@@ -19,6 +19,7 @@ signal port_unlocked(port_id: StringName)
 signal port_unlock_failed(port_id: StringName, required_amount: int, current_amount: int)
 signal port_leveled_up(port_id: StringName, new_level: int)
 signal port_tapped(port_id: StringName) ## Player tapped a port on the map.
+signal port_selection_changed(port_id: StringName)
 
 # --- Missions --------------------------------------------------------------
 signal mission_offers_changed(offers: Array)
@@ -29,6 +30,7 @@ signal mission_completed(mission: Mission)
 
 # --- Fleet / ships ---------------------------------------------------------
 signal ship_tapped(ship_id: StringName)
+signal ship_selection_changed(ship_id: StringName)
 signal ship_registered(ship_id: StringName)
 signal ship_purchased(ship_id: StringName, ship_data: ShipData, home_port_id: StringName)
 signal ship_purchase_failed(model_id: StringName, required_amount: int, current_amount: int)

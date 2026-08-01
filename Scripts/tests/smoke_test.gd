@@ -71,6 +71,9 @@ func _run() -> void:
 	assert(starter_map_ship != null)
 	var starter_icon := starter_map_ship.get_node("Icon") as Sprite2D
 	assert(starter_icon != null)
+	var starter_selection_outline := starter_icon.get_node("SelectionOutline") as Sprite2D
+	assert(starter_selection_outline != null)
+	assert(not starter_selection_outline.visible)
 	assert(is_equal_approx(starter_icon.scale.x, 0.8))
 	assert(is_equal_approx(starter_icon.scale.y, 0.8))
 	var starter_route_line := starter_map_ship.get_node("RouteLine") as ShipRouteLine
@@ -95,6 +98,7 @@ func _run() -> void:
 	world.set("_selected_ship_id", &"")
 	assert(world.try_select_ship_at_screen_position(ship_tap_event.position))
 	assert(world.get("_selected_ship_id") == &"starter_ship")
+	assert(starter_selection_outline.visible)
 
 	# Re-registering a ship (as scene reload does after New Game) must rebuild offers.
 	mission_manager.reset_state()
@@ -155,10 +159,20 @@ func _run() -> void:
 	assert(mission_badge.text == str(pickup_offer_count))
 	event_bus.port_tapped.emit(first_offer.pickup_port_id)
 	await process_frame
+	var pickup_icon := pickup_node.get_node("Icon") as Sprite2D
+	var pickup_highlight := pickup_icon.get_node("SelectionOutline") as Sprite2D
+	assert(pickup_highlight != null)
+	assert(pickup_highlight.visible)
 	assert(world.get_node("UI/MissionOfferPanel").visible)
 
-	assert(mission_manager.accept_offer(first_offer.id))
+	world.call("_on_offer_accepted", first_offer.id)
 	await process_frame
+	assert(not pickup_highlight.visible)
+	assert(starter_selection_outline.visible)
+	world.clear_map_selection()
+	assert(world.get("_selected_ship_id") == &"")
+	assert(not starter_selection_outline.visible)
+	assert(not pickup_highlight.visible)
 	var active_missions: Array = mission_manager.get_active_missions()
 	assert(active_missions.size() == 1)
 	var mission: Mission = active_missions[0]

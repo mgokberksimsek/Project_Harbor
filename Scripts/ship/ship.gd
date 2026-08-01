@@ -6,6 +6,7 @@ extends Area2D
 @export var home_port_id: StringName = &""
 
 @onready var _icon: Sprite2D = $Icon
+@onready var _selection_outline: Sprite2D = $Icon/SelectionOutline
 @onready var _status_label: Label = $StatusLabel
 @onready var _route_line: ShipRouteLine = $RouteLine
 
@@ -16,6 +17,8 @@ const MAX_TURN_SPEED_RAD_PER_SEC := 4.5
 const MIN_HEADING_MOVEMENT_SQUARED := 0.01
 const ROUTE_TANGENT_SAMPLE_PROGRESS := 0.015
 const DOCK_TRANSITION_DURATION_SEC := 0.9
+const SELECTED_SCALE_MULTIPLIER := 1.05
+const SELECTION_SCALE_TWEEN_SEC := 0.16
 
 var _sailing_route_points := PackedVector2Array()
 var _is_selected := false
@@ -25,6 +28,8 @@ var _preparing_departure_heading := false
 var _dock_transition_active := false
 var _dock_transition_elapsed := 0.0
 var _dock_transition_start := Vector2.ZERO
+var _base_icon_scale := Vector2.ONE
+var _selection_scale_tween: Tween = null
 
 
 func _ready() -> void:
@@ -35,11 +40,13 @@ func _ready() -> void:
 	if ship_data.icon != null:
 		_icon.texture = ship_data.icon
 	_icon.scale = Vector2.ONE * clampf(ship_data.sprite_scale, 0.1, 2.0)
+	_base_icon_scale = _icon.scale
+	_selection_outline.texture = _icon.texture
 
 	FleetManager.register_ship(ship_id, ship_data, home_port_id, self)
 	EventBus.ship_state_changed.connect(_on_ship_state_changed)
 	EventBus.ship_dock_slot_changed.connect(_on_ship_dock_slot_changed)
-	EventBus.ship_tapped.connect(_on_any_ship_tapped)
+	EventBus.ship_selection_changed.connect(_on_ship_selection_changed)
 	input_event.connect(_on_input_event)
 
 	call_deferred("_snap_to_home_port")
@@ -253,8 +260,23 @@ func _build_route_from_current_position(
 	return PortManager.smooth_polyline_points(dock_to_dock_points)
 
 
-func _on_any_ship_tapped(tapped_ship_id: StringName) -> void:
-	_is_selected = tapped_ship_id == ship_id
+func _on_ship_selection_changed(selected_ship_id: StringName) -> void:
+	_is_selected = selected_ship_id == ship_id
+	_selection_outline.visible = _is_selected
+	if _selection_scale_tween != null and _selection_scale_tween.is_valid():
+		_selection_scale_tween.kill()
+	var target_scale := _base_icon_scale * (
+		SELECTED_SCALE_MULTIPLIER if _is_selected else 1.0
+	)
+	_selection_scale_tween = create_tween()
+	_selection_scale_tween.set_trans(Tween.TRANS_QUAD)
+	_selection_scale_tween.set_ease(Tween.EASE_OUT)
+	_selection_scale_tween.tween_property(
+		_icon,
+		"scale",
+		target_scale,
+		SELECTION_SCALE_TWEEN_SEC
+	)
 
 
 func _update_route_visual(state: ShipRuntimeState.State) -> void:

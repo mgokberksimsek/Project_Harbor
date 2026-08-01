@@ -1,10 +1,16 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://Scripts/ship/ship.gd" id="1_ship_script"]
 [ext_resource type="Script" path="res://Scripts/ship/ship_route_line.gd" id="2_route_line"]
 
 [sub_resource type="CircleShape2D" id="1_ship_shape"]
 radius = 42.0
+
+[sub_resource type="Shader" id="Shader_selection_outline"]
+code = "shader_type canvas_item;\n\nuniform vec4 outline_color : source_color = vec4(1.0, 0.67, 0.16, 0.92);\n\nvoid fragment() {\n\tfloat texture_alpha = texture(TEXTURE, UV).a;\n\tCOLOR = vec4(outline_color.rgb, outline_color.a * texture_alpha);\n}\n"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_selection_outline"]
+shader = SubResource("Shader_selection_outline")
 
 [node name="Ship" type="Area2D"]
 z_index = 20
@@ -15,6 +21,12 @@ script = ExtResource("1_ship_script")
 script = ExtResource("2_route_line")
 
 [node name="Icon" type="Sprite2D" parent="."]
+
+[node name="SelectionOutline" type="Sprite2D" parent="Icon"]
+visible = false
+show_behind_parent = true
+material = SubResource("ShaderMaterial_selection_outline")
+scale = Vector2(1.14, 1.14)
 
 [node name="StatusLabel" type="Label" parent="."]
 offset_left = -60.0

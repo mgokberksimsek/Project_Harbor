@@ -12,6 +12,7 @@ var _mission_offers: Array[Mission] = []
 var _fleet_refresh_elapsed := 0.0
 
 const MAP_SHIP_TAP_RADIUS_PX := 48.0
+const MAP_PORT_TAP_RADIUS_PX := 48.0
 
 
 func _input(event: InputEvent) -> void:
@@ -27,6 +28,10 @@ func _input(event: InputEvent) -> void:
 		return
 	if try_select_ship_at_screen_position(screen_position):
 		get_viewport().set_input_as_handled()
+		return
+	if _is_port_at_screen_position(screen_position):
+		return
+	clear_map_selection()
 
 
 func try_select_ship_at_screen_position(screen_position: Vector2) -> bool:
@@ -46,6 +51,31 @@ func try_select_ship_at_screen_position(screen_position: Vector2) -> bool:
 		return false
 	EventBus.ship_tapped.emit(nearest_ship_id)
 	return true
+
+
+func _is_port_at_screen_position(screen_position: Vector2) -> bool:
+	var canvas_transform := get_viewport().get_canvas_transform()
+	var maximum_distance_squared := MAP_PORT_TAP_RADIUS_PX * MAP_PORT_TAP_RADIUS_PX
+	for port_id in PortManager.get_all_port_ids():
+		var port_node := PortManager.get_port_node(port_id)
+		if port_node == null or not port_node.is_visible_in_tree():
+			continue
+		var port_screen_position := canvas_transform * port_node.global_position
+		if screen_position.distance_squared_to(port_screen_position) <= maximum_distance_squared:
+			return true
+	return false
+
+
+func clear_map_selection() -> void:
+	_selected_ship_id = &""
+	_open_mission_port_id = &""
+	EventBus.ship_selection_changed.emit(&"")
+	EventBus.port_selection_changed.emit(&"")
+	_mission_offer_panel.close_panel()
+	_fleet_status_panel.select_ship(&"")
+	_refresh_fleet_panel()
+	_update_mission_markers()
+	_instruction_label.text = "Görevleri görmek için bir gemi seç."
 
 
 func _is_ui_at_screen_position(screen_position: Vector2) -> bool:
@@ -114,6 +144,7 @@ func _on_mission_offers_updated(offers: Array) -> void:
 
 func _on_offer_accepted(offer_id: String) -> void:
 	_open_mission_port_id = &""
+	EventBus.port_selection_changed.emit(&"")
 	_mission_offer_panel.close_panel()
 	if MissionManager.accept_offer(offer_id):
 		_instruction_label.text = "Görev başladı. Gemi rotasına otomatik ilerliyor."
@@ -122,6 +153,7 @@ func _on_offer_accepted(offer_id: String) -> void:
 
 func _on_mission_panel_dismissed() -> void:
 	_open_mission_port_id = &""
+	EventBus.port_selection_changed.emit(&"")
 
 
 func _on_fleet_ship_selected(ship_id: StringName) -> void:
@@ -164,6 +196,8 @@ func _on_fleet_capacity_reached(current_count: int, maximum_count: int) -> void:
 func _on_ship_tapped(ship_id: StringName) -> void:
 	_selected_ship_id = ship_id
 	_open_mission_port_id = &""
+	EventBus.ship_selection_changed.emit(ship_id)
+	EventBus.port_selection_changed.emit(&"")
 	_mission_offer_panel.close_panel()
 	_fleet_status_panel.select_ship(ship_id)
 	_refresh_fleet_panel()
@@ -179,6 +213,7 @@ func _on_ship_tapped(ship_id: StringName) -> void:
 func _on_port_tapped(port_id: StringName) -> void:
 	if not PortManager.is_unlocked(port_id):
 		return
+	EventBus.port_selection_changed.emit(port_id)
 	if _selected_ship_id == &"":
 		_instruction_label.text = "Önce görev vereceğin gemiyi seç."
 		return
@@ -298,6 +333,7 @@ func _show_port_offers(port_id: StringName) -> void:
 			matching_offers.append(offer)
 	if matching_offers.is_empty():
 		_open_mission_port_id = &""
+		EventBus.port_selection_changed.emit(&"")
 		_mission_offer_panel.close_panel()
 		_instruction_label.text = "Seçili gemi için bu limanda uygun görev yok."
 		return
