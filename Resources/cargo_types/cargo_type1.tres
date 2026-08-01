@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CargoTypeData" format=3 uid="uid://dc0xlsidlvror"]
+
+[ext_resource type="Script" uid="uid://t2livg6lneeb" path="res://Scripts/data/cargo_type_data.gd" id="1_cdsne"]
+
+[resource]
+script = ExtResource("1_cdsne")
+id = &"metal"
+display_name = "Metal"
+base_value = 140
+spawn_weight = 1.0
+required_capabilities = Array[StringName]([&"general"])
+metadata/_custom_type_script = "uid://t2livg6lneeb"

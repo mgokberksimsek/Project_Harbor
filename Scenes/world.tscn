@@ -1,0 +1,167 @@
+[gd_scene format=3 uid="uid://cedaxghwmb824"]
+
+[ext_resource type="Script" uid="uid://bl84cq34aqc81" path="res://Scenes/world.gd" id="1_world"]
+[ext_resource type="PackedScene" path="res://Scenes/ports/Port.tscn" id="2_port"]
+[ext_resource type="PackedScene" path="res://Scripts/ship/Ship.tscn" id="3_ship"]
+[ext_resource type="Resource" uid="uid://d36lwlle5krwq" path="res://Resources/Ports/port_mersin.tres" id="4_mersin"]
+[ext_resource type="Resource" uid="uid://bhqlpgs8dbotq" path="res://Resources/Ports/port_izmir.tres" id="5_izmir"]
+[ext_resource type="Resource" uid="uid://d2ajnmsckon5i" path="res://Resources/Ports/port_istanbul.tres" id="6_istanbul"]
+[ext_resource type="Resource" path="res://Resources/ships/ship_starter_freighter.tres" id="7_ship_data"]
+[ext_resource type="PackedScene" path="res://Scenes/ui/MissionOfferPanel.tscn" id="8_mission_offer_panel"]
+[ext_resource type="PackedScene" path="res://Scenes/ui/ShipShopPanel.tscn" id="9_ship_shop"]
+[ext_resource type="PackedScene" path="res://Scenes/ui/NewGameButton.tscn" id="10_new_game"]
+[ext_resource type="PackedScene" path="res://Scenes/ui/FleetStatusPanel.tscn" id="11_fleet_status"]
+[ext_resource type="Script" path="res://Scripts/camera/world_camera.gd" id="12_world_camera"]
+[ext_resource type="Script" path="res://Scripts/routes/sea_route_registry.gd" id="13_route_registry"]
+[ext_resource type="Resource" path="res://Resources/sea_routes/route_mersin_izmir.tres" id="14_route_mersin_izmir"]
+[ext_resource type="Resource" path="res://Resources/sea_routes/route_izmir_istanbul.tres" id="15_route_izmir_istanbul"]
+[ext_resource type="Resource" path="res://Resources/sea_routes/route_mersin_istanbul.tres" id="16_route_mersin_istanbul"]
+[ext_resource type="Script" path="res://Scripts/data/sea_route_data.gd" id="17_route_data"]
+
+[node name="World" type="Node2D" unique_id=1405839556]
+script = ExtResource("1_world")
+
+[node name="Ocean" type="ColorRect" parent="." unique_id=1478311842]
+z_index = -10
+offset_right = 6000.0
+offset_bottom = 3500.0
+mouse_filter = 2
+color = Color(0.145, 0.42, 0.72, 1)
+
+[node name="LandMasses" type="Node2D" parent="."]
+z_index = -5
+
+[node name="SouthwestLand" type="Polygon2D" parent="LandMasses"]
+polygon = PackedVector2Array(1050, 2120, 1350, 2020, 1500, 2050, 1650, 2140, 1740, 2500, 1600, 2800, 1100, 2800, 950, 2500)
+color = Color(0.38, 0.56, 0.28, 1)
+
+[node name="NorthLand" type="Polygon2D" parent="LandMasses"]
+polygon = PackedVector2Array(1450, 900, 2350, 900, 2320, 1350, 2150, 1550, 1900, 1700, 1700, 1570, 1500, 1400)
+color = Color(0.42, 0.6, 0.3, 1)
+
+[node name="EastLand" type="Polygon2D" parent="LandMasses"]
+polygon = PackedVector2Array(2350, 2020, 2500, 1920, 3150, 2000, 3350, 2400, 3250, 2850, 2550, 2850, 2300, 2500)
+color = Color(0.36, 0.54, 0.27, 1)
+
+[node name="Ports" type="Node2D" parent="." unique_id=1320507721]
+
+[node name="Mersin" parent="Ports" unique_id=643857306 instance=ExtResource("2_port")]
+position = Vector2(1500, 2050)
+port_data = ExtResource("4_mersin")
+
+[node name="Izmir" parent="Ports" unique_id=2146219901 instance=ExtResource("2_port")]
+position = Vector2(1900, 1700)
+port_data = ExtResource("5_izmir")
+
+[node name="Istanbul" parent="Ports" unique_id=790530954 instance=ExtResource("2_port")]
+position = Vector2(2350, 2020)
+port_data = ExtResource("6_istanbul")
+
+[node name="SeaRoutes" type="Node" parent="."]
+script = ExtResource("13_route_registry")
+routes = Array[ExtResource("17_route_data")]([ExtResource("14_route_mersin_izmir"), ExtResource("15_route_izmir_istanbul"), ExtResource("16_route_mersin_istanbul")])
+
+[node name="StarterShip" parent="." unique_id=598908117 instance=ExtResource("3_ship")]
+ship_id = &"starter_ship"
+ship_data = ExtResource("7_ship_data")
+home_port_id = &"mersin"
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1288995194]
+position = Vector2(1950, 1900)
+zoom = Vector2(0.65, 0.65)
+script = ExtResource("12_world_camera")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=436086544]
+
+[node name="MoneyLabel" type="Label" parent="UI" unique_id=649243899]
+offset_left = 24.0
+offset_top = 18.0
+offset_right = 240.0
+offset_bottom = 58.0
+theme_override_font_sizes/font_size = 28
+text = "0 ₺"
+
+[node name="InstructionLabel" type="Label" parent="UI" unique_id=1066584881]
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 250.0
+offset_top = 22.0
+offset_right = -24.0
+offset_bottom = 58.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 20
+text = "Açık bir hedef limana dokun."
+horizontal_alignment = 2
+
+[node name="ShipShopPanel" parent="UI" unique_id=1255476120 instance=ExtResource("9_ship_shop")]
+anchors_preset = 2
+offset_right = 237.0
+offset_bottom = -41.0
+
+[node name="NewGameButton" parent="UI" unique_id=306073066 instance=ExtResource("10_new_game")]
+
+[node name="MissionOfferPanel" parent="UI" unique_id=843648461 instance=ExtResource("8_mission_offer_panel")]
+visible = true
+offset_left = 756.0
+offset_top = -188.0
+offset_right = 215.1466
+offset_bottom = -43.68213
+scale = Vector2(0.68971443, 1.0532308)
+
+[node name="FleetStatusPanel" parent="UI" unique_id=1221162860 instance=ExtResource("11_fleet_status")]
+offset_left = -111.99988
+offset_top = 61.000046
+offset_right = 28.000122
+offset_bottom = 277.00006
+scale = Vector2(0.65999854, 0.71253467)
+
+[node name="MissionPanel" type="PanelContainer" parent="UI" unique_id=1510682631]
+visible = false
+custom_minimum_size = Vector2(366, 340)
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -256.99988
+offset_top = -303.0
+offset_right = 109.00012
+offset_bottom = 37.0
+grow_horizontal = 0
+grow_vertical = 2
+scale = Vector2(0.695821, 0.83363765)
+
+[node name="Margin" type="MarginContainer" parent="UI/MissionPanel" unique_id=1632286707]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="UI/MissionPanel/Margin" unique_id=2040345062]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="UI/MissionPanel/Margin/VBox" unique_id=166467139]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Görev Teklifleri"
+horizontal_alignment = 1
+
+[node name="Offer1" type="Button" parent="UI/MissionPanel/Margin/VBox" unique_id=1078024282]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "Teklif hazırlanıyor..."
+
+[node name="Offer2" type="Button" parent="UI/MissionPanel/Margin/VBox" unique_id=1707958628]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "Teklif hazırlanıyor..."
+
+[node name="Offer3" type="Button" parent="UI/MissionPanel/Margin/VBox" unique_id=655482573]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "Teklif hazırlanıyor..."

@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="ShipData" format=3 uid="uid://n3f5dyjuov6d"]
+
+[ext_resource type="Script" uid="uid://cga85yq6vumi5" path="res://Scripts/data/ship_data.gd" id="1_uhug7"]
+
+[resource]
+script = ExtResource("1_uhug7")
+id = &"1"
+display_name = "gemi 1"
+metadata/_custom_type_script = "uid://cga85yq6vumi5"

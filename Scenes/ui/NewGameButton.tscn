@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/ui/new_game_button.gd" id="1_button"]
+
+[node name="NewGameButton" type="Button"]
+offset_left = 24.0
+offset_top = 68.0
+offset_right = 174.0
+offset_bottom = 110.0
+text = "Yeni Oyun"
+script = ExtResource("1_button")
+
+[node name="ConfirmationDialog" type="ConfirmationDialog" parent="."]
+title = "Yeni oyuna başla"
+dialog_text = "Tüm para, liman, gemi ve görev ilerlemesi kalıcı olarak silinecek.\nYeni oyuna başlamak istediğine emin misin?"
+ok_button_text = "Evet, ilerlemeyi sil"
+cancel_button_text = "Vazgeç"

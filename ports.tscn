@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://bkq1tb70ad531"]
+
+[ext_resource type="PackedScene" path="res://Scenes/ports/Port.tscn" id="1_gpnib"]
+[ext_resource type="Resource" uid="uid://d2ajnmsckon5i" path="res://Resources/Ports/port_istanbul.tres" id="3_1i03r"]
+[ext_resource type="Resource" uid="uid://bhqlpgs8dbotq" path="res://Resources/Ports/port_izmir.tres" id="4_j74uo"]
+[ext_resource type="Resource" uid="uid://d36lwlle5krwq" path="res://Resources/Ports/port_mersin.tres" id="5_pwyok"]
+
+[node name="Ports" type="Node2D" unique_id=87054406]
+position = Vector2(226, 155)
+
+[node name="Port" parent="." unique_id=1540806162 instance=ExtResource("1_gpnib")]
+top_level = true
+position = Vector2(429, 112)
+port_data = ExtResource("3_1i03r")
+
+[node name="Port2" parent="." unique_id=2112079825 instance=ExtResource("1_gpnib")]
+top_level = true
+position = Vector2(300, 103)
+port_data = ExtResource("4_j74uo")
+
+[node name="Port3" parent="." unique_id=1129650536 instance=ExtResource("1_gpnib")]
+top_level = true
+position = Vector2(181, 95)
+port_data = ExtResource("5_pwyok")

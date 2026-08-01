@@ -1,0 +1,352 @@
+extends SceneTree
+## Headless smoke test for the first playable architecture slice.
+
+
+func _initialize() -> void:
+	call_deferred("_run")
+
+
+func _run() -> void:
+	var timing_probe := Mission.new()
+	timing_probe.start_leg(10.0, 1000.25)
+	assert(is_equal_approx(timing_probe.get_leg_progress_at(1000.75), 0.05))
+	var legacy_ship_state := ShipRuntimeState.from_dict({
+		"ship_id": "legacy_ship",
+		"current_port_id": "mersin",
+	})
+	assert(legacy_ship_state.dock_port_id == &"mersin")
+	assert(legacy_ship_state.dock_slot_index == -1)
+
+	var port_manager := root.get_node("/root/PortManager")
+	var fleet_manager := root.get_node("/root/FleetManager")
+	var mission_manager := root.get_node("/root/MissionManager")
+	var game_manager := root.get_node("/root/GameManager")
+	var save_manager := root.get_node("/root/SaveManager")
+	var event_bus := root.get_node("/root/EventBus")
+	var test_save_path := "user://smoke_test_save.json"
+	assert(save_manager.delete_save(test_save_path))
+
+	var world_scene := load("res://Scenes/world.tscn") as PackedScene
+	assert(world_scene != null)
+	var world := world_scene.instantiate()
+	root.add_child(world)
+	await process_frame
+	await process_frame
+
+	assert(port_manager.get_all_port_ids().size() == 3)
+	assert(port_manager.is_unlocked(&"mersin"))
+	assert(port_manager.is_unlocked(&"izmir"))
+	assert(not port_manager.is_unlocked(&"istanbul"))
+	assert(port_manager.has_sea_route(&"mersin", &"izmir"))
+	var forward_route: PackedVector2Array = port_manager.get_route_points(&"mersin", &"izmir")
+	var reverse_route: PackedVector2Array = port_manager.get_route_points(&"izmir", &"mersin")
+	var smooth_route: PackedVector2Array = port_manager.get_smoothed_route_points(&"mersin", &"izmir")
+	var s_curve_route: PackedVector2Array = port_manager.get_route_points(&"mersin", &"istanbul")
+	assert(forward_route.size() == 4)
+	assert(smooth_route.size() > forward_route.size())
+	assert(s_curve_route.size() == 6)
+	var has_clockwise_turn := false
+	var has_counterclockwise_turn := false
+	for curve_index in range(1, s_curve_route.size() - 1):
+		var incoming := s_curve_route[curve_index] - s_curve_route[curve_index - 1]
+		var outgoing := s_curve_route[curve_index + 1] - s_curve_route[curve_index]
+		var turn := incoming.cross(outgoing)
+		has_clockwise_turn = has_clockwise_turn or turn < -0.001
+		has_counterclockwise_turn = has_counterclockwise_turn or turn > 0.001
+	assert(has_clockwise_turn and has_counterclockwise_turn)
+	assert(reverse_route.size() == forward_route.size())
+	for route_index in range(forward_route.size()):
+		assert(forward_route[route_index].is_equal_approx(
+			reverse_route[reverse_route.size() - 1 - route_index]
+		))
+	var route_midpoint: Vector2 = port_manager.get_route_position(&"mersin", &"izmir", 0.5)
+	var direct_midpoint: Vector2 = (
+		port_manager.get_port_node(&"mersin").global_position
+		+ port_manager.get_port_node(&"izmir").global_position
+	) * 0.5
+	assert(not route_midpoint.is_equal_approx(direct_midpoint))
+	assert(fleet_manager.get_all_ship_ids().size() == 1)
+	var starter_map_ship: Area2D = fleet_manager.get_ship_node(&"starter_ship") as Area2D
+	var mersin_map_port: Area2D = port_manager.get_port_node(&"mersin") as Area2D
+	assert(starter_map_ship != null)
+	var starter_icon := starter_map_ship.get_node("Icon") as Sprite2D
+	assert(starter_icon != null)
+	assert(is_equal_approx(starter_icon.scale.x, 0.8))
+	assert(is_equal_approx(starter_icon.scale.y, 0.8))
+	var starter_route_line := starter_map_ship.get_node("RouteLine") as ShipRouteLine
+	assert(starter_route_line != null)
+	starter_route_line.set_route(smooth_route, 0.0, true)
+	var full_route_length := starter_route_line.get_remaining_length()
+	starter_route_line.set_route(smooth_route, 0.5, true)
+	assert(starter_route_line.get_remaining_length() < full_route_length)
+	starter_route_line.clear_route()
+	assert(port_manager.get_port_data(&"mersin").dock_slot_offsets.size() == 6)
+	assert(fleet_manager.get_ship_dock_slot_index(&"starter_ship") == 0)
+	assert(fleet_manager.get_ship_dock_position(&"starter_ship") != mersin_map_port.global_position)
+	assert(starter_map_ship.z_index > mersin_map_port.z_index)
+	assert(world.get_viewport().physics_object_picking_sort)
+	assert(world.get_viewport().physics_object_picking_first_only)
+	var ship_tap_event := InputEventMouseButton.new()
+	ship_tap_event.button_index = MOUSE_BUTTON_LEFT
+	ship_tap_event.pressed = true
+	ship_tap_event.position = world.get_viewport().get_canvas_transform() \
+		* starter_map_ship.global_position
+	ship_tap_event.global_position = ship_tap_event.position
+	world.set("_selected_ship_id", &"")
+	assert(world.try_select_ship_at_screen_position(ship_tap_event.position))
+	assert(world.get("_selected_ship_id") == &"starter_ship")
+
+	# Re-registering a ship (as scene reload does after New Game) must rebuild offers.
+	mission_manager.reset_state()
+	var starter_node: Node2D = fleet_manager.get_ship_node(&"starter_ship")
+	var starter_data: ShipData = fleet_manager.get_ship_data(&"starter_ship")
+	fleet_manager.register_ship(&"starter_ship", starter_data, &"mersin", starter_node)
+	await process_frame
+	assert(not mission_manager.get_offers().is_empty())
+
+	await process_frame
+
+	var offers: Array = mission_manager.get_offers()
+	assert(offers.size() == 3)
+	var starter_ship_data: ShipData = fleet_manager.get_ship_data(&"starter_ship")
+	var food_cargo: CargoTypeData = mission_manager.get_cargo_type(&"food")
+	assert(starter_ship_data != null)
+	assert(food_cargo != null)
+	assert(not starter_ship_data.can_carry(food_cargo))
+	for offer in offers:
+		assert(offer.offered_ship_id == &"starter_ship")
+		assert(offer.pickup_port_id == &"mersin")
+		assert(offer.delivery_port_id == &"izmir")
+		assert(offer.estimated_duration_sec > 0.0)
+		assert(offer.duration_class == Mission.DurationClass.SHORT)
+		assert(offer.reward > 0)
+		assert(offer.cargo_amount == 1)
+		var offered_cargo: CargoTypeData = mission_manager.get_cargo_type(offer.cargo_type_id)
+		assert(starter_ship_data.can_carry(offered_cargo))
+		assert(offer.cargo_type_id != &"food")
+
+	event_bus.ship_tapped.emit(&"starter_ship")
+	await process_frame
+	var izmir_node: Node = port_manager.get_port_node(&"izmir")
+	var mission_badge := izmir_node.get_node("MissionBadge") as Button
+	assert(mission_badge.visible)
+	assert(mission_badge.text == "3")
+	event_bus.port_tapped.emit(&"izmir")
+	await process_frame
+	assert(world.get_node("UI/MissionOfferPanel").visible)
+
+	assert(mission_manager.accept_offer(offers[0].id))
+	await process_frame
+	var active_missions: Array = mission_manager.get_active_missions()
+	assert(active_missions.size() == 1)
+	var mission: Mission = active_missions[0]
+	assert(mission.pickup_port_id == &"mersin")
+	assert(mission.delivery_port_id == &"izmir")
+	assert(mission.reward > 0)
+	assert(fleet_manager.get_ship_mission_remaining_sec(&"starter_ship") > 0.0)
+	assert(world.get_node("UI/FleetStatusPanel") is FleetStatusPanel)
+	var delivery_state_safety := 0
+	while fleet_manager.get_ship_state(&"starter_ship") \
+			!= ShipRuntimeState.State.SAILING_TO_DELIVERY \
+			and delivery_state_safety < 3:
+		mission.leg_duration_sec = 0.0
+		await process_frame
+		delivery_state_safety += 1
+	assert(fleet_manager.get_ship_state(&"starter_ship") \
+		== ShipRuntimeState.State.SAILING_TO_DELIVERY)
+	var delivery_route: PackedVector2Array = starter_map_ship.get("_sailing_route_points")
+	var delivery_port_node: Node2D = port_manager.get_port_node(mission.delivery_port_id)
+	assert(delivery_route.size() > 2)
+	assert(delivery_route[delivery_route.size() - 1].is_equal_approx(
+		delivery_port_node.global_position
+	))
+
+	for _step in range(5):
+		if mission.stage == Mission.Stage.COMPLETED:
+			break
+		mission.leg_duration_sec = 0.0
+		await process_frame
+		await process_frame
+
+	assert(mission.stage == Mission.Stage.COMPLETED)
+	assert(game_manager.money == mission.reward)
+	await process_frame
+	assert(mission_manager.get_offers().size() == 3)
+	assert(not game_manager.try_unlock_port(&"istanbul"))
+	assert(not port_manager.is_unlocked(&"istanbul"))
+
+	game_manager.add_money(750 - game_manager.money)
+	event_bus.port_tapped.emit(&"istanbul")
+	await process_frame
+	assert(port_manager.is_unlocked(&"istanbul"))
+	assert(game_manager.money == 0)
+
+	var refrigerated_model: ShipData = fleet_manager.get_ship_model(&"refrigerated_freighter")
+	assert(refrigerated_model != null)
+	assert(refrigerated_model.purchase_cost == 800)
+	assert(refrigerated_model.can_carry(food_cargo))
+	assert(fleet_manager.get_owned_model_count(&"refrigerated_freighter") == 0)
+	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 800)
+	game_manager.add_money(800)
+	assert(game_manager.try_purchase_ship(&"refrigerated_freighter", &"mersin"))
+	await process_frame
+	await process_frame
+	assert(game_manager.money == 0)
+	assert(fleet_manager.get_all_ship_ids().size() == 2)
+	assert(fleet_manager.get_owned_model_count(&"refrigerated_freighter") == 1)
+	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 1280)
+	var shop_buy_button := world.get_node(
+		"UI/ShipShopPanel/Margin/VBox/BuyButton"
+	) as Button
+	assert(shop_buy_button != null)
+	shop_buy_button.text = "Satın Al · 800 ₺"
+	event_bus.game_loaded.emit()
+	await process_frame
+	assert(shop_buy_button.text.contains("1280"))
+	assert(shop_buy_button.disabled == (game_manager.money < 1280))
+
+	var refrigerated_ship_found := false
+	for ship_id in fleet_manager.get_all_ship_ids():
+		if ship_id == &"starter_ship":
+			continue
+		var purchased_data: ShipData = fleet_manager.get_ship_data(ship_id)
+		assert(purchased_data != null)
+		assert(purchased_data.can_carry(food_cargo))
+		assert(fleet_manager.get_ship_node(ship_id) != null)
+		refrigerated_ship_found = true
+	assert(refrigerated_ship_found)
+
+	var starter_speed_before: float = fleet_manager.get_ship_effective_speed(&"starter_ship")
+	var starter_upgrade_cost: int = fleet_manager.get_ship_speed_upgrade_cost(&"starter_ship")
+	assert(starter_upgrade_cost > 0)
+	game_manager.add_money(starter_upgrade_cost)
+	assert(game_manager.try_upgrade_ship_speed(&"starter_ship"))
+	assert(game_manager.money == 0)
+	assert(fleet_manager.get_ship_speed_level(&"starter_ship") == 1)
+	assert(is_equal_approx(
+		fleet_manager.get_ship_effective_speed(&"starter_ship"),
+		starter_speed_before * 1.15
+	))
+	var starter_capacity_upgrade_cost: int = fleet_manager.get_ship_capacity_upgrade_cost(&"starter_ship")
+	assert(starter_capacity_upgrade_cost > 0)
+	game_manager.add_money(starter_capacity_upgrade_cost)
+	assert(game_manager.try_upgrade_ship_capacity(&"starter_ship"))
+	assert(game_manager.money == 0)
+	assert(fleet_manager.get_ship_capacity_level(&"starter_ship") == 1)
+	assert(fleet_manager.get_ship_effective_capacity(&"starter_ship") == 2)
+	await process_frame
+
+	mission_manager.refresh_offers()
+	var multi_ship_offers: Array = mission_manager.get_offers()
+	assert(multi_ship_offers.size() >= 2)
+	var offered_ship_ids: Array[StringName] = []
+	for offer in multi_ship_offers:
+		if not offered_ship_ids.has(offer.offered_ship_id):
+			offered_ship_ids.append(offer.offered_ship_id)
+	assert(offered_ship_ids.size() == 2)
+
+	var first_multi_offer: Mission = multi_ship_offers[0]
+	assert(mission_manager.accept_offer(first_multi_offer.id))
+	await process_frame
+	var remaining_offers: Array = mission_manager.get_offers()
+	var second_multi_offer: Mission = null
+	for offer in remaining_offers:
+		if offer.offered_ship_id != first_multi_offer.offered_ship_id:
+			second_multi_offer = offer
+			break
+	assert(second_multi_offer != null)
+	assert(mission_manager.accept_offer(second_multi_offer.id))
+	await process_frame
+	assert(mission_manager.get_active_missions().size() == 2)
+
+	var expected_offline_reward := 0
+	for active_mission in mission_manager.get_active_missions():
+		expected_offline_reward += active_mission.reward
+		var fleet_mission: Mission = fleet_manager.get_ship_mission(active_mission.assigned_ship_id)
+		fleet_mission.leg_start_unix = Time.get_unix_time_from_system() - 100
+	assert(save_manager.save_game(test_save_path))
+	game_manager.add_money(999)
+	assert(save_manager.load_game(test_save_path))
+	await process_frame
+	assert(game_manager.money == expected_offline_reward)
+	assert(mission_manager.get_active_missions().is_empty())
+	assert(fleet_manager.get_idle_ship_ids().size() == 2)
+	assert(fleet_manager.get_ship_speed_level(&"starter_ship") == 1)
+	assert(fleet_manager.get_ship_capacity_level(&"starter_ship") == 1)
+
+	var starter_max_speed_level := starter_ship_data.max_speed_level
+	while fleet_manager.get_ship_speed_level(&"starter_ship") < starter_max_speed_level:
+		assert(fleet_manager.upgrade_ship_speed(&"starter_ship"))
+	assert(fleet_manager.get_ship_speed_level(&"starter_ship") == starter_max_speed_level)
+	assert(fleet_manager.get_ship_speed_upgrade_cost(&"starter_ship") == -1)
+	assert(not fleet_manager.upgrade_ship_speed(&"starter_ship"))
+
+	var starter_max_capacity_level := starter_ship_data.max_capacity_level
+	while fleet_manager.get_ship_capacity_level(&"starter_ship") < starter_max_capacity_level:
+		assert(fleet_manager.upgrade_ship_capacity(&"starter_ship"))
+	assert(fleet_manager.get_ship_capacity_level(&"starter_ship") == starter_max_capacity_level)
+	assert(fleet_manager.get_ship_capacity_upgrade_cost(&"starter_ship") == -1)
+	assert(not fleet_manager.upgrade_ship_capacity(&"starter_ship"))
+
+	var fleet_capacity: int = fleet_manager.get_fleet_capacity()
+	while fleet_manager.get_all_ship_ids().size() < fleet_capacity:
+		var stable_mersin_slots := {}
+		for existing_ship_id in fleet_manager.get_all_ship_ids():
+			if fleet_manager.get_ship_current_port(existing_ship_id) == &"mersin" \
+					and fleet_manager.get_ship_dock_slot_index(existing_ship_id) >= 0:
+				stable_mersin_slots[String(existing_ship_id)] = \
+					fleet_manager.get_ship_dock_slot_index(existing_ship_id)
+		assert(fleet_manager.purchase_ship(&"refrigerated_freighter", &"mersin") != &"")
+		for existing_ship_id_string in stable_mersin_slots.keys():
+			var existing_ship_id := StringName(existing_ship_id_string)
+			assert(fleet_manager.get_ship_dock_slot_index(existing_ship_id) \
+				== stable_mersin_slots[existing_ship_id_string])
+	assert(fleet_manager.get_all_ship_ids().size() == fleet_capacity)
+	var occupied_mersin_slots: Array[int] = []
+	for docked_ship_id in fleet_manager.get_all_ship_ids():
+		if fleet_manager.get_ship_current_port(docked_ship_id) != &"mersin":
+			continue
+		var dock_slot_index: int = fleet_manager.get_ship_dock_slot_index(docked_ship_id)
+		assert(dock_slot_index >= 0)
+		assert(not occupied_mersin_slots.has(dock_slot_index))
+		occupied_mersin_slots.append(dock_slot_index)
+
+	# Departing from a lower berth pulls the last docked ship into that gap.
+	var lowest_slot := 999
+	var highest_slot := -1
+	var departing_ship_id: StringName = &""
+	var replacement_ship_id: StringName = &""
+	for docked_ship_id in fleet_manager.get_all_ship_ids():
+		if fleet_manager.get_ship_current_port(docked_ship_id) != &"mersin":
+			continue
+		var slot_index: int = fleet_manager.get_ship_dock_slot_index(docked_ship_id)
+		if slot_index >= 0 and slot_index < lowest_slot:
+			lowest_slot = slot_index
+			departing_ship_id = docked_ship_id
+		if slot_index > highest_slot:
+			highest_slot = slot_index
+			replacement_ship_id = docked_ship_id
+	assert(departing_ship_id != &"")
+	assert(replacement_ship_id != &"")
+	assert(departing_ship_id != replacement_ship_id)
+	var berth_compaction_mission := Mission.new()
+	berth_compaction_mission.id = "berth_compaction_test"
+	berth_compaction_mission.pickup_port_id = &"mersin"
+	berth_compaction_mission.delivery_port_id = &"izmir"
+	assert(fleet_manager.assign_mission(departing_ship_id, berth_compaction_mission))
+	berth_compaction_mission.leg_duration_sec = 0.0
+	await process_frame
+	berth_compaction_mission.leg_duration_sec = 0.0
+	await process_frame
+	assert(fleet_manager.get_ship_state(departing_ship_id) \
+		== ShipRuntimeState.State.SAILING_TO_DELIVERY)
+	assert(fleet_manager.get_ship_dock_slot_index(replacement_ship_id) == lowest_slot)
+	assert(fleet_manager.purchase_ship(&"refrigerated_freighter", &"mersin") == &"")
+	game_manager.add_money(10000)
+	var money_before_full_fleet_purchase: int = game_manager.money
+	assert(not game_manager.try_purchase_ship(&"refrigerated_freighter", &"mersin"))
+	assert(game_manager.money == money_before_full_fleet_purchase)
+	assert(save_manager.delete_save(test_save_path))
+	assert(not save_manager.has_save(test_save_path))
+	print("SMOKE_TEST_OK reward=%d" % mission.reward)
+	quit(0)

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PortData" load_steps=3 format=3 uid="uid://bhqlpgs8dbotq"]
+
+[ext_resource type="Script" uid="uid://c7gex5obwbhbk" path="res://Scripts/data/port_data.gd" id="1_em82v"]
+[ext_resource type="Texture2D" path="res://Assets/Sprites/Ports/tile_23.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_em82v")
+id = &"izmir"
+display_name = "İzmir"
+icon = ExtResource("2_icon")
+unlocked_by_default = true
+dock_slot_offsets = PackedVector2Array(-70, 75, 0, 95, 70, 75, -105, 140, 0, 155, 105, 140)
+metadata/_custom_type_script = "uid://c7gex5obwbhbk"

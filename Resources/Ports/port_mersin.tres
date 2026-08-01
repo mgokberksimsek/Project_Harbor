@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PortData" load_steps=3 format=3 uid="uid://d36lwlle5krwq"]
+
+[ext_resource type="Script" uid="uid://c7gex5obwbhbk" path="res://Scripts/data/port_data.gd" id="1_u812u"]
+[ext_resource type="Texture2D" path="res://Assets/Sprites/Ports/tile_18.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_u812u")
+id = &"mersin"
+display_name = "Mersin"
+icon = ExtResource("2_icon")
+unlocked_by_default = true
+dock_slot_offsets = PackedVector2Array(-70, -75, 0, -95, 70, -75, -105, -140, 0, -155, 105, -140)
+metadata/_custom_type_script = "uid://c7gex5obwbhbk"

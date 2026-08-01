@@ -1,0 +1,8 @@
+# Godot 4+ specific ignores
+.godot/
+.import/
+.export/
+/android/
+
+# Local handoff/test archives
+/ProjectHarbor-Claude-files.zip

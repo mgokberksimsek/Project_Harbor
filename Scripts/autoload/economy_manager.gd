@@ -1,0 +1,65 @@
+extends Node
+## Stateless economy formulas. This manager calculates values but owns no
+## player state, which keeps balancing changes isolated and testable.
+
+const SHIP_PRICE_GROWTH := 1.6
+const SHIP_SPEED_PER_LEVEL := 0.15
+const SHIP_SPEED_UPGRADE_COST_GROWTH := 1.7
+const SHIP_CAPACITY_UPGRADE_COST_GROWTH := 1.8
+const EXTRA_CARGO_REWARD_BONUS := 0.10
+
+
+func calculate_mission_reward(
+		pickup_port_id: StringName,
+		delivery_port_id: StringName,
+		cargo_type: CargoTypeData,
+		cargo_amount: int = 1
+) -> int:
+	var distance: float = PortManager.get_distance(pickup_port_id, delivery_port_id)
+	var cargo_value: int = cargo_type.base_value if cargo_type != null else 100
+	var pickup_multiplier: float = _get_port_multiplier(pickup_port_id)
+	var delivery_multiplier: float = _get_port_multiplier(delivery_port_id)
+	var distance_reward: float = distance * 0.5
+	var amount_multiplier := 1.0 + EXTRA_CARGO_REWARD_BONUS * maxi(cargo_amount - 1, 0)
+	return maxi(roundi(
+		(cargo_value + distance_reward)
+		* amount_multiplier
+		* pickup_multiplier
+		* delivery_multiplier
+	), 1)
+
+
+func _get_port_multiplier(port_id: StringName) -> float:
+	var port_data: PortData = PortManager.get_port_data(port_id)
+	if port_data == null:
+		return 1.0
+	return port_data.get_reward_multiplier(PortManager.get_level(port_id))
+
+
+func calculate_ship_purchase_price(base_cost: int, owned_model_count: int) -> int:
+	var safe_base_cost := maxi(base_cost, 0)
+	var safe_owned_count := maxi(owned_model_count, 0)
+	var raw_price := safe_base_cost * pow(SHIP_PRICE_GROWTH, safe_owned_count)
+	return maxi(roundi(raw_price / 10.0) * 10, safe_base_cost)
+
+
+func calculate_ship_speed(base_speed: float, speed_level: int) -> float:
+	return maxf(base_speed, 1.0) * (1.0 + SHIP_SPEED_PER_LEVEL * maxi(speed_level, 0))
+
+
+func calculate_ship_speed_upgrade_cost(base_cost: int, speed_level: int) -> int:
+	var safe_base_cost := maxi(base_cost, 0)
+	var raw_cost := safe_base_cost * pow(
+		SHIP_SPEED_UPGRADE_COST_GROWTH,
+		maxi(speed_level, 0)
+	)
+	return maxi(roundi(raw_cost / 10.0) * 10, safe_base_cost)
+
+
+func calculate_ship_capacity_upgrade_cost(base_cost: int, capacity_level: int) -> int:
+	var safe_base_cost := maxi(base_cost, 0)
+	var raw_cost := safe_base_cost * pow(
+		SHIP_CAPACITY_UPGRADE_COST_GROWTH,
+		maxi(capacity_level, 0)
+	)
+	return maxi(roundi(raw_cost / 10.0) * 10, safe_base_cost)
