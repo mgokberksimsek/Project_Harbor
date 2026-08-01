@@ -176,7 +176,7 @@ func _update_sailing_position(state: ShipRuntimeState.State) -> bool:
 		if state == ShipRuntimeState.State.SAILING_TO_DELIVERY:
 			_sailing_route_points = _build_delivery_route(mission)
 		else:
-			_sailing_route_points = PortManager.get_smoothed_route_points(
+			_sailing_route_points = _build_route_from_current_position(
 				origin_id,
 				destination_id
 			)
@@ -195,7 +195,7 @@ func _update_sailing_position(state: ShipRuntimeState.State) -> bool:
 	return false
 
 
-func _on_ship_state_changed(changed_ship_id: StringName, _previous_state: int, new_state: int) -> void:
+func _on_ship_state_changed(changed_ship_id: StringName, previous_state: int, new_state: int) -> void:
 	if changed_ship_id == ship_id:
 		var mission := FleetManager.get_ship_mission(ship_id)
 		if new_state == ShipRuntimeState.State.LOADING and mission != null:
@@ -209,7 +209,9 @@ func _on_ship_state_changed(changed_ship_id: StringName, _previous_state: int, n
 		else:
 			_preparing_departure_heading = false
 			_sailing_route_points.clear()
-		if new_state == ShipRuntimeState.State.UNLOADING:
+		if new_state == ShipRuntimeState.State.UNLOADING \
+				or (new_state == ShipRuntimeState.State.LOADING \
+				and previous_state == ShipRuntimeState.State.SAILING_TO_PICKUP):
 			_dock_transition_start = global_position
 			_dock_transition_elapsed = 0.0
 			_dock_transition_active = true
@@ -230,9 +232,19 @@ func _on_ship_dock_slot_changed(
 
 
 func _build_delivery_route(mission: Mission) -> PackedVector2Array:
-	var sea_points := PortManager.get_route_points(
+	return _build_route_from_current_position(
 		mission.pickup_port_id,
 		mission.delivery_port_id
+	)
+
+
+func _build_route_from_current_position(
+		origin_port_id: StringName,
+		destination_port_id: StringName
+) -> PackedVector2Array:
+	var sea_points := PortManager.get_route_points(
+		origin_port_id,
+		destination_port_id
 	)
 	if sea_points.is_empty():
 		return sea_points
@@ -257,6 +269,13 @@ func _update_route_visual(state: ShipRuntimeState.State) -> void:
 			_is_selected
 		)
 	elif state == ShipRuntimeState.State.SAILING_TO_DELIVERY:
+		_route_line.set_route(
+			_sailing_route_points,
+			mission.get_leg_progress(),
+			_is_selected
+		)
+	elif state == ShipRuntimeState.State.SAILING_TO_PICKUP \
+			and FleetManager.get_ship_current_port(ship_id) != mission.pickup_port_id:
 		_route_line.set_route(
 			_sailing_route_points,
 			mission.get_leg_progress(),

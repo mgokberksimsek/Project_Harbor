@@ -34,6 +34,9 @@ var cargo_type_id: StringName
 var cargo_amount: int = 1
 var reward: int
 var estimated_duration_sec: float = 0.0
+## Loading lasts longer after an empty repositioning leg, giving the ship
+## enough time to settle into its berth before departing with cargo.
+var loading_duration_sec: float = 0.5
 var duration_class: DurationClass = DurationClass.SHORT
 var stage: Stage = Stage.AWAITING_PICKUP
 
@@ -90,6 +93,7 @@ func to_dict() -> Dictionary:
 		"cargo_amount": cargo_amount,
 		"reward": reward,
 		"estimated_duration_sec": estimated_duration_sec,
+		"loading_duration_sec": loading_duration_sec,
 		"duration_class": duration_class,
 		"stage": stage,
 		"offered_ship_id": String(offered_ship_id),
@@ -108,6 +112,7 @@ static func from_dict(data: Dictionary) -> Mission:
 	mission.cargo_amount = maxi(int(data.get("cargo_amount", 1)), 1)
 	mission.reward = data.get("reward", 0)
 	mission.estimated_duration_sec = data.get("estimated_duration_sec", 0.0)
+	mission.loading_duration_sec = maxf(float(data.get("loading_duration_sec", 0.5)), 0.0)
 	mission.duration_class = data.get("duration_class", DurationClass.SHORT) as DurationClass
 	mission.stage = data.get("stage", Stage.AWAITING_PICKUP) as Stage
 	mission.offered_ship_id = StringName(data.get("offered_ship_id", ""))

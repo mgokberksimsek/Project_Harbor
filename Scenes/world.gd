@@ -294,7 +294,7 @@ func _refresh_fleet_panel() -> void:
 func _show_port_offers(port_id: StringName) -> void:
 	var matching_offers: Array[Mission] = []
 	for offer in _mission_offers:
-		if offer.offered_ship_id == _selected_ship_id and offer.delivery_port_id == port_id:
+		if offer.offered_ship_id == _selected_ship_id and offer.pickup_port_id == port_id:
 			matching_offers.append(offer)
 	if matching_offers.is_empty():
 		_open_mission_port_id = &""
@@ -302,7 +302,7 @@ func _show_port_offers(port_id: StringName) -> void:
 		_instruction_label.text = "Seçili gemi için bu limanda uygun görev yok."
 		return
 	_open_mission_port_id = port_id
-	var title := "%s limanına görevler" % String(port_id)
+	var title := "%s limanındaki yükler" % String(port_id)
 	_mission_offer_panel.show_offers(matching_offers, title)
 
 
@@ -311,7 +311,7 @@ func _update_mission_markers() -> void:
 		var offer_count := 0
 		if _selected_ship_id != &"":
 			for offer in _mission_offers:
-				if offer.offered_ship_id == _selected_ship_id and offer.delivery_port_id == port_id:
+				if offer.offered_ship_id == _selected_ship_id and offer.pickup_port_id == port_id:
 					offer_count += 1
 		var port_node := PortManager.get_port_node(port_id) as Port
 		if port_node != null:

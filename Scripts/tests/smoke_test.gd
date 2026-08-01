@@ -113,10 +113,20 @@ func _run() -> void:
 	assert(starter_ship_data != null)
 	assert(food_cargo != null)
 	assert(not starter_ship_data.can_carry(food_cargo))
+	var has_local_pickup_offer := false
+	var has_remote_pickup_offer := false
 	for offer in offers:
 		assert(offer.offered_ship_id == &"starter_ship")
-		assert(offer.pickup_port_id == &"mersin")
-		assert(offer.delivery_port_id == &"izmir")
+		assert(port_manager.is_unlocked(offer.pickup_port_id))
+		assert(port_manager.is_unlocked(offer.delivery_port_id))
+		assert(offer.pickup_port_id != offer.delivery_port_id)
+		assert(port_manager.has_sea_route(offer.pickup_port_id, offer.delivery_port_id))
+		if offer.pickup_port_id == &"mersin":
+			has_local_pickup_offer = true
+			assert(is_equal_approx(offer.loading_duration_sec, 0.5))
+		else:
+			has_remote_pickup_offer = true
+			assert(offer.loading_duration_sec > 0.9)
 		assert(offer.estimated_duration_sec > 0.0)
 		assert(offer.duration_class == Mission.DurationClass.SHORT)
 		assert(offer.reward > 0)
@@ -124,24 +134,36 @@ func _run() -> void:
 		var offered_cargo: CargoTypeData = mission_manager.get_cargo_type(offer.cargo_type_id)
 		assert(starter_ship_data.can_carry(offered_cargo))
 		assert(offer.cargo_type_id != &"food")
+	assert(has_local_pickup_offer)
+	assert(has_remote_pickup_offer)
 
 	event_bus.ship_tapped.emit(&"starter_ship")
 	await process_frame
-	var izmir_node: Node = port_manager.get_port_node(&"izmir")
-	var mission_badge := izmir_node.get_node("MissionBadge") as Button
+	var first_offer: Mission = null
+	for offer in offers:
+		if offer.pickup_port_id != &"mersin":
+			first_offer = offer
+			break
+	assert(first_offer != null)
+	var pickup_node: Node = port_manager.get_port_node(first_offer.pickup_port_id)
+	var mission_badge := pickup_node.get_node("MissionBadge") as Button
+	var pickup_offer_count := 0
+	for offer in offers:
+		if offer.pickup_port_id == first_offer.pickup_port_id:
+			pickup_offer_count += 1
 	assert(mission_badge.visible)
-	assert(mission_badge.text == "3")
-	event_bus.port_tapped.emit(&"izmir")
+	assert(mission_badge.text == str(pickup_offer_count))
+	event_bus.port_tapped.emit(first_offer.pickup_port_id)
 	await process_frame
 	assert(world.get_node("UI/MissionOfferPanel").visible)
 
-	assert(mission_manager.accept_offer(offers[0].id))
+	assert(mission_manager.accept_offer(first_offer.id))
 	await process_frame
 	var active_missions: Array = mission_manager.get_active_missions()
 	assert(active_missions.size() == 1)
 	var mission: Mission = active_missions[0]
-	assert(mission.pickup_port_id == &"mersin")
-	assert(mission.delivery_port_id == &"izmir")
+	assert(mission.pickup_port_id == first_offer.pickup_port_id)
+	assert(mission.delivery_port_id == first_offer.delivery_port_id)
 	assert(mission.reward > 0)
 	assert(fleet_manager.get_ship_mission_remaining_sec(&"starter_ship") > 0.0)
 	assert(world.get_node("UI/FleetStatusPanel") is FleetStatusPanel)

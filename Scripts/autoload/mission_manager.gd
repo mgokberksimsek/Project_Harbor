@@ -55,18 +55,41 @@ func refresh_offers() -> void:
 		return
 
 	for ship_id in idle_ship_ids:
-		var pickup_port_id := FleetManager.get_ship_current_port(ship_id)
-		if pickup_port_id == &"":
+		var ship_port_id := FleetManager.get_ship_current_port(ship_id)
+		if ship_port_id == &"":
 			continue
-		var destinations := _get_destinations(pickup_port_id)
-		var candidates: Array = _build_offer_candidates(destinations, ship_id)
+		var candidates: Array[Dictionary] = _build_offer_candidates(ship_port_id, ship_id)
+
+		# Always keep a useful local job and, whenever possible, a remote
+		# pickup job among the three choices.
+		for pickup_is_current_port in [true, false]:
+			var candidate_index := _pick_candidate_index_for_pickup(
+				candidates,
+				ship_port_id,
+				pickup_is_current_port
+			)
+			if candidate_index < 0 or _offers_for_ship(ship_id) >= OFFER_COUNT_PER_SHIP:
+				continue
+			var candidate: Dictionary = candidates[candidate_index]
+			candidates.remove_at(candidate_index)
+			_offers.append(_create_offer(
+				ship_id,
+				ship_port_id,
+				candidate["pickup_id"],
+				candidate["destination_id"],
+				candidate["cargo_type"]
+			))
+
 		for _offer_index in range(mini(OFFER_COUNT_PER_SHIP, candidates.size())):
+			if _offers_for_ship(ship_id) >= OFFER_COUNT_PER_SHIP:
+				break
 			var candidate_index := _pick_candidate_index(candidates)
 			var candidate: Dictionary = candidates[candidate_index]
 			candidates.remove_at(candidate_index)
 			_offers.append(_create_offer(
 				ship_id,
-				pickup_port_id,
+				ship_port_id,
+				candidate["pickup_id"],
 				candidate["destination_id"],
 				candidate["cargo_type"]
 			))
@@ -83,8 +106,6 @@ func accept_offer(offer_id: String, ship_id: StringName = &"") -> bool:
 	if selected_ship_id != offer.offered_ship_id:
 		return false
 
-	if FleetManager.get_ship_current_port(selected_ship_id) != offer.pickup_port_id:
-		return false
 	var ship_data: ShipData = FleetManager.get_ship_data(selected_ship_id)
 	var cargo_type := get_cargo_type(offer.cargo_type_id)
 	if ship_data == null or not ship_data.can_carry(cargo_type):
@@ -102,6 +123,7 @@ func accept_offer(offer_id: String, ship_id: StringName = &"") -> bool:
 
 func _create_offer(
 		ship_id: StringName,
+		ship_port_id: StringName,
 		pickup_port_id: StringName,
 		delivery_port_id: StringName,
 		cargo_type: CargoTypeData
@@ -123,17 +145,23 @@ func _create_offer(
 		cargo_type,
 		mission.cargo_amount
 	)
+	mission.loading_duration_sec = FleetManager.get_mission_loading_duration(
+		ship_port_id,
+		pickup_port_id
+	)
 	mission.estimated_duration_sec = FleetManager.estimate_mission_duration(
 		ship_id,
 		pickup_port_id,
-		delivery_port_id
+		delivery_port_id,
+		ship_port_id,
+		mission.loading_duration_sec
 	)
 	mission.duration_class = _classify_duration(mission.estimated_duration_sec)
 	return mission
 
 
 func _build_offer_candidates(
-		destinations: Array[StringName],
+		ship_port_id: StringName,
 		ship_id: StringName
 ) -> Array[Dictionary]:
 	var candidates: Array[Dictionary] = []
@@ -141,14 +169,44 @@ func _build_offer_candidates(
 	var compatible_cargo_types := _get_compatible_cargo_types(ship_data)
 	if compatible_cargo_types.is_empty():
 		return candidates
-	for destination_id in destinations:
-		for cargo_type in compatible_cargo_types:
-			candidates.append({
-				"destination_id": destination_id,
-				"cargo_type": cargo_type,
-				"weight": cargo_type.spawn_weight,
-			})
+	for pickup_id in PortManager.get_unlocked_port_ids():
+		if pickup_id != ship_port_id \
+				and not PortManager.has_sea_route(ship_port_id, pickup_id):
+			continue
+		for destination_id in _get_destinations(pickup_id):
+			for cargo_type in compatible_cargo_types:
+				candidates.append({
+					"pickup_id": pickup_id,
+					"destination_id": destination_id,
+					"cargo_type": cargo_type,
+					"weight": cargo_type.spawn_weight,
+				})
 	return candidates
+
+
+func _offers_for_ship(ship_id: StringName) -> int:
+	var count := 0
+	for offer in _offers:
+		if offer.offered_ship_id == ship_id:
+			count += 1
+	return count
+
+
+func _pick_candidate_index_for_pickup(
+		candidates: Array[Dictionary],
+		ship_port_id: StringName,
+		pickup_is_current_port: bool
+) -> int:
+	var matching_candidates: Array[Dictionary] = []
+	var original_indices: Array[int] = []
+	for index in range(candidates.size()):
+		var is_current_port: bool = candidates[index]["pickup_id"] == ship_port_id
+		if is_current_port == pickup_is_current_port:
+			matching_candidates.append(candidates[index])
+			original_indices.append(index)
+	if matching_candidates.is_empty():
+		return -1
+	return original_indices[_pick_candidate_index(matching_candidates)]
 
 
 func _pick_candidate_index(candidates: Array[Dictionary]) -> int:
