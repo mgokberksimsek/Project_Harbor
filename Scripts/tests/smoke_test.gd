@@ -121,16 +121,17 @@ func _run() -> void:
 	var has_remote_pickup_offer := false
 	for offer in offers:
 		assert(offer.offered_ship_id == &"starter_ship")
+		assert(offer.origin_port_id == &"mersin")
 		assert(port_manager.is_unlocked(offer.pickup_port_id))
 		assert(port_manager.is_unlocked(offer.delivery_port_id))
 		assert(offer.pickup_port_id != offer.delivery_port_id)
 		assert(port_manager.has_sea_route(offer.pickup_port_id, offer.delivery_port_id))
 		if offer.pickup_port_id == &"mersin":
 			has_local_pickup_offer = true
-			assert(is_equal_approx(offer.loading_duration_sec, 0.5))
+			assert(is_equal_approx(offer.loading_duration_sec, 1.7))
 		else:
 			has_remote_pickup_offer = true
-			assert(offer.loading_duration_sec > 0.9)
+			assert(is_equal_approx(offer.loading_duration_sec, 1.7))
 		assert(offer.estimated_duration_sec > 0.0)
 		assert(offer.duration_class == Mission.DurationClass.SHORT)
 		assert(offer.reward > 0)
@@ -180,8 +181,50 @@ func _run() -> void:
 	assert(mission.delivery_port_id == first_offer.delivery_port_id)
 	assert(mission.reward > 0)
 	assert(fleet_manager.get_ship_mission_remaining_sec(&"starter_ship") > 0.0)
+	await process_frame
+	var complete_preview_route: PackedVector2Array = starter_map_ship.get(
+		"_mission_preview_route_points"
+	)
+	var pickup_sailing_route: PackedVector2Array = starter_map_ship.get(
+		"_sailing_route_points"
+	)
+	var pickup_port_node: Node2D = port_manager.get_port_node(mission.pickup_port_id)
+	var origin_port_node: Node2D = port_manager.get_port_node(mission.origin_port_id)
+	assert(not pickup_sailing_route.has(origin_port_node.global_position))
+	var departure_direction := pickup_sailing_route[0].direction_to(
+		pickup_sailing_route[1]
+	)
+	var icon := starter_map_ship.get_node("Icon") as Sprite2D
+	var initial_ship_forward := Vector2.RIGHT.rotated(
+		icon.rotation + starter_map_ship.ship_data.sprite_forward_angle_rad
+	)
+	assert(departure_direction.dot(initial_ship_forward) > 0.99)
+	assert(complete_preview_route.size() > 3)
+	assert(complete_preview_route.has(pickup_port_node.global_position))
+	assert(complete_preview_route[complete_preview_route.size() - 1].is_equal_approx(
+		port_manager.get_port_node(mission.delivery_port_id).global_position
+	))
+	starter_route_line.set_route(complete_preview_route, 0.0, true)
+	var complete_preview_length := starter_route_line.get_remaining_length()
+	var initial_dash_segments := starter_route_line.get_visible_dash_segments()
+	var preview_pickup_length: float = starter_map_ship.get("_preview_pickup_route_length")
+	var preview_total_length: float = starter_map_ship.get("_preview_total_route_length")
+	starter_route_line.set_route(
+		complete_preview_route,
+		0.5 * preview_pickup_length / preview_total_length,
+		true
+	)
+	var progressed_dash_segments := starter_route_line.get_visible_dash_segments()
+	assert(progressed_dash_segments.size() < initial_dash_segments.size())
+	assert(progressed_dash_segments.back()[0].is_equal_approx(initial_dash_segments.back()[0]))
+	assert(progressed_dash_segments.back()[1].is_equal_approx(initial_dash_segments.back()[1]))
 	assert(world.get_node("UI/FleetStatusPanel") is FleetStatusPanel)
 	var delivery_state_safety := 0
+	mission.leg_duration_sec = 0.0
+	await process_frame
+	assert(fleet_manager.get_ship_state(&"starter_ship") == ShipRuntimeState.State.LOADING)
+	assert(fleet_manager.get_ship_dock_slot_index(&"starter_ship") == -1)
+	assert(starter_map_ship.global_position.is_equal_approx(pickup_port_node.global_position))
 	while fleet_manager.get_ship_state(&"starter_ship") \
 			!= ShipRuntimeState.State.SAILING_TO_DELIVERY \
 			and delivery_state_safety < 3:
@@ -190,6 +233,7 @@ func _run() -> void:
 		delivery_state_safety += 1
 	assert(fleet_manager.get_ship_state(&"starter_ship") \
 		== ShipRuntimeState.State.SAILING_TO_DELIVERY)
+	assert(starter_route_line.get_remaining_length() < complete_preview_length)
 	var delivery_route: PackedVector2Array = starter_map_ship.get("_sailing_route_points")
 	var delivery_port_node: Node2D = port_manager.get_port_node(mission.delivery_port_id)
 	assert(delivery_route.size() > 2)

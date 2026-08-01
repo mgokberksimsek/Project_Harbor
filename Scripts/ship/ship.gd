@@ -17,14 +17,23 @@ const MAX_TURN_SPEED_RAD_PER_SEC := 4.5
 const MIN_HEADING_MOVEMENT_SQUARED := 0.01
 const ROUTE_TANGENT_SAMPLE_PROGRESS := 0.015
 const DOCK_TRANSITION_DURATION_SEC := 0.9
+const DEPARTURE_HEADING_LEAD_MIN := 24.0
+const DEPARTURE_HEADING_LEAD_MAX := 60.0
+const DEPARTURE_HEADING_LEAD_RATIO := 0.16
+const DEPARTURE_TURN_SPEED_RAD_PER_SEC := 1.8
+const DEPARTURE_TURN_SNAP_RAD := 0.02
 const SELECTED_SCALE_MULTIPLIER := 1.05
 const SELECTION_SCALE_TWEEN_SEC := 0.16
 
 var _sailing_route_points := PackedVector2Array()
+var _mission_preview_route_points := PackedVector2Array()
+var _preview_pickup_route_length := 0.0
+var _preview_total_route_length := 0.0
 var _is_selected := false
 var _turn_velocity := 0.0
 var _departure_start_rotation := 0.0
 var _preparing_departure_heading := false
+var _smoothing_pickup_departure_turn := false
 var _dock_transition_active := false
 var _dock_transition_elapsed := 0.0
 var _dock_transition_start := Vector2.ZERO
@@ -61,7 +70,7 @@ func _process(delta: float) -> void:
 	var heading_locked_to_route := false
 	var heading_prepared_for_departure := false
 	if sailing_to_pickup or sailing_to_delivery:
-		heading_locked_to_route = _update_sailing_position(state)
+		heading_locked_to_route = _update_sailing_position(state, delta)
 	else:
 		_update_docked_position(delta)
 	if state == ShipRuntimeState.State.LOADING:
@@ -75,12 +84,19 @@ func _snap_to_home_port() -> void:
 	var dock_position := FleetManager.get_ship_dock_position(ship_id)
 	if dock_position != Vector2.ZERO:
 		global_position = dock_position
-	else:
+	elif FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.IDLE:
 		push_warning("Ship '%s': home port '%s' has no dock position." % [ship_id, home_port_id])
 
 
 func _update_docked_position(delta: float) -> void:
 	var dock_position := FleetManager.get_ship_dock_position(ship_id)
+	if dock_position == Vector2.ZERO \
+			and FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.LOADING:
+		var mission := FleetManager.get_ship_mission(ship_id)
+		var pickup_port := PortManager.get_port_node(mission.pickup_port_id) \
+			if mission != null else null
+		if pickup_port != null:
+			dock_position = pickup_port.global_position
 	if dock_position == Vector2.ZERO:
 		return
 	if _dock_transition_active:
@@ -165,7 +181,7 @@ func calculate_visual_rotation(
 	return wrapf(direction.angle() - sprite_forward_angle_rad, -PI, PI)
 
 
-func _update_sailing_position(state: ShipRuntimeState.State) -> bool:
+func _update_sailing_position(state: ShipRuntimeState.State, delta: float) -> bool:
 	var mission := FleetManager.get_ship_mission(ship_id)
 	if mission == null:
 		return false
@@ -185,18 +201,35 @@ func _update_sailing_position(state: ShipRuntimeState.State) -> bool:
 		else:
 			_sailing_route_points = _build_route_from_current_position(
 				origin_id,
-				destination_id
+				destination_id,
+				true
 			)
+			_build_remote_mission_preview(mission)
 	var progress := mission.get_leg_progress()
 	var route_position := _get_position_along_points(_sailing_route_points, progress)
 	if route_position != Vector2.ZERO:
 		global_position = route_position
 	var tangent := _get_direction_along_points(_sailing_route_points, progress)
 	if not tangent.is_zero_approx():
-		_icon.rotation = calculate_visual_rotation(
+		var target_rotation := calculate_visual_rotation(
 			tangent,
 			ship_data.sprite_forward_angle_rad
 		)
+		if state == ShipRuntimeState.State.SAILING_TO_PICKUP \
+				and _smoothing_pickup_departure_turn:
+			var angle_error := wrapf(target_rotation - _icon.rotation, -PI, PI)
+			var maximum_turn := DEPARTURE_TURN_SPEED_RAD_PER_SEC * delta
+			if absf(angle_error) <= maxf(maximum_turn, DEPARTURE_TURN_SNAP_RAD):
+				_icon.rotation = target_rotation
+				_smoothing_pickup_departure_turn = false
+			else:
+				_icon.rotation = wrapf(
+					_icon.rotation + signf(angle_error) * maximum_turn,
+					-PI,
+					PI
+				)
+		else:
+			_icon.rotation = target_rotation
 		_turn_velocity = 0.0
 		return true
 	return false
@@ -206,16 +239,32 @@ func _on_ship_state_changed(changed_ship_id: StringName, previous_state: int, ne
 	if changed_ship_id == ship_id:
 		var mission := FleetManager.get_ship_mission(ship_id)
 		if new_state == ShipRuntimeState.State.LOADING and mission != null:
+			_smoothing_pickup_departure_turn = false
+			if FleetManager.get_ship_dock_slot_index(ship_id) < 0 \
+					and not _sailing_route_points.is_empty():
+				global_position = _sailing_route_points[_sailing_route_points.size() - 1]
+			_clear_mission_preview()
 			_sailing_route_points = _build_delivery_route(mission)
 			_departure_start_rotation = _icon.rotation
 			_preparing_departure_heading = true
 		elif new_state == ShipRuntimeState.State.SAILING_TO_DELIVERY:
 			_preparing_departure_heading = false
+			_smoothing_pickup_departure_turn = false
 			if _sailing_route_points.is_empty() and mission != null:
 				_sailing_route_points = _build_delivery_route(mission)
+		elif new_state == ShipRuntimeState.State.SAILING_TO_PICKUP:
+			_preparing_departure_heading = false
+			_smoothing_pickup_departure_turn = mission != null \
+				and FleetManager.get_ship_current_port(ship_id) \
+				!= mission.pickup_port_id
+			_turn_velocity = 0.0
+			_sailing_route_points.clear()
+			_clear_mission_preview()
 		else:
 			_preparing_departure_heading = false
+			_smoothing_pickup_departure_turn = false
 			_sailing_route_points.clear()
+			_clear_mission_preview()
 		if new_state == ShipRuntimeState.State.UNLOADING \
 				or (new_state == ShipRuntimeState.State.LOADING \
 				and previous_state == ShipRuntimeState.State.SAILING_TO_PICKUP):
@@ -247,7 +296,8 @@ func _build_delivery_route(mission: Mission) -> PackedVector2Array:
 
 func _build_route_from_current_position(
 		origin_port_id: StringName,
-		destination_port_id: StringName
+		destination_port_id: StringName,
+		preserve_departure_heading: bool = false
 ) -> PackedVector2Array:
 	var sea_points := PortManager.get_route_points(
 		origin_port_id,
@@ -256,8 +306,57 @@ func _build_route_from_current_position(
 	if sea_points.is_empty():
 		return sea_points
 	var dock_to_dock_points := PackedVector2Array([global_position])
-	dock_to_dock_points.append_array(sea_points)
+	if preserve_departure_heading and sea_points.size() >= 2:
+		var distance_to_first_sea_point := global_position.distance_to(sea_points[1])
+		var departure_lead_length := clampf(
+			distance_to_first_sea_point * DEPARTURE_HEADING_LEAD_RATIO,
+			DEPARTURE_HEADING_LEAD_MIN,
+			DEPARTURE_HEADING_LEAD_MAX
+		)
+		var current_forward := Vector2.RIGHT.rotated(
+			_icon.rotation + ship_data.sprite_forward_angle_rad
+		)
+		dock_to_dock_points.append(
+			global_position + current_forward * departure_lead_length
+		)
+	# global_position already represents the departure point. Skipping the
+	# route's authored origin-center point lets a ship leave its berth directly
+	# toward the first sea waypoint instead of detouring through its own port.
+	# Remote pickups also receive a short control point in the ship's current
+	# forward direction, so the smoothed route curves naturally out of the berth.
+	for point_index in range(1, sea_points.size()):
+		dock_to_dock_points.append(sea_points[point_index])
 	return PortManager.smooth_polyline_points(dock_to_dock_points)
+
+
+func _build_remote_mission_preview(mission: Mission) -> void:
+	_clear_mission_preview()
+	if mission == null \
+			or FleetManager.get_ship_current_port(ship_id) == mission.pickup_port_id \
+			or _sailing_route_points.size() < 2:
+		return
+
+	var delivery_points := PortManager.get_smoothed_route_points(
+		mission.pickup_port_id,
+		mission.delivery_port_id
+	)
+	if delivery_points.size() < 2:
+		return
+
+	_mission_preview_route_points = _sailing_route_points.duplicate()
+	# Both legs contain the pickup port center. Keep the first copy so the
+	# red preview remains a single continuous polyline without a zero-length
+	# duplicate segment at the transfer point.
+	for point_index in range(1, delivery_points.size()):
+		_mission_preview_route_points.append(delivery_points[point_index])
+	_preview_pickup_route_length = _get_polyline_length(_sailing_route_points)
+	_preview_total_route_length = _get_polyline_length(_mission_preview_route_points)
+
+
+func _clear_mission_preview() -> void:
+	_mission_preview_route_points.clear()
+	_preview_pickup_route_length = 0.0
+	_preview_total_route_length = 0.0
 
 
 func _on_ship_selection_changed(selected_ship_id: StringName) -> void:
@@ -298,9 +397,15 @@ func _update_route_visual(state: ShipRuntimeState.State) -> void:
 		)
 	elif state == ShipRuntimeState.State.SAILING_TO_PICKUP \
 			and FleetManager.get_ship_current_port(ship_id) != mission.pickup_port_id:
+		if _mission_preview_route_points.is_empty():
+			_build_remote_mission_preview(mission)
+		var preview_progress := 0.0
+		if _preview_total_route_length > 0.001:
+			preview_progress = mission.get_leg_progress() \
+				* _preview_pickup_route_length / _preview_total_route_length
 		_route_line.set_route(
-			_sailing_route_points,
-			mission.get_leg_progress(),
+			_mission_preview_route_points,
+			preview_progress,
 			_is_selected
 		)
 	else:
@@ -328,6 +433,13 @@ func _get_position_along_points(points: PackedVector2Array, progress: float) -> 
 			return segment_start.lerp(segment_end, remaining / segment_length)
 		remaining -= segment_length
 	return points[points.size() - 1]
+
+
+func _get_polyline_length(points: PackedVector2Array) -> float:
+	var total_length := 0.0
+	for point_index in range(points.size() - 1):
+		total_length += points[point_index].distance_to(points[point_index + 1])
+	return total_length
 
 
 func _get_direction_along_points(

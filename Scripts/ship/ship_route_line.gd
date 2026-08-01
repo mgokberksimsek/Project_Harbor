@@ -45,17 +45,36 @@ func get_remaining_length() -> float:
 
 
 func _draw() -> void:
-	var remaining_points := _get_remaining_points()
-	if remaining_points.size() < 2:
-		return
 	var line_color := SELECTED_COLOR if _highlighted else UNSELECTED_COLOR
 	var line_width := SELECTED_WIDTH if _highlighted else UNSELECTED_WIDTH
+	for dash_segment in get_visible_dash_segments():
+		draw_line(
+			dash_segment[0],
+			dash_segment[1],
+			line_color,
+			line_width,
+			true
+		)
+
+
+func get_visible_dash_segments() -> Array[PackedVector2Array]:
+	var visible_segments: Array[PackedVector2Array] = []
+	if _route_points.size() < 2:
+		return visible_segments
+	var total_length := _get_polyline_length(_route_points)
+	if total_length <= 0.001:
+		return visible_segments
+	var consumed_length := total_length * _progress
 	var drawing_dash := true
 	var phase_remaining := DASH_LENGTH
+	var route_distance := 0.0
 
-	for point_index in range(remaining_points.size() - 1):
-		var segment_start := remaining_points[point_index]
-		var segment_end := remaining_points[point_index + 1]
+	# Walk the complete route so the dash/gap phase always stays anchored to
+	# the original path. Progress only clips travelled portions; it never
+	# shifts the dashes that are still ahead of the ship.
+	for point_index in range(_route_points.size() - 1):
+		var segment_start := _route_points[point_index]
+		var segment_end := _route_points[point_index + 1]
 		var segment_length := segment_start.distance_to(segment_end)
 		if segment_length <= 0.001:
 			continue
@@ -63,19 +82,27 @@ func _draw() -> void:
 		var travelled := 0.0
 		while travelled < segment_length:
 			var step := minf(phase_remaining, segment_length - travelled)
-			if drawing_dash:
-				draw_line(
-					segment_start + direction * travelled,
-					segment_start + direction * (travelled + step),
-					line_color,
-					line_width,
-					true
+			var piece_start_distance := route_distance + travelled
+			var piece_end_distance := piece_start_distance + step
+			if drawing_dash and piece_end_distance > consumed_length:
+				var visible_start_offset := travelled + maxf(
+					consumed_length - piece_start_distance,
+					0.0
 				)
+				var visible_start := segment_start + direction * visible_start_offset
+				var visible_end := segment_start + direction * (travelled + step)
+				if visible_start.distance_squared_to(visible_end) > 0.001:
+					visible_segments.append(PackedVector2Array([
+						visible_start,
+						visible_end,
+					]))
 			travelled += step
 			phase_remaining -= step
 			if phase_remaining <= 0.001:
 				drawing_dash = not drawing_dash
 				phase_remaining = DASH_LENGTH if drawing_dash else GAP_LENGTH
+		route_distance += segment_length
+	return visible_segments
 
 
 func _get_remaining_points() -> PackedVector2Array:

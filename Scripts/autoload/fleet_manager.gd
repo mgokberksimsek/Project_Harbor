@@ -18,10 +18,9 @@ extends Node
 ## Stationary legs have a fixed duration rather than a distance-derived one.
 ## Reserved as tunable constants for now; a natural place for "higher-level
 ## ports load faster" to plug in later (Phase 5, EconomyManager territory).
-const LOADING_DURATION_SEC := 0.5
+const LOADING_DURATION_SEC := 1.7
 const UNLOADING_DURATION_SEC := 0.5
 const MIN_SAILING_DURATION_SEC := 2.0
-const REMOTE_PICKUP_EXTRA_WAIT_SEC := 1.2
 const SHIP_RESOURCE_DIR := "res://Resources/ships"
 const BASE_FLEET_CAPACITY := 6
 
@@ -177,6 +176,18 @@ func _move_reservation_to_port(ship_id: StringName, port_id: StringName) -> int:
 	return new_slot_index
 
 
+func _release_dock_reservation(ship_id: StringName) -> void:
+	if not _states.has(ship_id):
+		return
+	var runtime: ShipRuntimeState = _states[ship_id]
+	var previous_port_id := runtime.dock_port_id
+	var previous_slot_index := runtime.dock_slot_index
+	runtime.dock_port_id = &""
+	runtime.dock_slot_index = -1
+	if previous_port_id != &"" and previous_slot_index >= 0:
+		_fill_vacated_dock_slot(previous_port_id, previous_slot_index)
+
+
 func _fill_vacated_dock_slot(port_id: StringName, vacated_slot_index: int) -> void:
 	var replacement_ship_id: StringName = &""
 	var replacement_slot_index := vacated_slot_index
@@ -204,7 +215,9 @@ func _fill_vacated_dock_slot(port_id: StringName, vacated_slot_index: int) -> vo
 func _get_expected_dock_port(runtime: ShipRuntimeState) -> StringName:
 	if runtime.current_mission != null:
 		if runtime.state == ShipRuntimeState.State.SAILING_TO_PICKUP:
-			return runtime.current_mission.pickup_port_id
+			return &""
+		if runtime.state == ShipRuntimeState.State.LOADING:
+			return &""
 		if runtime.state == ShipRuntimeState.State.SAILING_TO_DELIVERY:
 			return runtime.current_mission.delivery_port_id
 	return runtime.current_port_id
@@ -248,14 +261,7 @@ func _is_ship_docked(ship_id: StringName) -> bool:
 	if not _states.has(ship_id):
 		return false
 	var state: ShipRuntimeState.State = _states[ship_id].state
-	var pickup_is_current_port := false
-	if state == ShipRuntimeState.State.SAILING_TO_PICKUP:
-		var mission: Mission = _states[ship_id].current_mission
-		pickup_is_current_port = mission != null \
-			and mission.pickup_port_id == _states[ship_id].current_port_id
-	return pickup_is_current_port \
-		or state == ShipRuntimeState.State.IDLE \
-		or state == ShipRuntimeState.State.LOADING \
+	return state == ShipRuntimeState.State.IDLE \
 		or state == ShipRuntimeState.State.UNLOADING
 
 
@@ -496,11 +502,9 @@ func estimate_mission_duration(
 
 
 func get_mission_loading_duration(
-		origin_port_id: StringName,
-		pickup_port_id: StringName
+		_origin_port_id: StringName,
+		_pickup_port_id: StringName
 ) -> float:
-	if origin_port_id != &"" and origin_port_id != pickup_port_id:
-		return LOADING_DURATION_SEC + REMOTE_PICKUP_EXTRA_WAIT_SEC
 	return LOADING_DURATION_SEC
 
 
@@ -613,10 +617,15 @@ func _start_leg(ship_id: StringName, new_state: ShipRuntimeState.State,
 
 	mission.stage = _state_to_mission_stage(new_state)
 	mission.start_leg(duration, leg_start_unix)
-	# A departing ship releases its old berth and claims the first free berth
-	# at its next port. The last docked ship at the origin fills the gap, while
-	# existing reservations at the destination remain untouched.
-	_move_reservation_to_port(ship_id, to_port_id)
+	# Loading happens at the port center, not in a permanent berth. The ship
+	# releases its berth for both local and remote pickups, then only reserves
+	# a new berth when it starts the loaded delivery leg.
+	var pickup_or_loading_leg := new_state == ShipRuntimeState.State.SAILING_TO_PICKUP \
+		or new_state == ShipRuntimeState.State.LOADING
+	if pickup_or_loading_leg:
+		_release_dock_reservation(ship_id)
+	else:
+		_move_reservation_to_port(ship_id, to_port_id)
 
 	var previous := state.state
 	state.state = new_state

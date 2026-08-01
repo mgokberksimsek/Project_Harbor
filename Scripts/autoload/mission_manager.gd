@@ -105,6 +105,9 @@ func accept_offer(offer_id: String, ship_id: StringName = &"") -> bool:
 	var selected_ship_id := offer.offered_ship_id if ship_id == &"" else ship_id
 	if selected_ship_id != offer.offered_ship_id:
 		return false
+	if offer.origin_port_id != &"" \
+			and FleetManager.get_ship_current_port(selected_ship_id) != offer.origin_port_id:
+		return false
 
 	var ship_data: ShipData = FleetManager.get_ship_data(selected_ship_id)
 	var cargo_type := get_cargo_type(offer.cargo_type_id)
@@ -132,6 +135,7 @@ func _create_offer(
 	var mission := Mission.new()
 	mission.id = "offer-%d-%d" % [Time.get_unix_time_from_system(), _mission_sequence]
 	mission.offered_ship_id = ship_id
+	mission.origin_port_id = ship_port_id
 	mission.pickup_port_id = pickup_port_id
 	mission.delivery_port_id = delivery_port_id
 	mission.cargo_type_id = cargo_type.id if cargo_type != null else &""

@@ -28,15 +28,17 @@ enum DurationClass {
 }
 
 var id: String
+## Port where the offered ship was waiting when this mission was generated.
+## This distinguishes a local pickup from an empty repositioning leg.
+var origin_port_id: StringName
 var pickup_port_id: StringName
 var delivery_port_id: StringName
 var cargo_type_id: StringName
 var cargo_amount: int = 1
 var reward: int
 var estimated_duration_sec: float = 0.0
-## Loading lasts longer after an empty repositioning leg, giving the ship
-## enough time to settle into its berth before departing with cargo.
-var loading_duration_sec: float = 0.5
+## Time spent handling cargo at the pickup port center before departure.
+var loading_duration_sec: float = 1.7
 var duration_class: DurationClass = DurationClass.SHORT
 var stage: Stage = Stage.AWAITING_PICKUP
 
@@ -87,6 +89,7 @@ func is_leg_complete_at(unix_time: float) -> bool:
 func to_dict() -> Dictionary:
 	return {
 		"id": id,
+		"origin_port_id": String(origin_port_id),
 		"pickup_port_id": String(pickup_port_id),
 		"delivery_port_id": String(delivery_port_id),
 		"cargo_type_id": String(cargo_type_id),
@@ -106,13 +109,14 @@ func to_dict() -> Dictionary:
 static func from_dict(data: Dictionary) -> Mission:
 	var mission := Mission.new()
 	mission.id = data.get("id", "")
+	mission.origin_port_id = StringName(data.get("origin_port_id", ""))
 	mission.pickup_port_id = StringName(data.get("pickup_port_id", ""))
 	mission.delivery_port_id = StringName(data.get("delivery_port_id", ""))
 	mission.cargo_type_id = StringName(data.get("cargo_type_id", ""))
 	mission.cargo_amount = maxi(int(data.get("cargo_amount", 1)), 1)
 	mission.reward = data.get("reward", 0)
 	mission.estimated_duration_sec = data.get("estimated_duration_sec", 0.0)
-	mission.loading_duration_sec = maxf(float(data.get("loading_duration_sec", 0.5)), 0.0)
+	mission.loading_duration_sec = maxf(float(data.get("loading_duration_sec", 1.7)), 0.0)
 	mission.duration_class = data.get("duration_class", DurationClass.SHORT) as DurationClass
 	mission.stage = data.get("stage", Stage.AWAITING_PICKUP) as Stage
 	mission.offered_ship_id = StringName(data.get("offered_ship_id", ""))
