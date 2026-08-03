@@ -43,7 +43,7 @@ Data resources (.tres)  →  Autoload managers  →  EventBus  →  Scenes & UI
 | Autoload | Owns | Does NOT own |
 |---|---|---|
 | `EventBus` | All cross-system signals | Any state |
-| `GameManager` | Currency, game-flow/session state | Ports, ships, missions |
+| `GameManager` | Currency, tutorial and game-flow/session state | Ports, ships, missions |
 | `PortManager` | Port registry, unlock/level state, id lookup | Port visuals (Port scene) |
 | `FleetManager` | Ship registry (player + future AI), mission assignment | Mission generation |
 | `MissionManager` | Mission generation & lifecycle | Reward math, currency |
@@ -57,8 +57,8 @@ bottom, since later autoloads may reference earlier ones on `_ready()`:
 1. `EventBus`
 2. `PortManager`
 3. `FleetManager`
-4. `MissionManager`
-5. `EconomyManager`
+4. `EconomyManager`
+5. `MissionManager`
 6. `CompanyManager`
 7. `GameManager`
 8. `SaveManager`

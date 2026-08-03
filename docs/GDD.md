@@ -336,8 +336,8 @@ görevler bilinçli olarak kısa tutulur; çevrimdışı ilerleme esas değerini
 ve ileri oyunda kazanır.
 
 Oyun verisi sürümlü JSON olarak otomatik kaydedilir. Para, liman durumları,
-gemi sahipliği ve geliştirmeleri ile aktif görevler kayda dahildir. Oyuncu
-ayarlar içinden kaydı silip temiz bir oyuna başlayabilir.
+gemi sahipliği ve geliştirmeleri, aktif görevler ve öğretici ilerlemesi kayda
+dahildir. Oyuncu ayarlar içinden kaydı silip temiz bir oyuna başlayabilir.
 
 ## 12. Kontroller ve kullanıcı arayüzü
 
@@ -366,6 +366,14 @@ ayarlar içinden kaydı silip temiz bir oyuna başlayabilir.
 doğrulanmamıştır. Üç ila altı gemiyle yapılacak kullanılabilirlik testlerinden
 sonra filtreleme, sıralama, görevde/boşta gruplama veya kompakt filo görünümü
 eklenebilir.
+
+### 12.4 Başlangıç öğreticisi
+
+Öğretici ayrı bir modal ekran açmadan mevcut üst yönlendirme alanını kullanır.
+Oyuncudan sırasıyla şirket merkezindeki başlangıç gemisini seçmesi, görev
+işaretli bir limana dokunması ve bir görev teklifini kabul etmesi istenir.
+İlk görev başladığında öğretici tamamlanır ve bu durum kayıt verisinde saklanır.
+Eski kayıtlar öğreticiyi tamamlamış kabul edilir.
 
 ## 13. Görsel yön
 

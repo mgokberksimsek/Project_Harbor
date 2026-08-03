@@ -58,6 +58,7 @@ signal ship_dock_slot_changed(
 )
 
 # --- Game flow ---------------------------------------------------------
+signal tutorial_step_changed(new_step: int, previous_step: int)
 signal game_loaded()
 signal game_saved()
 signal offline_progress_applied(elapsed_sec: float)

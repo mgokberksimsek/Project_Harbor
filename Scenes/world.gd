@@ -77,7 +77,8 @@ func clear_map_selection() -> void:
 	_fleet_status_panel.select_ship(&"")
 	_refresh_fleet_panel()
 	_update_mission_markers()
-	_instruction_label.text = "Görevleri görmek için bir gemi seç."
+	if not _update_tutorial_instruction():
+		_instruction_label.text = "Görevleri görmek için bir gemi seç."
 
 
 func _is_ui_at_screen_position(screen_position: Vector2) -> bool:
@@ -119,6 +120,7 @@ func _ready() -> void:
 	EventBus.ship_capacity_upgraded.connect(_on_ship_capacity_upgraded)
 	EventBus.ship_upgrade_failed.connect(_on_ship_upgrade_failed)
 	EventBus.fleet_capacity_reached.connect(_on_fleet_capacity_reached)
+	EventBus.tutorial_step_changed.connect(_on_tutorial_step_changed)
 	EventBus.game_loaded.connect(_on_game_loaded)
 	EventBus.offline_progress_applied.connect(_on_offline_progress_applied)
 	_mission_offer_panel.offer_accepted.connect(_on_offer_accepted)
@@ -129,7 +131,8 @@ func _ready() -> void:
 
 	_update_money(GameManager.money)
 	_update_company_progress()
-	_instruction_label.text = "Görevleri görmek için haritadaki veya filo panelindeki bir gemiyi seç."
+	if not _update_tutorial_instruction():
+		_instruction_label.text = "Görevleri görmek için haritadaki veya filo panelindeki bir gemiyi seç."
 	_on_mission_offers_updated(MissionManager.get_offers())
 	_refresh_fleet_panel()
 
@@ -148,6 +151,10 @@ func _on_money_changed(new_amount: int, _delta: int) -> void:
 
 func _on_company_value_changed(_new_value: int, _delta: int) -> void:
 	_update_company_progress()
+
+
+func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
+	_update_tutorial_instruction()
 
 
 func _on_company_level_changed(new_level: int, previous_level: int) -> void:
@@ -183,13 +190,18 @@ func _on_offer_accepted(offer_id: String) -> void:
 	EventBus.port_selection_changed.emit(&"")
 	_mission_offer_panel.close_panel()
 	if MissionManager.accept_offer(offer_id):
-		_instruction_label.text = "Görev başladı. Gemi rotasına otomatik ilerliyor."
+		if GameManager.tutorial_step == GameManager.TutorialStep.ACCEPT_MISSION:
+			GameManager.set_tutorial_step(GameManager.TutorialStep.COMPLETED)
+			_instruction_label.text = "ÖĞRETİCİ TAMAMLANDI · İlk görevin başladı; gemi otomatik ilerliyor."
+		else:
+			_instruction_label.text = "Görev başladı. Gemi rotasına otomatik ilerliyor."
 	_update_mission_markers()
 
 
 func _on_mission_panel_dismissed() -> void:
 	_open_mission_port_id = &""
 	EventBus.port_selection_changed.emit(&"")
+	_update_tutorial_instruction()
 
 
 func _on_fleet_ship_selected(ship_id: StringName) -> void:
@@ -241,7 +253,10 @@ func _on_ship_tapped(ship_id: StringName) -> void:
 	var ship_data := FleetManager.get_ship_data(ship_id)
 	var ship_name := ship_data.display_name if ship_data != null else String(ship_id)
 	if FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.IDLE:
-		_instruction_label.text = "%s seçildi. Görev işareti bulunan bir limana dokun." % ship_name
+		if GameManager.tutorial_step == GameManager.TutorialStep.SELECT_SHIP:
+			GameManager.set_tutorial_step(GameManager.TutorialStep.SELECT_MISSION_PORT)
+		if not _update_tutorial_instruction():
+			_instruction_label.text = "%s seçildi. Görev işareti bulunan bir limana dokun." % ship_name
 	else:
 		_instruction_label.text = "%s şu anda görevde." % ship_name
 
@@ -254,6 +269,31 @@ func _on_port_tapped(port_id: StringName) -> void:
 		_instruction_label.text = "Önce görev vereceğin gemiyi seç."
 		return
 	_show_port_offers(port_id)
+	if _open_mission_port_id == port_id \
+			and GameManager.tutorial_step == GameManager.TutorialStep.SELECT_MISSION_PORT:
+		GameManager.set_tutorial_step(GameManager.TutorialStep.ACCEPT_MISSION)
+	_update_tutorial_instruction()
+
+
+func _update_tutorial_instruction() -> bool:
+	match GameManager.tutorial_step:
+		GameManager.TutorialStep.SELECT_SHIP:
+			_instruction_label.text = "ÖĞRETİCİ 1/3 · Şirket merkezindeki başlangıç gemisine dokun."
+			return true
+		GameManager.TutorialStep.SELECT_MISSION_PORT:
+			if _selected_ship_id == &"":
+				_instruction_label.text = "ÖĞRETİCİ 2/3 · Gemiyi seç, sonra görev işaretli bir limana dokun."
+			else:
+				_instruction_label.text = "ÖĞRETİCİ 2/3 · Görev işareti bulunan bir limana dokun."
+			return true
+		GameManager.TutorialStep.ACCEPT_MISSION:
+			if _open_mission_port_id == &"":
+				_instruction_label.text = "ÖĞRETİCİ 3/3 · Görev işaretli limana yeniden dokun."
+			else:
+				_instruction_label.text = "ÖĞRETİCİ 3/3 · Açılan tekliflerden bir görevi seç."
+			return true
+		_:
+			return false
 
 
 func _update_money(amount: int) -> void:
@@ -324,6 +364,7 @@ func _on_game_loaded() -> void:
 	_update_company_progress()
 	_on_mission_offers_updated(MissionManager.get_offers())
 	_refresh_fleet_panel()
+	_update_tutorial_instruction()
 
 
 func _on_offline_progress_applied(elapsed_sec: float) -> void:

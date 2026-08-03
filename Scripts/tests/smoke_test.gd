@@ -48,6 +48,10 @@ func _run() -> void:
 	var company_label := world.get_node("UI/CompanyProgressLabel") as Label
 	assert(company_label != null)
 	assert(company_label.text.contains("900 / 1000 CV"))
+	var instruction_label := world.get_node("UI/InstructionLabel") as Label
+	assert(instruction_label != null)
+	assert(int(game_manager.get("tutorial_step")) == 0)
+	assert(instruction_label.text.contains("ÖĞRETİCİ 1/3"))
 	var fleet_panel := world.get_node("UI/FleetStatusPanel") as FleetStatusPanel
 	assert(fleet_panel != null)
 	var fleet_toggle := fleet_panel.get_node("Margin/VBox/ToggleButton") as Button
@@ -186,6 +190,8 @@ func _run() -> void:
 
 	event_bus.ship_tapped.emit(&"starter_ship")
 	await process_frame
+	assert(int(game_manager.get("tutorial_step")) == 1)
+	assert(instruction_label.text.contains("ÖĞRETİCİ 2/3"))
 	var first_offer: Mission = null
 	for offer in offers:
 		if offer.pickup_port_id != &"mersin":
@@ -202,6 +208,8 @@ func _run() -> void:
 	assert(mission_badge.text == str(pickup_offer_count))
 	event_bus.port_tapped.emit(first_offer.pickup_port_id)
 	await process_frame
+	assert(int(game_manager.get("tutorial_step")) == 2)
+	assert(instruction_label.text.contains("ÖĞRETİCİ 3/3"))
 	var pickup_icon := pickup_node.get_node("Icon") as Sprite2D
 	var pickup_highlight := pickup_icon.get_node("SelectionOutline") as Sprite2D
 	assert(pickup_highlight != null)
@@ -210,6 +218,8 @@ func _run() -> void:
 
 	world.call("_on_offer_accepted", first_offer.id)
 	await process_frame
+	assert(game_manager.is_tutorial_completed())
+	assert(instruction_label.text.contains("ÖĞRETİCİ TAMAMLANDI"))
 	assert(not pickup_highlight.visible)
 	assert(starter_selection_outline.visible)
 	world.clear_map_selection()
@@ -412,6 +422,7 @@ func _run() -> void:
 	assert(company_manager.company_value == saved_company_value)
 	assert(company_manager.company_level == saved_company_level)
 	assert(company_manager.peak_company_value >= company_manager.company_value)
+	assert(game_manager.is_tutorial_completed())
 
 	var starter_max_speed_level := starter_ship_data.max_speed_level
 	while fleet_manager.get_ship_speed_level(&"starter_ship") < starter_max_speed_level:
@@ -487,5 +498,9 @@ func _run() -> void:
 	assert(game_manager.money == money_before_full_fleet_purchase)
 	assert(save_manager.delete_save(test_save_path))
 	assert(not save_manager.has_save(test_save_path))
+	game_manager.apply_save_state({"money": 0})
+	assert(game_manager.is_tutorial_completed())
+	game_manager.reset_state()
+	assert(int(game_manager.get("tutorial_step")) == 0)
 	print("SMOKE_TEST_OK reward=%d" % mission.reward)
 	quit(0)

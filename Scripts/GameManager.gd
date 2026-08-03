@@ -1,6 +1,14 @@
 extends Node
 
+enum TutorialStep {
+	SELECT_SHIP,
+	SELECT_MISSION_PORT,
+	ACCEPT_MISSION,
+	COMPLETED,
+}
+
 var money: int = 0
+var tutorial_step: TutorialStep = TutorialStep.SELECT_SHIP
 
 
 func _ready() -> void:
@@ -117,15 +125,43 @@ func _on_port_tapped(port_id: StringName) -> void:
 		try_unlock_port(port_id)
 
 
+func set_tutorial_step(new_step: TutorialStep) -> void:
+	if tutorial_step == new_step:
+		return
+	var previous := tutorial_step
+	tutorial_step = new_step
+	EventBus.tutorial_step_changed.emit(tutorial_step, previous)
+
+
+func is_tutorial_completed() -> bool:
+	return tutorial_step == TutorialStep.COMPLETED
+
+
 func get_save_state() -> Dictionary:
-	return {"money": money}
+	return {
+		"money": money,
+		"tutorial_step": tutorial_step,
+	}
 
 
 func apply_save_state(saved: Dictionary) -> void:
 	var previous := money
 	money = maxi(int(saved.get("money", 0)), 0)
 	EventBus.money_changed.emit(money, money - previous)
+	var default_tutorial_step := TutorialStep.SELECT_SHIP
+	if not saved.is_empty() and not saved.has("tutorial_step"):
+		# Existing saves created before the tutorial should not be forced back
+		# through first-time onboarding.
+		default_tutorial_step = TutorialStep.COMPLETED
+	set_tutorial_step(clampi(
+		int(saved.get("tutorial_step", default_tutorial_step)),
+		TutorialStep.SELECT_SHIP,
+		TutorialStep.COMPLETED
+	))
 
 
 func reset_state() -> void:
-	apply_save_state({"money": 0})
+	apply_save_state({
+		"money": 0,
+		"tutorial_step": TutorialStep.SELECT_SHIP,
+	})
