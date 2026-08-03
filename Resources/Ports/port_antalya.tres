@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PortData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/data/port_data.gd" id="1_port_data"]
+[ext_resource type="Texture2D" path="res://Assets/Sprites/Ports/tile_23.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_port_data")
+id = &"antalya"
+display_name = "Antalya"
+description = "İlk genişleme bölgesinin batı yük kapısı."
+icon = ExtResource("2_icon")
+base_unlock_cost = 1500
+base_company_value = 800
+required_company_level = 3
+dock_slot_offsets = PackedVector2Array(-80, -70, 0, -95, 80, -70, -120, -135, 0, -155, 120, -135)

@@ -349,7 +349,7 @@ func _on_ship_purchased(
 
 
 func _on_game_loaded() -> void:
-	if SaveManager.has_save():
+	if SaveManager.loaded_existing_save:
 		for existing_ship_id in FleetManager.get_all_ship_ids():
 			var existing_ship := FleetManager.get_ship_node(existing_ship_id) as Ship
 			if existing_ship != null:

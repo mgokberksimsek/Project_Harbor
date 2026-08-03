@@ -26,6 +26,7 @@ func _run() -> void:
 	var event_bus := root.get_node("/root/EventBus")
 	var test_save_path := "user://smoke_test_save.json"
 	assert(save_manager.delete_save(test_save_path))
+	assert(not save_manager.loaded_existing_save)
 
 	var world_scene := load("res://Scenes/world.tscn") as PackedScene
 	assert(world_scene != null)
@@ -34,11 +35,28 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	assert(port_manager.get_all_port_ids().size() == 3)
+	assert(port_manager.get_all_port_ids().size() == 5)
 	assert(port_manager.is_unlocked(&"mersin"))
 	assert(port_manager.is_unlocked(&"izmir"))
 	assert(not port_manager.is_unlocked(&"istanbul"))
+	assert(not port_manager.is_unlocked(&"antalya"))
+	assert(not port_manager.is_unlocked(&"samsun"))
 	assert(port_manager.has_sea_route(&"mersin", &"izmir"))
+	assert(port_manager.has_sea_route(&"izmir", &"antalya"))
+	assert(port_manager.has_sea_route(&"istanbul", &"antalya"))
+	assert(port_manager.has_sea_route(&"antalya", &"samsun"))
+	assert(port_manager.has_sea_route(&"mersin", &"samsun"))
+	var antalya_data: PortData = port_manager.get_port_data(&"antalya")
+	var samsun_data: PortData = port_manager.get_port_data(&"samsun")
+	assert(antalya_data.required_company_level == 3)
+	assert(antalya_data.base_unlock_cost == 1500)
+	assert(antalya_data.base_company_value == 800)
+	assert(samsun_data.required_company_level == 4)
+	assert(samsun_data.base_unlock_cost == 2600)
+	assert(samsun_data.base_company_value == 1200)
+	var antalya_status := world.get_node("Ports/Antalya/StatusLabel") as Label
+	assert(antalya_status.text.contains("Sv. 3"))
+	assert(antalya_status.text.contains("1500"))
 	assert(company_manager.company_value == 900)
 	assert(company_manager.company_level == 1)
 	assert(company_manager.get_next_level_threshold() == 1000)
@@ -85,9 +103,11 @@ func _run() -> void:
 	var reverse_route: PackedVector2Array = port_manager.get_route_points(&"izmir", &"mersin")
 	var smooth_route: PackedVector2Array = port_manager.get_smoothed_route_points(&"mersin", &"izmir")
 	var s_curve_route: PackedVector2Array = port_manager.get_route_points(&"mersin", &"istanbul")
+	var expansion_route: PackedVector2Array = port_manager.get_route_points(&"izmir", &"antalya")
 	assert(forward_route.size() == 4)
 	assert(smooth_route.size() > forward_route.size())
 	assert(s_curve_route.size() == 6)
+	assert(expansion_route.size() == 7)
 	var has_clockwise_turn := false
 	var has_counterclockwise_turn := false
 	for curve_index in range(1, s_curve_route.size() - 1):
@@ -355,6 +375,26 @@ func _run() -> void:
 		) < 40.0)
 		refrigerated_ship_found = true
 	assert(refrigerated_ship_found)
+	assert(not game_manager.try_unlock_port(&"samsun"))
+	assert(not port_manager.is_unlocked(&"samsun"))
+	game_manager.add_money(1500)
+	assert(game_manager.try_unlock_port(&"antalya"))
+	assert(game_manager.money == 0)
+	assert(port_manager.is_unlocked(&"antalya"))
+	assert(antalya_status.text == "Lv. 1")
+	assert(company_manager.company_value == 3400)
+	assert(company_manager.company_level == 3)
+	var expansion_candidates: Array = mission_manager.call(
+		"_build_offer_candidates",
+		&"izmir",
+		&"starter_ship"
+	)
+	var has_antalya_candidate := false
+	for candidate in expansion_candidates:
+		has_antalya_candidate = has_antalya_candidate \
+			or candidate["pickup_id"] == &"antalya" \
+			or candidate["destination_id"] == &"antalya"
+	assert(has_antalya_candidate)
 
 	var starter_speed_before: float = fleet_manager.get_ship_effective_speed(&"starter_ship")
 	var company_value_before_speed_upgrade: int = company_manager.company_value
@@ -414,6 +454,7 @@ func _run() -> void:
 	game_manager.add_money(999)
 	assert(save_manager.load_game(test_save_path))
 	await process_frame
+	assert(save_manager.loaded_existing_save)
 	assert(game_manager.money == expected_offline_reward)
 	assert(mission_manager.get_active_missions().is_empty())
 	assert(fleet_manager.get_idle_ship_ids().size() == 2)

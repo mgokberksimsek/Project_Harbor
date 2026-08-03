@@ -101,6 +101,8 @@ Mevcut prototipte oyuncu:
 - Bir adet başlangıç yük gemisine sahiptir.
 - Mersin ve İzmir limanları açık başlar.
 - İstanbul kilitlidir.
+- Antalya, Şirket Seviyesi 3; Samsun ise Şirket Seviyesi 4 genişleme
+  hedefi olarak kilitlidir.
 - Sıfır para ile başlar ve ilk parasını görevlerden kazanır.
 - Aynı anda seçili gemiye ait üç görev teklifi görür.
 
@@ -152,6 +154,10 @@ içinden geçemez; tanımlı deniz koridorlarını ve kıvrımlı rotaları izle
 
 Harita ilk bölgedeki limanları yakın ve anlaşılır tutmalı, yeni bölgeler
 açıldıkça mesafeleri ve rota karmaşıklığını kademeli artırmalıdır.
+
+İlk prototip genişlemesinde Antalya `1.500 ₺` karşılığında `800 CV`, Samsun
+ise `2.600 ₺` karşılığında `1.200 CV` şirket varlığı kazandırır. Bu değerler
+nihai ekonomi dengesi değildir; seviye ve bölge akışını test etmek içindir.
 
 ## 6. Limanlar
 
@@ -435,7 +441,7 @@ veri dosyaları üzerinden tanımlanmalıdır.
 
 Prototipte bulunan içerik:
 
-- Limanlar: Mersin, İzmir, İstanbul.
+- Limanlar: Mersin, İzmir, İstanbul, Antalya ve Samsun.
 - Kargolar: Konteyner, Metal, Makine Parçaları, Gıda.
 - Ana gemiler: Başlangıç yük gemisi ve soğutmalı yük gemisi.
 

@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="SeaRouteData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/data/sea_route_data.gd" id="1_route"]
+
+[resource]
+script = ExtResource("1_route")
+from_port_id = &"mersin"
+to_port_id = &"samsun"
+waypoints = PackedVector2Array(1700, 1880, 2100, 1820, 2500, 1680, 3000, 1580, 3500, 1620, 3900, 1750)

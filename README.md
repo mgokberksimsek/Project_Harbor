@@ -10,7 +10,7 @@ Start with a small cargo ship, transport goods between ports, earn money, upgrad
 
 - Multiple independently managed ships and missions
 - Random, ship-compatible mission offers
-- Unlockable ports and multiple cargo types
+- Five data-driven ports across two regions, with level-gated expansion
 - Purchasable ships with escalating prices
 - Limited speed and cargo-capacity upgrades
 - Asset-based Company Value and permanent Company Levels
@@ -18,6 +18,7 @@ Start with a small cargo ship, transport goods between ports, earn money, upgrad
 - Stable harbor berths with smooth docking movement
 - JSON save data and offline mission progress
 - Mobile-first landscape camera controls
+- Three-step first-mission tutorial with saved progress
 
 ## Tech Stack
 

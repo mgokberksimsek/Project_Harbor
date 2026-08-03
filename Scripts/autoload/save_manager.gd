@@ -7,6 +7,7 @@ const AUTOSAVE_INTERVAL_SEC := 10.0
 
 var _auto_enabled := true
 var _autosave_timer: Timer
+var loaded_existing_save := false
 
 
 func _ready() -> void:
@@ -42,6 +43,7 @@ func reset_game() -> bool:
 	if not delete_save():
 		push_error("Could not delete the current save game.")
 		return false
+	loaded_existing_save = false
 
 	MissionManager.reset_state()
 	FleetManager.reset_state()
@@ -101,6 +103,7 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	MissionManager.apply_save_state(parsed.get("missions", {}))
 	MissionManager.sync_active_missions_from_fleet()
 	CompanyManager.apply_save_state(parsed.get("company", {}))
+	loaded_existing_save = true
 
 	var now := Time.get_unix_time_from_system()
 	var saved_at := float(parsed.get("saved_at_unix", now))
@@ -114,4 +117,5 @@ func load_game(path: String = SAVE_PATH) -> bool:
 
 func _load_or_start() -> void:
 	if not load_game():
+		loaded_existing_save = false
 		EventBus.game_loaded.emit()

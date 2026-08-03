@@ -92,4 +92,7 @@ func _refresh_visuals() -> void:
 	if unlocked:
 		_status_label.text = "Lv. %d" % PortManager.get_level(port_data.id)
 	else:
-		_status_label.text = "Locked - %d" % port_data.base_unlock_cost
+		_status_label.text = "Kilitli · Sv. %d · %d ₺" % [
+			port_data.required_company_level,
+			port_data.base_unlock_cost,
+		]
