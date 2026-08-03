@@ -119,6 +119,13 @@ func register_sea_route(route: SeaRouteData) -> void:
 	_sea_routes[_get_route_key(route.from_port_id, route.to_port_id)] = route
 
 
+func get_all_sea_routes() -> Array[SeaRouteData]:
+	var routes: Array[SeaRouteData] = []
+	for route in _sea_routes.values():
+		routes.append(route)
+	return routes
+
+
 func has_sea_route(port_a_id: StringName, port_b_id: StringName) -> bool:
 	return _sea_routes.has(_get_route_key(port_a_id, port_b_id))
 

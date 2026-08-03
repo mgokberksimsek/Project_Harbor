@@ -119,6 +119,7 @@ func _run() -> void:
 	assert(smooth_route.size() > forward_route.size())
 	assert(s_curve_route.size() == 6)
 	assert(expansion_route.size() == 7)
+	_assert_all_sea_routes_avoid_land(port_manager, world)
 	var has_clockwise_turn := false
 	var has_counterclockwise_turn := false
 	for curve_index in range(1, s_curve_route.size() - 1):
@@ -556,3 +557,58 @@ func _run() -> void:
 	assert(int(game_manager.get("tutorial_step")) == 0)
 	print("SMOKE_TEST_OK reward=%d" % mission.reward)
 	quit(0)
+
+
+func _assert_all_sea_routes_avoid_land(port_manager: Node, world: Node2D) -> void:
+	const ROUTE_SAMPLE_SPACING_PX := 20.0
+	var land_entries: Array[Dictionary] = []
+	var land_root := world.get_node("LandMasses")
+	for candidate in land_root.find_children("*", "Polygon2D", true, false):
+		var land := candidate as Polygon2D
+		var global_polygon := PackedVector2Array()
+		for local_point in land.polygon:
+			global_polygon.append(land.to_global(local_point))
+		land_entries.append({
+			"name": land.name,
+			"polygon": global_polygon,
+		})
+
+	var routes: Array = port_manager.call("get_all_sea_routes")
+	assert(not routes.is_empty(), "No sea routes were registered for validation.")
+	for route in routes:
+		var route_points: PackedVector2Array = port_manager.call(
+			"get_smoothed_route_points",
+			route.from_port_id,
+			route.to_port_id
+		)
+		assert(route_points.size() >= 2, "Sea route has fewer than two points: %s -> %s" % [
+			route.from_port_id,
+			route.to_port_id,
+		])
+		for segment_index in range(route_points.size() - 1):
+			var segment_start := route_points[segment_index]
+			var segment_end := route_points[segment_index + 1]
+			var sample_count := maxi(
+				ceili(segment_start.distance_to(segment_end) / ROUTE_SAMPLE_SPACING_PX),
+				1
+			)
+			for sample_index in range(sample_count + 1):
+				var is_route_start := segment_index == 0 and sample_index == 0
+				var is_route_end := segment_index == route_points.size() - 2 \
+					and sample_index == sample_count
+				if is_route_start or is_route_end:
+					continue
+				var sample_point := segment_start.lerp(
+					segment_end,
+					float(sample_index) / float(sample_count)
+				)
+				for land_entry in land_entries:
+					assert(not Geometry2D.is_point_in_polygon(
+						sample_point,
+						land_entry["polygon"]
+					), "Sea route %s -> %s enters land '%s' near %s." % [
+						route.from_port_id,
+						route.to_port_id,
+						land_entry["name"],
+						sample_point,
+					])

@@ -275,6 +275,8 @@ Prototipte yolculuk ve liman süreleri testleri hızlandırmak amacıyla bilerek
 ## 9. Rota, hareket ve liman animasyonları
 
 - Deniz rotaları hafif kavisli ve birbirinden farklı biçimlerde olmalıdır.
+- Bütün kayıtlı rotaların yumuşatılmış merkez çizgileri, geliştirme testlerinde
+  tüm kara poligonlarına karşı otomatik olarak doğrulanır.
 - Tam görev rotası kırmızı, kesikli bir çizgiyle gösterilir.
 - Gemi ilerledikçe geçtiği çizgi parçaları kaybolur; ilerideki parçalar yerinde
   kalır ve gemiye doğru kaymaz.

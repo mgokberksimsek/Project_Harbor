@@ -6,4 +6,4 @@
 script = ExtResource("1_route")
 from_port_id = &"istanbul"
 to_port_id = &"antalya"
-waypoints = PackedVector2Array(2450, 1820, 2800, 1720, 3200, 1750, 3500, 1840)
+waypoints = PackedVector2Array(2450, 1850, 2700, 1700, 3000, 1500, 3250, 1350)
