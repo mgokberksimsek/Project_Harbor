@@ -46,11 +46,15 @@ func register_port(port_data: PortData, node: Node2D) -> void:
 	_nodes[id] = node
 
 	if not _states.has(id):
-		var state := PortRuntimeState.new()
-		state.port_id = id
-		state.unlocked = port_data.unlocked_by_default
-		state.level = 1
-		_states[id] = state
+		_states[id] = _create_default_state(port_data)
+
+
+func _create_default_state(port_data: PortData) -> PortRuntimeState:
+	var state := PortRuntimeState.new()
+	state.port_id = port_data.id
+	state.unlocked = port_data.unlocked_by_default
+	state.level = 1
+	return state
 
 
 func is_registered(port_id: StringName) -> bool:
@@ -266,6 +270,21 @@ func apply_save_state(saved: Dictionary) -> void:
 		if state.unlocked:
 			EventBus.port_unlocked.emit(state.port_id)
 		EventBus.port_leveled_up.emit(state.port_id, state.level)
+
+	# Save files only contain ports that existed when they were written. If
+	# new data-driven ports were added in a later game version, keep them
+	# registered with their authored defaults instead of dropping them from
+	# the runtime state. This works whether loading happens before or after
+	# the World scene registers its port nodes.
+	for registered_id in _data.keys():
+		if _states.has(registered_id):
+			continue
+		var port_data: PortData = _data[registered_id]
+		var default_state := _create_default_state(port_data)
+		_states[registered_id] = default_state
+		if default_state.unlocked:
+			EventBus.port_unlocked.emit(default_state.port_id)
+		EventBus.port_leveled_up.emit(default_state.port_id, default_state.level)
 
 
 func reset_state() -> void:

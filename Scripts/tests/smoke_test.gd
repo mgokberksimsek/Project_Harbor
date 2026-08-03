@@ -54,6 +54,17 @@ func _run() -> void:
 	assert(samsun_data.required_company_level == 4)
 	assert(samsun_data.base_unlock_cost == 2600)
 	assert(samsun_data.base_company_value == 1200)
+	port_manager.apply_save_state({
+		"mersin": {"port_id": "mersin", "unlocked": true, "level": 1},
+		"izmir": {"port_id": "izmir", "unlocked": true, "level": 1},
+		"istanbul": {"port_id": "istanbul", "unlocked": false, "level": 1},
+	})
+	assert(port_manager.get_all_port_ids().size() == 5)
+	assert(port_manager.is_registered(&"antalya"))
+	assert(port_manager.is_registered(&"samsun"))
+	assert(not port_manager.is_unlocked(&"antalya"))
+	assert(not port_manager.is_unlocked(&"samsun"))
+	world.call("_update_tutorial_instruction")
 	var antalya_status := world.get_node("Ports/Antalya/StatusLabel") as Label
 	assert(antalya_status.text.contains("Sv. 3"))
 	assert(antalya_status.text.contains("1500"))
