@@ -11,12 +11,13 @@
 [ext_resource type="PackedScene" path="res://Scenes/ui/ShipShopPanel.tscn" id="9_ship_shop"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/NewGameButton.tscn" id="10_new_game"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/FleetStatusPanel.tscn" id="11_fleet_status"]
-[ext_resource type="Script" path="res://Scripts/camera/world_camera.gd" id="12_world_camera"]
-[ext_resource type="Script" path="res://Scripts/routes/sea_route_registry.gd" id="13_route_registry"]
+[ext_resource type="Script" uid="uid://bis3wmyn8relq" path="res://Scripts/camera/world_camera.gd" id="12_world_camera"]
+[ext_resource type="Script" uid="uid://slwfs8f8ho3y" path="res://Scripts/routes/sea_route_registry.gd" id="13_route_registry"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_mersin_izmir.tres" id="14_route_mersin_izmir"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_izmir_istanbul.tres" id="15_route_izmir_istanbul"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_mersin_istanbul.tres" id="16_route_mersin_istanbul"]
-[ext_resource type="Script" path="res://Scripts/data/sea_route_data.gd" id="17_route_data"]
+[ext_resource type="Script" uid="uid://bbj27msugemgp" path="res://Scripts/data/sea_route_data.gd" id="17_route_data"]
+[ext_resource type="PackedScene" path="res://Scenes/company/CompanyHeadquarters.tscn" id="18_headquarters"]
 
 [node name="World" type="Node2D" unique_id=1405839556]
 script = ExtResource("1_world")
@@ -28,20 +29,23 @@ offset_bottom = 3500.0
 mouse_filter = 2
 color = Color(0.145, 0.42, 0.72, 1)
 
-[node name="LandMasses" type="Node2D" parent="."]
+[node name="LandMasses" type="Node2D" parent="." unique_id=1679331096]
 z_index = -5
 
-[node name="SouthwestLand" type="Polygon2D" parent="LandMasses"]
-polygon = PackedVector2Array(1050, 2120, 1350, 2020, 1500, 2050, 1650, 2140, 1740, 2500, 1600, 2800, 1100, 2800, 950, 2500)
+[node name="SouthwestLand" type="Polygon2D" parent="LandMasses" unique_id=196392431]
 color = Color(0.38, 0.56, 0.28, 1)
+polygon = PackedVector2Array(1050, 2120, 1350, 2020, 1500, 2050, 1650, 2140, 1740, 2500, 1600, 2800, 1100, 2800, 950, 2500)
 
-[node name="NorthLand" type="Polygon2D" parent="LandMasses"]
-polygon = PackedVector2Array(1450, 900, 2350, 900, 2320, 1350, 2150, 1550, 1900, 1700, 1700, 1570, 1500, 1400)
+[node name="NorthLand" type="Polygon2D" parent="LandMasses" unique_id=1103081544]
 color = Color(0.42, 0.6, 0.3, 1)
+polygon = PackedVector2Array(1450, 900, 2350, 900, 2320, 1350, 2150, 1550, 1900, 1700, 1700, 1570, 1500, 1400)
 
-[node name="EastLand" type="Polygon2D" parent="LandMasses"]
-polygon = PackedVector2Array(2350, 2020, 2500, 1920, 3150, 2000, 3350, 2400, 3250, 2850, 2550, 2850, 2300, 2500)
+[node name="EastLand" type="Polygon2D" parent="LandMasses" unique_id=1911289241]
 color = Color(0.36, 0.54, 0.27, 1)
+polygon = PackedVector2Array(2350, 2020, 2500, 1920, 3150, 2000, 3350, 2400, 3250, 2850, 2550, 2850, 2300, 2500)
+
+[node name="CompanyHeadquarters" parent="." unique_id=536382575 instance=ExtResource("18_headquarters")]
+position = Vector2(1200, 2185)
 
 [node name="Ports" type="Node2D" parent="." unique_id=1320507721]
 
@@ -57,7 +61,7 @@ port_data = ExtResource("5_izmir")
 position = Vector2(2350, 2020)
 port_data = ExtResource("6_istanbul")
 
-[node name="SeaRoutes" type="Node" parent="."]
+[node name="SeaRoutes" type="Node" parent="." unique_id=156795111]
 script = ExtResource("13_route_registry")
 routes = Array[ExtResource("17_route_data")]([ExtResource("14_route_mersin_izmir"), ExtResource("15_route_izmir_istanbul"), ExtResource("16_route_mersin_istanbul")])
 
@@ -81,6 +85,15 @@ offset_bottom = 58.0
 theme_override_font_sizes/font_size = 28
 text = "0 ₺"
 
+[node name="CompanyProgressLabel" type="Label" parent="UI" unique_id=526220139]
+offset_left = 24.0
+offset_top = 58.0
+offset_right = 350.0
+offset_bottom = 88.0
+theme_override_colors/font_color = Color(0.98, 0.82, 0.25, 1)
+theme_override_font_sizes/font_size = 18
+text = "Şirket Sv. 1 · 0 / 1.000 CV"
+
 [node name="InstructionLabel" type="Label" parent="UI" unique_id=1066584881]
 anchors_preset = 10
 anchor_right = 1.0
@@ -95,10 +108,14 @@ horizontal_alignment = 2
 
 [node name="ShipShopPanel" parent="UI" unique_id=1255476120 instance=ExtResource("9_ship_shop")]
 anchors_preset = 2
-offset_right = 237.0
-offset_bottom = -41.0
+offset_top = -86.0
+offset_right = 192.0
 
 [node name="NewGameButton" parent="UI" unique_id=306073066 instance=ExtResource("10_new_game")]
+offset_left = 25.0
+offset_top = 95.0
+offset_right = 175.0
+offset_bottom = 137.0
 
 [node name="MissionOfferPanel" parent="UI" unique_id=843648461 instance=ExtResource("8_mission_offer_panel")]
 visible = true
@@ -109,11 +126,8 @@ offset_bottom = -43.68213
 scale = Vector2(0.68971443, 1.0532308)
 
 [node name="FleetStatusPanel" parent="UI" unique_id=1221162860 instance=ExtResource("11_fleet_status")]
-offset_left = -111.99988
-offset_top = 61.000046
-offset_right = 28.000122
-offset_bottom = 277.00006
-scale = Vector2(0.65999854, 0.71253467)
+offset_left = -195.0
+offset_top = 72.0
 
 [node name="MissionPanel" type="PanelContainer" parent="UI" unique_id=1510682631]
 visible = false

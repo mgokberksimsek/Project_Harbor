@@ -7,7 +7,7 @@ anchors_preset = 3
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 24.0
-offset_top = -190.0
+offset_top = -88.0
 offset_right = 334.0
 offset_bottom = -24.0
 grow_vertical = 0
@@ -24,20 +24,31 @@ theme_override_constants/margin_bottom = 10
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="Title" type="Label" parent="Margin/VBox"]
+[node name="ToggleButton" type="Button" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Gemi Satın Al ▶"
+
+[node name="Body" type="VBoxContainer" parent="Margin/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Title" type="Label" parent="Margin/VBox/Body"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "Soğutmalı Yük Gemisi"
 
-[node name="Details" type="Label" parent="Margin/VBox"]
+[node name="Details" type="Label" parent="Margin/VBox/Body"]
 layout_mode = 2
 text = "Hız: 105 · Kapasite: 2"
 
-[node name="BuyButton" type="Button" parent="Margin/VBox"]
+[node name="BuyButton" type="Button" parent="Margin/VBox/Body"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 text = "Satın Al · 800 ₺"
 
-[node name="Status" type="Label" parent="Margin/VBox"]
+[node name="Status" type="Label" parent="Margin/VBox/Body"]
 layout_mode = 2
 text = ""

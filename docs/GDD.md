@@ -54,6 +54,19 @@ Yeni gemiler artan fiyatlarla satın alınmalı ve filo sınırsız büyümemeli
 Gemi hızı ve kapasitesi de sınırlı seviyelerde geliştirilmelidir. Oyuncu her
 harcamada kısa vadeli kazanç ile uzun vadeli büyüme arasında seçim yapmalıdır.
 
+### 2.5 Basitlik önceliği
+
+Project Harbor kolay öğrenilen, az sayıda açık kararla yönetilen bir mobil
+tycoon olarak kalmalıdır. Yeni bir sistem ancak oyuncuya anlamlı ve kolay
+açıklanabilen bir karar katıyorsa eklenir. Gerçekçilik uğruna zorunlu seyahat,
+bekleme, tekrarlanan bakım veya gereksiz mikro yönetim oluşturulmaz. Aynı amacı
+daha az adımla karşılayan çözüm her zaman tercih edilir.
+
+Yeni satın alınan gemiler şirket merkezinin teslimat iskelesinde görünür ve
+ayrılmış liman yuvasına kısa bir tanıtım hareketiyle geçer. Başlangıç gemisi
+de yeni oyunda bu iskelede bekler ve ilk görevini alınca buradan ayrılır. Bu
+yalnızca görsel bir teslimat akışıdır; oyuncuya ek işlem veya bekleme yüklemez.
+
 ## 3. Hedef oyuncu ve deneyim
 
 - Kısa oturumlarla ilerlemek isteyen mobil oyuncular.
@@ -104,7 +117,34 @@ Oyuncunun gelişimi dört ana eksende ilerler:
 - **Uzmanlaşma:** Soğutmalı yük gibi özel yetenek isteyen kargolar için uygun
   gemilerin edinilmesi.
 
-### 5.3 Uzun vadeli dünya hedefi
+Bu yatırımlar şirketin harcanmayan ilerleme ölçüsü olan Company Value'yu
+artırır. Ulaşılan Company Value eşikleri kalıcı Company Level seviyelerini
+açar.
+
+### 5.3 Company Value ve Company Level
+
+Cash yalnızca harcanabilir paradır ve Company Value hesabına doğrudan girmez.
+İlk sürümde Company Value mümkün olduğunca sade tutulur:
+
+```text
+Company Value = Gemi Değeri + Gemi Geliştirmeleri + Açık Limanların Değeri
+```
+
+Şirket merkezi ve teknolojiler eklendiğinde kendi sabit varlık değerleriyle bu
+toplama dahil edilir. Tamamlanan görev, taşınan yük, rota çeşitliliği, Cash ve
+geçici verimlilik çarpanları ilk sürümde Company Value üretmez.
+
+Company Level, şimdiye kadar ulaşılan en yüksek Company Value üzerinden
+hesaplanır. Company Value daha sonra düşse bile seviye düşmez ve açılan içerik
+yeniden kilitlenmez. Company Level yeni gemi, liman bölgesi, teknoloji, filo
+kapasitesi ve şirket merkezi aşamalarını kullanılabilir hale getirir; oyuncu
+bu içeriği almak için ayrıca Cash öder.
+
+Nihai 15 seviyelik eşikler, bütün gemi, liman, teknoloji ve merkez varlık
+değerleri çıkarıldıktan sonra dengelenecektir. Mevcut eşikler prototip ve test
+değerleridir.
+
+### 5.4 Uzun vadeli dünya hedefi
 
 Tam sürüm için yaklaşık 15–20 açılabilir liman hedeflenir. Dünya, büyük kara
 parçalarından ve bunların kıyılarındaki limanlardan oluşur. Gemiler karaların
@@ -164,6 +204,9 @@ Aynı modelden alınan her yeni gemi bir öncekinden daha pahalıdır. Mevcut
 prototip formülü taban fiyatı her sahip olunan gemi için `1,6` katsayısıyla
 büyütür ve fiyatı en yakın 10'a yuvarlar.
 
+Bir gemi modelinin satın alınabilmesi için gereken Company Level'a ulaşılmış
+olmalı ve güncel Cash fiyatı ayrıca ödenmelidir.
+
 Filo sonsuza kadar büyümez. Prototipte üst sınır 6 gemidir. Nihai sınır ve bu
 sınırı artırabilecek liman/ofis geliştirmeleri dengeleme aşamasında
 kararlaştırılacaktır.
@@ -175,6 +218,9 @@ kararlaştırılacaktır.
 - Kapasite geliştirmesi en fazla 3 seviyedir.
 - Geliştirme maliyetleri her seviyede katlanarak artar.
 - Hiçbir gemi sonsuza kadar hızlandırılamaz veya kapasite kazanamaz.
+- Gemi geliştirmeleri, gemi nerede olursa olsun satın alındığı anda uygulanır.
+- Geliştirme için merkeze ya da tersaneye dönme, refit yolculuğu veya zorunlu
+  bekleme bulunmaz.
 
 ## 8. Görev sistemi
 
@@ -304,6 +350,8 @@ ayarlar içinden kaydı silip temiz bir oyuna başlayabilir.
 - Boş dünya alanına dokunma: Gemi ve liman vurgularını kaldırır, açık görev
   panelini kapatır.
 - Sürükleme ve yakınlaştırma: Büyük dünya haritasında gezinmeyi sağlar.
+- Filo durumu ve gemi satın alma panelleri haritayı kapatmamak için başlangıçta
+  kapalı sekmeler halinde durur ve başlıklarına dokunularak açılıp kapanır.
 
 ### 12.2 Seçim geri bildirimi
 
@@ -372,6 +420,7 @@ veri dosyaları üzerinden tanımlanmalıdır.
 - Kararlı ve sıkışık liman yuvası düzeni.
 - Liman açma, gemi satın alma ve gemi geliştirme ekonomisi.
 - Artan gemi fiyatları ve sınırlı filo/geliştirme seviyeleri.
+- Varlık tabanlı Company Value ve kalıcı Company Level ilerlemesi.
 - Sürüm kontrollü JSON kayıt, otomatik kayıt ve kayıt sıfırlama.
 - Uygulama kapalıyken görev ilerlemesi.
 - Mobil öncelikli yatay kamera ve dokunma etkileşimleri.
@@ -402,6 +451,7 @@ Aşağıdaki konular sonraki test ve tasarım oturumlarında kesinleştirilecekt
 
 - Nihai görev süreleri ve görev sınıfı eşikleri.
 - Nihai ödül eğrisi ve ikinci gemiye ulaşma süresi.
+- Nihai Company Value varlık değerleri ve 15 Company Level eşiği.
 - Yakıt maliyetinin tahsil zamanı ve iflas koruması.
 - Nihai filo sınırı ve sınırı artırma yöntemi.
 - Liman seviyelerinin görev, yükleme hızı ve gelir üzerindeki etkileri.
@@ -419,6 +469,7 @@ Aşağıdaki konular sonraki test ve tasarım oturumlarında kesinleştirilecekt
 - Gerçekçi denizcilik simülasyonu veya ayrıntılı gemi kullanımı.
 - Oyuncunun gemiyi manuel olarak sürmesi.
 - Tamamen gerçek dünya ölçeğinde rota ve süre simülasyonu.
+- Gemi geliştirmesi için zorunlu tersane dönüşleri ve refit yolculukları.
 
 Project Harbor'ın odağı, kolay dokunmatik kontrolle yönetilen, görsel olarak
 tatmin edici ve giderek büyüyen bir liman-taşımacılık ağıdır.

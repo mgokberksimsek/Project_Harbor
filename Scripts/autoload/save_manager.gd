@@ -46,6 +46,7 @@ func reset_game() -> bool:
 	MissionManager.reset_state()
 	FleetManager.reset_state()
 	PortManager.reset_state()
+	CompanyManager.reset_state()
 	GameManager.reset_state()
 
 	var reload_error := get_tree().reload_current_scene()
@@ -66,6 +67,7 @@ func save_game(path: String = SAVE_PATH) -> bool:
 		"ports": PortManager.get_save_state(),
 		"fleet": FleetManager.get_save_state(),
 		"missions": MissionManager.get_save_state(),
+		"company": CompanyManager.get_save_state(),
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
@@ -98,6 +100,7 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	FleetManager.apply_save_state(parsed.get("fleet", {}))
 	MissionManager.apply_save_state(parsed.get("missions", {}))
 	MissionManager.sync_active_missions_from_fleet()
+	CompanyManager.apply_save_state(parsed.get("company", {}))
 
 	var now := Time.get_unix_time_from_system()
 	var saved_at := float(parsed.get("saved_at_unix", now))

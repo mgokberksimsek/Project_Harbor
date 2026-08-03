@@ -1,10 +1,12 @@
 extends Node2D
 
 @onready var _money_label: Label = $UI/MoneyLabel
+@onready var _company_progress_label: Label = $UI/CompanyProgressLabel
 @onready var _instruction_label: Label = $UI/InstructionLabel
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
 @onready var _world_camera: WorldCamera = $Camera2D
+@onready var _company_headquarters: CompanyHeadquarters = $CompanyHeadquarters
 
 var _selected_ship_id: StringName = &""
 var _open_mission_port_id: StringName = &""
@@ -90,12 +92,23 @@ func _is_ui_at_screen_position(screen_position: Vector2) -> bool:
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color("#256BB8"))
+	var starter_ship := get_node_or_null("StarterShip") as Ship
+	if starter_ship != null:
+		starter_ship.set_initial_world_position(
+			_company_headquarters.get_delivery_position(),
+			true
+		)
 	# Ships and ports can occupy the same dock position. Sorted, first-only
 	# picking guarantees that the higher-z ship receives the tap.
 	get_viewport().physics_object_picking_sort = true
 	get_viewport().physics_object_picking_first_only = true
 
 	EventBus.money_changed.connect(_on_money_changed)
+	EventBus.company_value_changed.connect(_on_company_value_changed)
+	EventBus.company_level_changed.connect(_on_company_level_changed)
+	EventBus.company_level_requirement_failed.connect(
+		_on_company_level_requirement_failed
+	)
 	EventBus.mission_offers_updated.connect(_on_mission_offers_updated)
 	EventBus.port_unlocked.connect(_on_port_unlocked)
 	EventBus.port_unlock_failed.connect(_on_port_unlock_failed)
@@ -115,6 +128,7 @@ func _ready() -> void:
 	_fleet_status_panel.capacity_upgrade_requested.connect(_on_capacity_upgrade_requested)
 
 	_update_money(GameManager.money)
+	_update_company_progress()
 	_instruction_label.text = "Görevleri görmek için haritadaki veya filo panelindeki bir gemiyi seç."
 	_on_mission_offers_updated(MissionManager.get_offers())
 	_refresh_fleet_panel()
@@ -130,6 +144,28 @@ func _process(delta: float) -> void:
 
 func _on_money_changed(new_amount: int, _delta: int) -> void:
 	_update_money(new_amount)
+
+
+func _on_company_value_changed(_new_value: int, _delta: int) -> void:
+	_update_company_progress()
+
+
+func _on_company_level_changed(new_level: int, previous_level: int) -> void:
+	_update_company_progress()
+	if new_level > previous_level:
+		_instruction_label.text = "Şirket seviyesi %d oldu! Yeni içerikler açıldı." % new_level
+
+
+func _on_company_level_requirement_failed(
+		_content_type: StringName,
+		_content_id: StringName,
+		required_level: int,
+		current_level: int
+) -> void:
+	_instruction_label.text = "Bu yatırım için Şirket Seviyesi %d gerekli (şu an %d)." % [
+		required_level,
+		current_level,
+	]
 
 
 func _on_mission_offers_updated(offers: Array) -> void:
@@ -224,6 +260,21 @@ func _update_money(amount: int) -> void:
 	_money_label.text = "%d ₺" % amount
 
 
+func _update_company_progress() -> void:
+	var next_threshold := CompanyManager.get_next_level_threshold()
+	if next_threshold < 0:
+		_company_progress_label.text = "Şirket Sv. %d · %d CV · MAKS" % [
+			CompanyManager.company_level,
+			CompanyManager.company_value,
+		]
+	else:
+		_company_progress_label.text = "Şirket Sv. %d · %d / %d CV" % [
+			CompanyManager.company_level,
+			CompanyManager.company_value,
+			next_threshold,
+		]
+
+
 func _on_port_unlocked(port_id: StringName) -> void:
 	var port_data: PortData = PortManager.get_port_data(port_id)
 	var port_name := port_data.display_name if port_data != null else String(port_id)
@@ -246,12 +297,23 @@ func _on_ship_purchased(
 		ship_data: ShipData,
 		home_port_id: StringName
 ) -> void:
-	_spawn_ship(ship_id, ship_data, home_port_id)
+	_spawn_ship(
+		ship_id,
+		ship_data,
+		home_port_id,
+		_company_headquarters.get_delivery_position(),
+		true
+	)
 	_instruction_label.text = "%s filoya katıldı!" % ship_data.display_name
 	_refresh_fleet_panel()
 
 
 func _on_game_loaded() -> void:
+	if SaveManager.has_save():
+		for existing_ship_id in FleetManager.get_all_ship_ids():
+			var existing_ship := FleetManager.get_ship_node(existing_ship_id) as Ship
+			if existing_ship != null:
+				existing_ship.clear_initial_world_position_override()
 	for ship_id in FleetManager.get_all_ship_ids():
 		if FleetManager.get_ship_node(ship_id) != null:
 			continue
@@ -259,6 +321,7 @@ func _on_game_loaded() -> void:
 		var home_port_id := FleetManager.get_ship_current_port(ship_id)
 		_spawn_ship(ship_id, ship_data, home_port_id)
 	_update_money(GameManager.money)
+	_update_company_progress()
 	_on_mission_offers_updated(MissionManager.get_offers())
 	_refresh_fleet_panel()
 
@@ -271,7 +334,9 @@ func _on_offline_progress_applied(elapsed_sec: float) -> void:
 func _spawn_ship(
 		ship_id: StringName,
 		ship_data: ShipData,
-		home_port_id: StringName
+		home_port_id: StringName,
+		initial_world_position := Vector2.ZERO,
+		use_initial_world_position := false
 ) -> void:
 	if FleetManager.get_ship_node(ship_id) != null:
 		return
@@ -284,6 +349,8 @@ func _spawn_ship(
 	ship.ship_id = ship_id
 	ship.ship_data = ship_data
 	ship.home_port_id = home_port_id
+	if use_initial_world_position:
+		ship.set_initial_world_position(initial_world_position)
 	add_child(ship)
 
 

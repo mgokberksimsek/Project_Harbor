@@ -27,6 +27,14 @@ func try_unlock_port(port_id: StringName) -> bool:
 	var port_data: PortData = PortManager.get_port_data(port_id)
 	if port_data == null or PortManager.is_unlocked(port_id):
 		return false
+	if CompanyManager.company_level < port_data.required_company_level:
+		EventBus.company_level_requirement_failed.emit(
+			&"port",
+			port_id,
+			port_data.required_company_level,
+			CompanyManager.company_level
+		)
+		return false
 
 	var cost := maxi(port_data.base_unlock_cost, 0)
 	if not spend_money(cost):
@@ -50,6 +58,14 @@ func try_purchase_ship(model_id: StringName, home_port_id: StringName) -> bool:
 		return false
 	var ship_data := FleetManager.get_ship_model(model_id)
 	if ship_data == null:
+		return false
+	if CompanyManager.company_level < ship_data.required_company_level:
+		EventBus.company_level_requirement_failed.emit(
+			&"ship",
+			model_id,
+			ship_data.required_company_level,
+			CompanyManager.company_level
+		)
 		return false
 	var cost := FleetManager.get_ship_purchase_price(model_id)
 	if cost < 0:

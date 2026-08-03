@@ -23,6 +23,12 @@ extends Resource
 ## as data, not as code).
 @export var unlocked_by_default: bool = false
 
+## Company Value represents the player's operating presence at this port,
+## not ownership of the real-world port itself.
+@export var base_company_value: int = 0
+@export var upgrade_company_values: Array[int] = []
+@export_range(1, 15, 1) var required_company_level: int = 1
+
 ## Cost to upgrade FROM level N TO level N+1.
 ## Index 0 = cost of the 1st upgrade (level 1 -> 2), index 1 = 2nd, etc.
 ## A short/empty array simply means "no further upgrades authored yet" —
@@ -56,6 +62,17 @@ func get_reward_multiplier(level: int) -> float:
 		return 1.0
 	var index := clampi(level - 1, 0, level_reward_multipliers.size() - 1)
 	return level_reward_multipliers[index]
+
+
+func get_company_value(level: int) -> int:
+	var total := maxi(base_company_value, 0)
+	var applied_upgrade_count := mini(
+		maxi(level - 1, 0),
+		upgrade_company_values.size()
+	)
+	for upgrade_index in range(applied_upgrade_count):
+		total += maxi(upgrade_company_values[upgrade_index], 0)
+	return total
 
 
 func get_dock_slot_offset(slot_index: int) -> Vector2:

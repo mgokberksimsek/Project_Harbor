@@ -20,6 +20,7 @@ func _run() -> void:
 	var port_manager := root.get_node("/root/PortManager")
 	var fleet_manager := root.get_node("/root/FleetManager")
 	var mission_manager := root.get_node("/root/MissionManager")
+	var company_manager := root.get_node("/root/CompanyManager")
 	var game_manager := root.get_node("/root/GameManager")
 	var save_manager := root.get_node("/root/SaveManager")
 	var event_bus := root.get_node("/root/EventBus")
@@ -38,6 +39,44 @@ func _run() -> void:
 	assert(port_manager.is_unlocked(&"izmir"))
 	assert(not port_manager.is_unlocked(&"istanbul"))
 	assert(port_manager.has_sea_route(&"mersin", &"izmir"))
+	assert(company_manager.company_value == 900)
+	assert(company_manager.company_level == 1)
+	assert(company_manager.get_next_level_threshold() == 1000)
+	var headquarters := world.get_node("CompanyHeadquarters") as CompanyHeadquarters
+	assert(headquarters != null)
+	assert(headquarters.get_delivery_position() != Vector2.ZERO)
+	var company_label := world.get_node("UI/CompanyProgressLabel") as Label
+	assert(company_label != null)
+	assert(company_label.text.contains("900 / 1000 CV"))
+	var fleet_panel := world.get_node("UI/FleetStatusPanel") as FleetStatusPanel
+	assert(fleet_panel != null)
+	var fleet_toggle := fleet_panel.get_node("Margin/VBox/ToggleButton") as Button
+	assert(not fleet_panel.is_expanded())
+	assert(is_equal_approx(fleet_panel.offset_bottom - fleet_panel.offset_top, 64.0))
+	assert(not fleet_panel.get_node("Margin/VBox/Body").visible)
+	fleet_toggle.pressed.emit()
+	assert(fleet_panel.is_expanded())
+	assert(is_equal_approx(fleet_panel.offset_bottom - fleet_panel.offset_top, 330.0))
+	assert(fleet_panel.get_node("Margin/VBox/Body").visible)
+	fleet_toggle.pressed.emit()
+	assert(not fleet_panel.is_expanded())
+	var shop_panel := world.get_node("UI/ShipShopPanel") as PanelContainer
+	assert(shop_panel != null)
+	var shop_toggle := shop_panel.get_node("Margin/VBox/ToggleButton") as Button
+	assert(not bool(shop_panel.call("is_expanded")))
+	assert(is_equal_approx(shop_panel.offset_bottom - shop_panel.offset_top, 64.0))
+	shop_toggle.pressed.emit()
+	assert(bool(shop_panel.call("is_expanded")))
+	assert(is_equal_approx(shop_panel.offset_bottom - shop_panel.offset_top, 215.0))
+	assert(shop_panel.get_node("Margin/VBox/Body").visible)
+	shop_toggle.pressed.emit()
+	assert(not bool(shop_panel.call("is_expanded")))
+	var initial_company_value: int = company_manager.company_value
+	game_manager.add_money(800)
+	assert(company_manager.company_value == initial_company_value)
+	assert(not game_manager.try_purchase_ship(&"refrigerated_freighter", &"mersin"))
+	assert(game_manager.money == 800)
+	assert(game_manager.spend_money(800))
 	var forward_route: PackedVector2Array = port_manager.get_route_points(&"mersin", &"izmir")
 	var reverse_route: PackedVector2Array = port_manager.get_route_points(&"izmir", &"mersin")
 	var smooth_route: PackedVector2Array = port_manager.get_smoothed_route_points(&"mersin", &"izmir")
@@ -69,6 +108,9 @@ func _run() -> void:
 	var starter_map_ship: Area2D = fleet_manager.get_ship_node(&"starter_ship") as Area2D
 	var mersin_map_port: Area2D = port_manager.get_port_node(&"mersin") as Area2D
 	assert(starter_map_ship != null)
+	assert(starter_map_ship.global_position.is_equal_approx(
+		headquarters.get_delivery_position()
+	))
 	var starter_icon := starter_map_ship.get_node("Icon") as Sprite2D
 	assert(starter_icon != null)
 	var starter_selection_outline := starter_icon.get_node("SelectionOutline") as Sprite2D
@@ -260,6 +302,8 @@ func _run() -> void:
 	await process_frame
 	assert(port_manager.is_unlocked(&"istanbul"))
 	assert(game_manager.money == 0)
+	assert(company_manager.company_value == 1400)
+	assert(company_manager.company_level == 2)
 
 	var refrigerated_model: ShipData = fleet_manager.get_ship_model(&"refrigerated_freighter")
 	assert(refrigerated_model != null)
@@ -270,13 +314,14 @@ func _run() -> void:
 	game_manager.add_money(800)
 	assert(game_manager.try_purchase_ship(&"refrigerated_freighter", &"mersin"))
 	await process_frame
-	await process_frame
 	assert(game_manager.money == 0)
 	assert(fleet_manager.get_all_ship_ids().size() == 2)
 	assert(fleet_manager.get_owned_model_count(&"refrigerated_freighter") == 1)
 	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 1280)
+	assert(company_manager.company_value == 2600)
+	assert(company_manager.company_level == 3)
 	var shop_buy_button := world.get_node(
-		"UI/ShipShopPanel/Margin/VBox/BuyButton"
+		"UI/ShipShopPanel/Margin/VBox/Body/BuyButton"
 	) as Button
 	assert(shop_buy_button != null)
 	shop_buy_button.text = "Satın Al · 800 ₺"
@@ -292,11 +337,17 @@ func _run() -> void:
 		var purchased_data: ShipData = fleet_manager.get_ship_data(ship_id)
 		assert(purchased_data != null)
 		assert(purchased_data.can_carry(food_cargo))
-		assert(fleet_manager.get_ship_node(ship_id) != null)
+		var purchased_ship := fleet_manager.get_ship_node(ship_id) as Node2D
+		assert(purchased_ship != null)
+		assert(bool(purchased_ship.get("_dock_transition_active")))
+		assert(purchased_ship.global_position.distance_to(
+			headquarters.get_delivery_position()
+		) < 40.0)
 		refrigerated_ship_found = true
 	assert(refrigerated_ship_found)
 
 	var starter_speed_before: float = fleet_manager.get_ship_effective_speed(&"starter_ship")
+	var company_value_before_speed_upgrade: int = company_manager.company_value
 	var starter_upgrade_cost: int = fleet_manager.get_ship_speed_upgrade_cost(&"starter_ship")
 	assert(starter_upgrade_cost > 0)
 	game_manager.add_money(starter_upgrade_cost)
@@ -307,13 +358,16 @@ func _run() -> void:
 		fleet_manager.get_ship_effective_speed(&"starter_ship"),
 		starter_speed_before * 1.15
 	))
+	assert(company_manager.company_value == company_value_before_speed_upgrade + 100)
 	var starter_capacity_upgrade_cost: int = fleet_manager.get_ship_capacity_upgrade_cost(&"starter_ship")
+	var company_value_before_capacity_upgrade: int = company_manager.company_value
 	assert(starter_capacity_upgrade_cost > 0)
 	game_manager.add_money(starter_capacity_upgrade_cost)
 	assert(game_manager.try_upgrade_ship_capacity(&"starter_ship"))
 	assert(game_manager.money == 0)
 	assert(fleet_manager.get_ship_capacity_level(&"starter_ship") == 1)
 	assert(fleet_manager.get_ship_effective_capacity(&"starter_ship") == 2)
+	assert(company_manager.company_value == company_value_before_capacity_upgrade + 120)
 	await process_frame
 
 	mission_manager.refresh_offers()
@@ -344,6 +398,8 @@ func _run() -> void:
 		expected_offline_reward += active_mission.reward
 		var fleet_mission: Mission = fleet_manager.get_ship_mission(active_mission.assigned_ship_id)
 		fleet_mission.leg_start_unix = Time.get_unix_time_from_system() - 100
+	var saved_company_value: int = company_manager.company_value
+	var saved_company_level: int = company_manager.company_level
 	assert(save_manager.save_game(test_save_path))
 	game_manager.add_money(999)
 	assert(save_manager.load_game(test_save_path))
@@ -353,6 +409,9 @@ func _run() -> void:
 	assert(fleet_manager.get_idle_ship_ids().size() == 2)
 	assert(fleet_manager.get_ship_speed_level(&"starter_ship") == 1)
 	assert(fleet_manager.get_ship_capacity_level(&"starter_ship") == 1)
+	assert(company_manager.company_value == saved_company_value)
+	assert(company_manager.company_level == saved_company_level)
+	assert(company_manager.peak_company_value >= company_manager.company_value)
 
 	var starter_max_speed_level := starter_ship_data.max_speed_level
 	while fleet_manager.get_ship_speed_level(&"starter_ship") < starter_max_speed_level:

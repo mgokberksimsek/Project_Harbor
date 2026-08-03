@@ -17,6 +17,7 @@ const MAX_TURN_SPEED_RAD_PER_SEC := 4.5
 const MIN_HEADING_MOVEMENT_SQUARED := 0.01
 const ROUTE_TANGENT_SAMPLE_PROGRESS := 0.015
 const DOCK_TRANSITION_DURATION_SEC := 0.9
+const DELIVERY_TRANSITION_DURATION_SEC := 1.8
 const DEPARTURE_HEADING_LEAD_MIN := 24.0
 const DEPARTURE_HEADING_LEAD_MAX := 60.0
 const DEPARTURE_HEADING_LEAD_RATIO := 0.16
@@ -37,6 +38,10 @@ var _smoothing_pickup_departure_turn := false
 var _dock_transition_active := false
 var _dock_transition_elapsed := 0.0
 var _dock_transition_start := Vector2.ZERO
+var _dock_transition_duration_sec := DOCK_TRANSITION_DURATION_SEC
+var _has_initial_world_position := false
+var _initial_world_position := Vector2.ZERO
+var _hold_initial_position_while_idle := false
 var _base_icon_scale := Vector2.ONE
 var _selection_scale_tween: Tween = null
 
@@ -80,8 +85,36 @@ func _process(delta: float) -> void:
 	_update_route_visual(state)
 
 
+func set_initial_world_position(
+		world_position: Vector2,
+		hold_while_idle := false
+) -> void:
+	_initial_world_position = world_position
+	_has_initial_world_position = true
+	_hold_initial_position_while_idle = hold_while_idle
+
+
+func clear_initial_world_position_override() -> void:
+	_has_initial_world_position = false
+	_hold_initial_position_while_idle = false
+	if FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.IDLE:
+		_dock_transition_active = false
+		_snap_to_home_port()
+
+
 func _snap_to_home_port() -> void:
 	var dock_position := FleetManager.get_ship_dock_position(ship_id)
+	if _has_initial_world_position:
+		global_position = _initial_world_position
+		_has_initial_world_position = false
+		if _hold_initial_position_while_idle:
+			return
+		if dock_position != Vector2.ZERO:
+			_dock_transition_start = global_position
+			_dock_transition_elapsed = 0.0
+			_dock_transition_duration_sec = DELIVERY_TRANSITION_DURATION_SEC
+			_dock_transition_active = true
+		return
 	if dock_position != Vector2.ZERO:
 		global_position = dock_position
 	elif FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.IDLE:
@@ -89,6 +122,9 @@ func _snap_to_home_port() -> void:
 
 
 func _update_docked_position(delta: float) -> void:
+	if _hold_initial_position_while_idle:
+		global_position = _initial_world_position
+		return
 	var dock_position := FleetManager.get_ship_dock_position(ship_id)
 	if dock_position == Vector2.ZERO \
 			and FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.LOADING:
@@ -102,7 +138,7 @@ func _update_docked_position(delta: float) -> void:
 	if _dock_transition_active:
 		_dock_transition_elapsed += delta
 		var linear_progress := clampf(
-			_dock_transition_elapsed / DOCK_TRANSITION_DURATION_SEC,
+			_dock_transition_elapsed / _dock_transition_duration_sec,
 			0.0,
 			1.0
 		)
@@ -237,6 +273,8 @@ func _update_sailing_position(state: ShipRuntimeState.State, delta: float) -> bo
 
 func _on_ship_state_changed(changed_ship_id: StringName, previous_state: int, new_state: int) -> void:
 	if changed_ship_id == ship_id:
+		if new_state != ShipRuntimeState.State.IDLE:
+			_hold_initial_position_while_idle = false
 		var mission := FleetManager.get_ship_mission(ship_id)
 		if new_state == ShipRuntimeState.State.LOADING and mission != null:
 			_smoothing_pickup_departure_turn = false
@@ -270,6 +308,7 @@ func _on_ship_state_changed(changed_ship_id: StringName, previous_state: int, ne
 				and previous_state == ShipRuntimeState.State.SAILING_TO_PICKUP):
 			_dock_transition_start = global_position
 			_dock_transition_elapsed = 0.0
+			_dock_transition_duration_sec = DOCK_TRANSITION_DURATION_SEC
 			_dock_transition_active = true
 		_refresh_visuals()
 
@@ -284,6 +323,7 @@ func _on_ship_dock_slot_changed(
 		return
 	_dock_transition_start = global_position
 	_dock_transition_elapsed = 0.0
+	_dock_transition_duration_sec = DOCK_TRANSITION_DURATION_SEC
 	_dock_transition_active = true
 
 

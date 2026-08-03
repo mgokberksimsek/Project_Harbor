@@ -14,6 +14,16 @@ extends Node
 # --- Economy -----------------------------------------------------------
 signal money_changed(new_amount: int, delta: int)
 
+# --- Company progression ---------------------------------------------------
+signal company_value_changed(new_value: int, delta: int)
+signal company_level_changed(new_level: int, previous_level: int)
+signal company_level_requirement_failed(
+	content_type: StringName,
+	content_id: StringName,
+	required_level: int,
+	current_level: int
+)
+
 # --- Ports ---------------------------------------------------------------
 signal port_unlocked(port_id: StringName)
 signal port_unlock_failed(port_id: StringName, required_amount: int, current_amount: int)

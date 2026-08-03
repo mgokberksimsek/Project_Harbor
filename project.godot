@@ -22,6 +22,7 @@ PortManager="*uid://b448xwv3q8ywn"
 FleetManager="*uid://badlafy4w3a6n"
 EconomyManager="*res://Scripts/autoload/economy_manager.gd"
 MissionManager="*res://Scripts/autoload/mission_manager.gd"
+CompanyManager="*res://Scripts/autoload/company_manager.gd"
 GameManager="*uid://bwf60iskcrcne"
 SaveManager="*res://Scripts/autoload/save_manager.gd"
 

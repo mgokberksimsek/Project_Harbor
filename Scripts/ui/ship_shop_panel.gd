@@ -2,24 +2,45 @@ extends PanelContainer
 
 @export var model_id: StringName = &"refrigerated_freighter"
 @export var home_port_id: StringName = &"mersin"
+@export var start_expanded := false
 
-@onready var _title: Label = $Margin/VBox/Title
-@onready var _details: Label = $Margin/VBox/Details
-@onready var _buy_button: Button = $Margin/VBox/BuyButton
-@onready var _status: Label = $Margin/VBox/Status
+@onready var _toggle_button: Button = $Margin/VBox/ToggleButton
+@onready var _body: VBoxContainer = $Margin/VBox/Body
+@onready var _title: Label = $Margin/VBox/Body/Title
+@onready var _details: Label = $Margin/VBox/Body/Details
+@onready var _buy_button: Button = $Margin/VBox/Body/BuyButton
+@onready var _status: Label = $Margin/VBox/Body/Status
+
+const COLLAPSED_HEIGHT := 64.0
+const EXPANDED_HEIGHT := 215.0
 
 var _ship_data: ShipData
+var _expanded := false
 
 
 func _ready() -> void:
 	_ship_data = FleetManager.get_ship_model(model_id)
+	_toggle_button.pressed.connect(_on_toggle_pressed)
 	_buy_button.pressed.connect(_on_buy_pressed)
 	EventBus.money_changed.connect(_on_money_changed)
+	EventBus.company_level_changed.connect(_on_company_level_changed)
 	EventBus.ship_purchased.connect(_on_ship_purchased)
 	EventBus.ship_purchase_failed.connect(_on_ship_purchase_failed)
 	EventBus.fleet_capacity_reached.connect(_on_fleet_capacity_reached)
 	EventBus.game_loaded.connect(_on_game_loaded)
+	set_expanded(start_expanded)
 	_refresh()
+
+
+func set_expanded(expanded: bool) -> void:
+	_expanded = expanded
+	_body.visible = expanded
+	_toggle_button.text = "Gemi Satın Al ▼" if expanded else "Gemi Satın Al ▶"
+	offset_top = offset_bottom - (EXPANDED_HEIGHT if expanded else COLLAPSED_HEIGHT)
+
+
+func is_expanded() -> bool:
+	return _expanded
 
 
 func _refresh() -> void:
@@ -34,7 +55,11 @@ func _refresh() -> void:
 	]
 	var current_price := FleetManager.get_ship_purchase_price(model_id)
 	var owned_count := FleetManager.get_owned_model_count(model_id)
-	if FleetManager.is_fleet_at_capacity():
+	if CompanyManager.company_level < _ship_data.required_company_level:
+		_buy_button.text = "Şirket Sv. %d gerekli" % _ship_data.required_company_level
+		_buy_button.disabled = true
+		_status.text = "Şu anki seviye: %d" % CompanyManager.company_level
+	elif FleetManager.is_fleet_at_capacity():
 		_buy_button.text = "Filo kapasitesi dolu"
 		_buy_button.disabled = true
 		_status.text = "Filo: %d/%d" % [
@@ -56,7 +81,15 @@ func _on_buy_pressed() -> void:
 	GameManager.try_purchase_ship(model_id, home_port_id)
 
 
+func _on_toggle_pressed() -> void:
+	set_expanded(not _expanded)
+
+
 func _on_money_changed(_new_amount: int, _delta: int) -> void:
+	_refresh()
+
+
+func _on_company_level_changed(_new_level: int, _previous_level: int) -> void:
 	_refresh()
 
 

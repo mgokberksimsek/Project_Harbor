@@ -33,6 +33,7 @@ Data resources (.tres)  →  Autoload managers  →  EventBus  →  Scenes & UI
   CargoTypeData               FleetManager
   ShipData                    MissionManager
 							   EconomyManager
+							   CompanyManager
 							   GameManager
 							   SaveManager
 ```
@@ -47,6 +48,7 @@ Data resources (.tres)  →  Autoload managers  →  EventBus  →  Scenes & UI
 | `FleetManager` | Ship registry (player + future AI), mission assignment | Mission generation |
 | `MissionManager` | Mission generation & lifecycle | Reward math, currency |
 | `EconomyManager` | Stateless reward/cost formulas | Any persisted state |
+| `CompanyManager` | Derived Company Value, peak value, permanent Company Level | Cash, ships, ports |
 | `SaveManager` | Serialize/restore all manager state, versioning | Game logic |
 
 **Autoload registration order** (Project Settings > Autoload) — top to
@@ -57,8 +59,9 @@ bottom, since later autoloads may reference earlier ones on `_ready()`:
 3. `FleetManager`
 4. `MissionManager`
 5. `EconomyManager`
-6. `GameManager`
-7. `SaveManager`
+6. `CompanyManager`
+7. `GameManager`
+8. `SaveManager`
 
 ## Folder structure
 

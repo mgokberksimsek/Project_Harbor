@@ -1,0 +1,63 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/company/company_headquarters.gd" id="1_headquarters"]
+
+[node name="CompanyHeadquarters" type="Node2D"]
+z_index = 1
+script = ExtResource("1_headquarters")
+
+[node name="BuildingShadow" type="Polygon2D" parent="."]
+position = Vector2(10, 12)
+color = Color(0.12, 0.16, 0.18, 0.32)
+polygon = PackedVector2Array(-88, -62, 88, -62, 88, 62, -88, 62)
+
+[node name="Building" type="Polygon2D" parent="."]
+color = Color(0.86, 0.88, 0.82, 1)
+polygon = PackedVector2Array(-88, -62, 88, -62, 88, 62, -88, 62)
+
+[node name="Roof" type="Polygon2D" parent="."]
+position = Vector2(0, -4)
+color = Color(0.15, 0.3, 0.42, 1)
+polygon = PackedVector2Array(-104, -62, 0, -116, 104, -62, 78, -38, -78, -38)
+
+[node name="Door" type="Polygon2D" parent="."]
+position = Vector2(0, 25)
+color = Color(0.2, 0.38, 0.48, 1)
+polygon = PackedVector2Array(-18, -30, 18, -30, 18, 37, -18, 37)
+
+[node name="LeftWindow" type="Polygon2D" parent="."]
+position = Vector2(-52, 4)
+color = Color(0.38, 0.72, 0.86, 1)
+polygon = PackedVector2Array(-17, -16, 17, -16, 17, 16, -17, 16)
+
+[node name="RightWindow" type="Polygon2D" parent="."]
+position = Vector2(52, 4)
+color = Color(0.38, 0.72, 0.86, 1)
+polygon = PackedVector2Array(-17, -16, 17, -16, 17, 16, -17, 16)
+
+[node name="Pier" type="Line2D" parent="."]
+z_index = -1
+points = PackedVector2Array(55, -70, 80, -100, 105, -135)
+width = 28.0
+default_color = Color(0.48, 0.31, 0.18, 1)
+
+[node name="PierEdge" type="Line2D" parent="."]
+points = PackedVector2Array(55, -70, 80, -100, 105, -135)
+width = 4.0
+default_color = Color(0.25, 0.17, 0.11, 1)
+
+[node name="DeliveryBerth" type="Marker2D" parent="."]
+position = Vector2(105, -135)
+
+[node name="Label" type="Label" parent="."]
+offset_left = -118.0
+offset_top = 76.0
+offset_right = 118.0
+offset_bottom = 111.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.75)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 20
+text = "Şirket Merkezi"
+horizontal_alignment = 1

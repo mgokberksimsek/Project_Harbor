@@ -5,9 +5,33 @@ signal ship_selected(ship_id: StringName)
 signal speed_upgrade_requested(ship_id: StringName)
 signal capacity_upgrade_requested(ship_id: StringName)
 
-@onready var _list: VBoxContainer = $Margin/VBox/Scroll/List
+@export var start_expanded := false
+
+@onready var _toggle_button: Button = $Margin/VBox/ToggleButton
+@onready var _body: VBoxContainer = $Margin/VBox/Body
+@onready var _list: VBoxContainer = $Margin/VBox/Body/Scroll/List
+
+const COLLAPSED_HEIGHT := 64.0
+const EXPANDED_HEIGHT := 330.0
 
 var _cards: Dictionary = {}
+var _expanded := false
+
+
+func _ready() -> void:
+	_toggle_button.pressed.connect(_on_toggle_pressed)
+	set_expanded(start_expanded)
+
+
+func set_expanded(expanded: bool) -> void:
+	_expanded = expanded
+	_body.visible = expanded
+	_toggle_button.text = "Filo Durumu ▼" if expanded else "Filo Durumu ▶"
+	offset_bottom = offset_top + (EXPANDED_HEIGHT if expanded else COLLAPSED_HEIGHT)
+
+
+func is_expanded() -> bool:
+	return _expanded
 
 
 func set_fleet_data(entries: Array, selected_ship_id: StringName) -> void:
@@ -118,6 +142,10 @@ func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
 
 func _on_card_pressed(ship_id: StringName) -> void:
 	ship_selected.emit(ship_id)
+
+
+func _on_toggle_pressed() -> void:
+	set_expanded(not _expanded)
 
 
 func _on_speed_upgrade_pressed(ship_id: StringName) -> void:

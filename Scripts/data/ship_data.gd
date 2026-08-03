@@ -42,6 +42,13 @@ extends Resource
 @export var purchase_cost: int = 0
 @export var unlocked_by_default: bool = false
 
+## Company progression values are authored independently from Cash prices so
+## price inflation never causes Company Value inflation.
+@export var base_company_value: int = 0
+@export var speed_upgrade_company_value: int = 0
+@export var capacity_upgrade_company_value: int = 0
+@export_range(1, 15, 1) var required_company_level: int = 1
+
 
 func can_carry(cargo_type: CargoTypeData) -> bool:
 	if cargo_type == null:
@@ -50,3 +57,9 @@ func can_carry(cargo_type: CargoTypeData) -> bool:
 		if not cargo_capabilities.has(requirement):
 			return false
 	return true
+
+
+func get_company_value(speed_level: int, capacity_level: int) -> int:
+	return maxi(base_company_value, 0) \
+		+ maxi(speed_level, 0) * maxi(speed_upgrade_company_value, 0) \
+		+ maxi(capacity_level, 0) * maxi(capacity_upgrade_company_value, 0)

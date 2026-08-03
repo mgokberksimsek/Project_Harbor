@@ -19,3 +19,7 @@ max_capacity_level = 3
 cargo_capabilities = Array[StringName]([&"general", &"refrigerated"])
 purchase_cost = 800
 unlocked_by_default = false
+base_company_value = 1200
+speed_upgrade_company_value = 150
+capacity_upgrade_company_value = 180
+required_company_level = 2
