@@ -112,6 +112,16 @@ flat = true
 text = "Şirket Sv. 1 · 0 / 1.000 CV"
 alignment = 0
 
+[node name="DebugLevelUpButton" type="Button" parent="UI"]
+offset_left = 24.0
+offset_top = 98.0
+offset_right = 180.0
+offset_bottom = 134.0
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 0.86, 0.32, 1)
+theme_override_font_sizes/font_size = 16
+text = "TEST · +1 SEVİYE"
+
 [node name="InstructionLabel" type="Label" parent="UI" unique_id=1066584881]
 anchors_preset = 10
 anchor_right = 1.0

@@ -80,6 +80,9 @@ func _run() -> void:
 	var company_label := world.get_node("UI/CompanyProgressLabel") as Button
 	assert(company_label != null)
 	assert(company_label.text.contains("400 / 1000 CV"))
+	var debug_level_button := world.get_node("UI/DebugLevelUpButton") as Button
+	assert(debug_level_button != null)
+	assert(debug_level_button.text.contains("Sv. 1"))
 	assert(company_manager.get_fleet_asset_value() == 0)
 	assert(company_manager.get_port_asset_value() == 400)
 	assert(company_manager.get_fleet_asset_value() + company_manager.get_port_asset_value() \
@@ -687,6 +690,10 @@ func _run() -> void:
 	game_manager.reset_state()
 	assert(int(game_manager.get("tutorial_step")) == 4)
 	assert(game_manager.money == starter_model.purchase_cost)
+	var level_before_debug: int = company_manager.company_level
+	debug_level_button.emit_signal("pressed")
+	assert(company_manager.company_level == level_before_debug + 1)
+	assert(debug_level_button.text.contains("Sv. %d" % company_manager.company_level))
 	print("SMOKE_TEST_OK reward=%d" % mission.reward)
 	quit(0)
 

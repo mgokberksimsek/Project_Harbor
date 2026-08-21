@@ -68,6 +68,21 @@ func get_max_level() -> int:
 	return LEVEL_THRESHOLDS.size()
 
 
+## DEBUG: Temporary progression shortcut for testing level-gated content.
+## Remove together with UI/DebugLevelUpButton once progression balancing begins.
+func debug_advance_level() -> bool:
+	if company_level >= get_max_level():
+		return false
+	var previous_level := company_level
+	company_level += 1
+	peak_company_value = maxi(
+		peak_company_value,
+		get_level_threshold(company_level)
+	)
+	EventBus.company_level_changed.emit(company_level, previous_level)
+	return true
+
+
 func get_fleet_asset_value() -> int:
 	var total := 0
 	for ship_id in FleetManager.get_all_ship_ids():

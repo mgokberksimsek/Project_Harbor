@@ -2,6 +2,7 @@ extends Node2D
 
 @onready var _money_label: Label = $UI/MoneyLabel
 @onready var _company_progress_label: Button = $UI/CompanyProgressLabel
+@onready var _debug_level_up_button: Button = $UI/DebugLevelUpButton
 @onready var _instruction_label: Label = $UI/InstructionLabel
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
@@ -132,6 +133,7 @@ func _ready() -> void:
 	_port_unlock_panel.unlock_requested.connect(_on_port_unlock_requested)
 	_port_unlock_panel.closed.connect(_on_port_unlock_panel_closed)
 	_company_progress_label.pressed.connect(_on_company_progress_pressed)
+	_debug_level_up_button.pressed.connect(_on_debug_level_up_pressed)
 	_settings_menu.menu_opened.connect(_on_settings_opened)
 	_settings_menu.resumed.connect(_on_settings_resumed)
 	_settings_menu.sound_effects_toggled.connect(SettingsManager.set_sound_effects_enabled)
@@ -146,6 +148,7 @@ func _ready() -> void:
 
 	_update_money(GameManager.money)
 	_update_company_progress()
+	_update_debug_level_button()
 	if not _update_tutorial_instruction():
 		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP_LONG")
 	_on_mission_offers_updated(MissionManager.get_offers())
@@ -178,6 +181,7 @@ func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
 
 func _on_language_changed(_locale: String) -> void:
 	_update_company_progress()
+	_update_debug_level_button()
 	_refresh_fleet_panel()
 	if _company_progress_panel.is_open():
 		_show_company_progress_panel()
@@ -202,11 +206,24 @@ func _on_new_game_confirmed() -> void:
 
 func _on_company_level_changed(new_level: int, previous_level: int) -> void:
 	_update_company_progress()
+	_update_debug_level_button()
 	_port_unlock_panel.update_status(GameManager.money, new_level)
 	if _company_progress_panel.is_open():
 		_show_company_progress_panel()
 	if new_level > previous_level:
 		_instruction_label.text = tr("INSTRUCTION_LEVEL_UP") % new_level
+
+
+func _on_debug_level_up_pressed() -> void:
+	CompanyManager.debug_advance_level()
+	_update_debug_level_button()
+
+
+func _update_debug_level_button() -> void:
+	_debug_level_up_button.text = tr("DEBUG_LEVEL_UP") % CompanyManager.company_level
+	_debug_level_up_button.disabled = (
+		CompanyManager.company_level >= CompanyManager.get_max_level()
+	)
 
 
 func _on_company_level_requirement_failed(
