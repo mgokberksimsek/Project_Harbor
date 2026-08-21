@@ -15,6 +15,7 @@ Start with a small cargo ship, transport goods between ports, earn money, upgrad
 - Purchasable ships with escalating prices
 - Limited speed and cargo-capacity upgrades
 - Asset-based Company Value and permanent Company Levels
+- Tap-to-open company progress breakdown and next-level unlock preview
 - Curved sea routes with animated route progress
 - Stable harbor berths with smooth docking movement
 - JSON save data and offline mission progress

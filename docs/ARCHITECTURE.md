@@ -80,7 +80,8 @@ res://
 	world/World.tscn
 	ship/Ship.tscn
 	port/Port.tscn
-	ui/MissionOfferPanel.tscn, PortUnlockPanel.tscn, SettingsMenu.tscn
+	ui/MissionOfferPanel.tscn, PortUnlockPanel.tscn, CompanyProgressPanel.tscn,
+	   SettingsMenu.tscn
   scripts/
 	autoload/          # one script per autoload above
 	data/               # port_data.gd, cargo_type_data.gd, ship_data.gd

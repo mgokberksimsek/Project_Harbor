@@ -75,9 +75,13 @@ func _run() -> void:
 	var headquarters := world.get_node("CompanyHeadquarters")
 	assert(headquarters != null)
 	assert(headquarters.get_delivery_position() != Vector2.ZERO)
-	var company_label := world.get_node("UI/CompanyProgressLabel") as Label
+	var company_label := world.get_node("UI/CompanyProgressLabel") as Button
 	assert(company_label != null)
 	assert(company_label.text.contains("900 / 1000 CV"))
+	assert(company_manager.get_fleet_asset_value() == 500)
+	assert(company_manager.get_port_asset_value() == 400)
+	assert(company_manager.get_fleet_asset_value() + company_manager.get_port_asset_value() \
+		== company_manager.company_value)
 	var settings_menu := world.get_node("UI/SettingsMenu")
 	assert(settings_menu != null)
 	var port_unlock_panel := world.get_node("UI/PortUnlockPanel")
@@ -124,6 +128,16 @@ func _run() -> void:
 	settings_menu.close_menu()
 	assert(not settings_menu.is_open())
 	assert(not paused)
+	company_label.pressed.emit()
+	await process_frame
+	var company_panel := world.get_node("UI/CompanyProgressPanel")
+	assert(company_panel.visible)
+	assert(company_panel.get_node("Margin/VBox/TotalValue").text.contains("900 CV"))
+	assert(company_panel.get_node("Margin/VBox/Breakdown/FleetValue").text.contains("500 CV"))
+	assert(company_panel.get_node("Margin/VBox/Breakdown/PortValue").text.contains("400 CV"))
+	assert(company_panel.get_node("Margin/VBox/NextUnlocks").text.contains("Soğutmalı"))
+	company_panel.get_node("Margin/VBox/CloseButton").pressed.emit()
+	assert(not company_panel.visible)
 	var instruction_label := world.get_node("UI/InstructionLabel") as Label
 	assert(instruction_label != null)
 	assert(int(game_manager.get("tutorial_step")) == 0)

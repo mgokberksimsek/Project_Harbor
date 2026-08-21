@@ -68,6 +68,29 @@ func get_max_level() -> int:
 	return LEVEL_THRESHOLDS.size()
 
 
+func get_fleet_asset_value() -> int:
+	var total := 0
+	for ship_id in FleetManager.get_all_ship_ids():
+		var ship_data := FleetManager.get_ship_data(ship_id)
+		if ship_data == null:
+			continue
+		total += ship_data.get_company_value(
+			FleetManager.get_ship_speed_level(ship_id),
+			FleetManager.get_ship_capacity_level(ship_id)
+		)
+	return maxi(total, 0)
+
+
+func get_port_asset_value() -> int:
+	var total := 0
+	for port_id in PortManager.get_unlocked_port_ids():
+		var port_data := PortManager.get_port_data(port_id)
+		if port_data == null:
+			continue
+		total += port_data.get_company_value(PortManager.get_level(port_id))
+	return maxi(total, 0)
+
+
 func get_save_state() -> Dictionary:
 	return {
 		"peak_company_value": peak_company_value,
@@ -107,21 +130,7 @@ func reset_state() -> void:
 
 
 func _calculate_asset_value() -> int:
-	var total := 0
-	for ship_id in FleetManager.get_all_ship_ids():
-		var ship_data := FleetManager.get_ship_data(ship_id)
-		if ship_data == null:
-			continue
-		total += ship_data.get_company_value(
-			FleetManager.get_ship_speed_level(ship_id),
-			FleetManager.get_ship_capacity_level(ship_id)
-		)
-	for port_id in PortManager.get_unlocked_port_ids():
-		var port_data := PortManager.get_port_data(port_id)
-		if port_data == null:
-			continue
-		total += port_data.get_company_value(PortManager.get_level(port_id))
-	return maxi(total, 0)
+	return get_fleet_asset_value() + get_port_asset_value()
 
 
 func _calculate_level(value: int) -> int:

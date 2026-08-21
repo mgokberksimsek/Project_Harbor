@@ -1,11 +1,12 @@
 extends Node2D
 
 @onready var _money_label: Label = $UI/MoneyLabel
-@onready var _company_progress_label: Label = $UI/CompanyProgressLabel
+@onready var _company_progress_label: Button = $UI/CompanyProgressLabel
 @onready var _instruction_label: Label = $UI/InstructionLabel
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
 @onready var _port_unlock_panel: PortUnlockPanel = $UI/PortUnlockPanel
+@onready var _company_progress_panel: CompanyProgressPanel = $UI/CompanyProgressPanel
 @onready var _settings_menu: SettingsMenu = $UI/SettingsMenu
 @onready var _world_camera: WorldCamera = $Camera2D
 @onready var _company_headquarters: CompanyHeadquarters = $CompanyHeadquarters
@@ -77,6 +78,7 @@ func clear_map_selection() -> void:
 	EventBus.port_selection_changed.emit(&"")
 	_mission_offer_panel.close_panel()
 	_port_unlock_panel.close_panel()
+	_company_progress_panel.close_panel()
 	_fleet_status_panel.select_ship(&"")
 	_refresh_fleet_panel()
 	_update_mission_markers()
@@ -134,6 +136,7 @@ func _ready() -> void:
 	_fleet_status_panel.capacity_upgrade_requested.connect(_on_capacity_upgrade_requested)
 	_port_unlock_panel.unlock_requested.connect(_on_port_unlock_requested)
 	_port_unlock_panel.closed.connect(_on_port_unlock_panel_closed)
+	_company_progress_label.pressed.connect(_on_company_progress_pressed)
 	_settings_menu.menu_opened.connect(_on_settings_opened)
 	_settings_menu.resumed.connect(_on_settings_resumed)
 	_settings_menu.sound_effects_toggled.connect(SettingsManager.set_sound_effects_enabled)
@@ -169,6 +172,8 @@ func _on_money_changed(new_amount: int, _delta: int) -> void:
 
 func _on_company_value_changed(_new_value: int, _delta: int) -> void:
 	_update_company_progress()
+	if _company_progress_panel.is_open():
+		_show_company_progress_panel()
 
 
 func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
@@ -178,6 +183,8 @@ func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
 func _on_language_changed(_locale: String) -> void:
 	_update_company_progress()
 	_refresh_fleet_panel()
+	if _company_progress_panel.is_open():
+		_show_company_progress_panel()
 	if _open_mission_port_id != &"":
 		_show_port_offers(_open_mission_port_id)
 	if not _update_tutorial_instruction():
@@ -200,6 +207,8 @@ func _on_new_game_confirmed() -> void:
 func _on_company_level_changed(new_level: int, previous_level: int) -> void:
 	_update_company_progress()
 	_port_unlock_panel.update_status(GameManager.money, new_level)
+	if _company_progress_panel.is_open():
+		_show_company_progress_panel()
 	if new_level > previous_level:
 		_instruction_label.text = tr("INSTRUCTION_LEVEL_UP") % new_level
 
@@ -291,6 +300,7 @@ func _on_ship_tapped(ship_id: StringName) -> void:
 	EventBus.port_selection_changed.emit(&"")
 	_mission_offer_panel.close_panel()
 	_port_unlock_panel.close_panel()
+	_company_progress_panel.close_panel()
 	_fleet_status_panel.select_ship(ship_id)
 	_refresh_fleet_panel()
 	_update_mission_markers()
@@ -305,6 +315,7 @@ func _on_ship_tapped(ship_id: StringName) -> void:
 
 
 func _on_port_tapped(port_id: StringName) -> void:
+	_company_progress_panel.close_panel()
 	if not PortManager.is_unlocked(port_id):
 		_open_mission_port_id = &""
 		_mission_offer_panel.close_panel()
@@ -398,6 +409,7 @@ func _on_ship_purchased(
 
 func _on_game_loaded() -> void:
 	_port_unlock_panel.close_panel()
+	_company_progress_panel.close_panel()
 	if SaveManager.loaded_existing_save:
 		for existing_ship_id in FleetManager.get_all_ship_ids():
 			var existing_ship := FleetManager.get_ship_node(existing_ship_id) as Ship
@@ -529,6 +541,44 @@ func _on_port_unlock_requested(port_id: StringName) -> void:
 
 func _on_port_unlock_panel_closed() -> void:
 	EventBus.port_selection_changed.emit(&"")
+
+
+func _on_company_progress_pressed() -> void:
+	if _company_progress_panel.is_open():
+		_company_progress_panel.close_panel()
+		return
+	_mission_offer_panel.close_panel()
+	_port_unlock_panel.close_panel()
+	_show_company_progress_panel()
+
+
+func _show_company_progress_panel() -> void:
+	var level := CompanyManager.company_level
+	_company_progress_panel.show_progress(
+		level,
+		CompanyManager.company_value,
+		CompanyManager.get_level_threshold(level),
+		CompanyManager.get_next_level_threshold(),
+		CompanyManager.get_fleet_asset_value(),
+		CompanyManager.get_port_asset_value(),
+		_get_next_company_unlocks(level + 1)
+	)
+
+
+func _get_next_company_unlocks(next_level: int) -> Array[String]:
+	var unlocks: Array[String] = []
+	for port_id in PortManager.get_all_port_ids():
+		if PortManager.is_unlocked(port_id):
+			continue
+		var port_data := PortManager.get_port_data(port_id)
+		if port_data != null and port_data.required_company_level == next_level:
+			unlocks.append(tr("COMPANY_PANEL_PORT_UNLOCK") % _translated_port_name(port_id))
+	for ship_data in FleetManager.get_purchasable_ship_models():
+		if ship_data.required_company_level == next_level:
+			unlocks.append(
+				tr("COMPANY_PANEL_SHIP_UNLOCK") % _translated_ship_model_name(ship_data)
+			)
+	return unlocks
 
 
 func _update_mission_markers() -> void:

@@ -1,0 +1,96 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/ui/company_progress_panel.gd" id="1_company_progress"]
+
+[node name="CompanyProgressPanel" type="PanelContainer"]
+visible = false
+z_index = 45
+custom_minimum_size = Vector2(520, 330)
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -165.0
+offset_right = 260.0
+offset_bottom = 165.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_company_progress")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 26
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 26
+theme_override_constants/margin_bottom = 22
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Şirket İlerlemesi"
+horizontal_alignment = 1
+
+[node name="Level" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.82, 0.25, 1)
+theme_override_font_sizes/font_size = 20
+text = "Şirket Seviyesi 1"
+horizontal_alignment = 1
+
+[node name="TotalValue" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Toplam Şirket Değeri: 900 CV"
+horizontal_alignment = 1
+
+[node name="Breakdown" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="FleetValue" type="Label" parent="Margin/VBox/Breakdown"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 17
+text = "Filo: 500 CV"
+horizontal_alignment = 1
+
+[node name="PortValue" type="Label" parent="Margin/VBox/Breakdown"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 17
+text = "Limanlar: 400 CV"
+horizontal_alignment = 1
+
+[node name="ProgressBar" type="ProgressBar" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+value = 90.0
+show_percentage = false
+
+[node name="ProgressText" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "900 / 1000 CV · 100 CV kaldı"
+horizontal_alignment = 1
+
+[node name="NextUnlocks" type="Label" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "Seviye 2'de açılacak: Soğutmalı Yük Gemisi"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="CloseButton" type="Button" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Kapat"

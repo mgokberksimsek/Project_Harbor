@@ -25,6 +25,7 @@
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_antalya_samsun.tres" id="23_route_antalya_samsun"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_mersin_samsun.tres" id="24_route_mersin_samsun"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/PortUnlockPanel.tscn" id="25_port_unlock"]
+[ext_resource type="PackedScene" path="res://Scenes/ui/CompanyProgressPanel.tscn" id="26_company_progress"]
 
 [node name="World" type="Node2D" unique_id=1405839556]
 script = ExtResource("1_world")
@@ -105,14 +106,17 @@ offset_bottom = 58.0
 theme_override_font_sizes/font_size = 28
 text = "0 ₺"
 
-[node name="CompanyProgressLabel" type="Label" parent="UI" unique_id=526220139]
+[node name="CompanyProgressLabel" type="Button" parent="UI" unique_id=526220139]
 offset_left = 24.0
 offset_top = 58.0
 offset_right = 350.0
-offset_bottom = 88.0
+offset_bottom = 94.0
+focus_mode = 0
 theme_override_colors/font_color = Color(0.98, 0.82, 0.25, 1)
 theme_override_font_sizes/font_size = 18
+flat = true
 text = "Şirket Sv. 1 · 0 / 1.000 CV"
+alignment = 0
 
 [node name="InstructionLabel" type="Label" parent="UI" unique_id=1066584881]
 anchors_preset = 10
@@ -134,6 +138,8 @@ offset_right = 192.0
 [node name="SettingsMenu" parent="UI" unique_id=506582069 instance=ExtResource("10_settings")]
 
 [node name="PortUnlockPanel" parent="UI" unique_id=1388240783 instance=ExtResource("25_port_unlock")]
+
+[node name="CompanyProgressPanel" parent="UI" instance=ExtResource("26_company_progress")]
 
 [node name="MissionOfferPanel" parent="UI" unique_id=843648461 instance=ExtResource("8_mission_offer_panel")]
 visible = true

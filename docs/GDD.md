@@ -146,6 +146,12 @@ Nihai 15 seviyelik eşikler, bütün gemi, liman, teknoloji ve merkez varlık
 değerleri çıkarıldıktan sonra dengelenecektir. Mevcut eşikler prototip ve test
 değerleridir.
 
+Üst arayüzdeki Company Level göstergesine dokunulduğunda kompakt bir ilerleme
+özeti açılır. Bu özet toplam Company Value'yu filo ve liman yatırımları olarak
+ayırır, mevcut seviyedeki ilerleme çubuğunu gösterir ve bir sonraki Company
+Level'da açılacak veri tanımlı gemi ve limanları listeler. Amaç yeni bir yönetim
+katmanı eklemek değil, oyuncuya bir sonraki yatırım hedefini açıkça göstermektir.
+
 ### 5.4 Uzun vadeli dünya hedefi
 
 Tam sürüm için yaklaşık 15–20 açılabilir liman hedeflenir. Dünya, büyük kara
@@ -364,6 +370,8 @@ dahildir. Oyuncu ayarlar içinden kaydı silip temiz bir oyuna başlayabilir.
 - Sürükleme ve yakınlaştırma: Büyük dünya haritasında gezinmeyi sağlar.
 - Filo durumu ve gemi satın alma panelleri haritayı kapatmamak için başlangıçta
   kapalı sekmeler halinde durur ve başlıklarına dokunularak açılıp kapanır.
+- Üstteki Company Level göstergesine dokunmak değer dağılımını ve sonraki
+  seviye hedefini gösteren şirket ilerleme panelini açar.
 
 ### 12.2 Seçim geri bildirimi
 
@@ -458,6 +466,7 @@ veri dosyaları üzerinden tanımlanmalıdır.
 - Maliyet, seviye ve Company Value katkısını gösteren onaylı liman açma paneli.
 - Artan gemi fiyatları ve sınırlı filo/geliştirme seviyeleri.
 - Varlık tabanlı Company Value ve kalıcı Company Level ilerlemesi.
+- Filo/liman değer dağılımı ve sonraki seviye açılımlarını gösteren ilerleme paneli.
 - Sürüm kontrollü JSON kayıt, otomatik kayıt ve kayıt sıfırlama.
 - Uygulama kapalıyken görev ilerlemesi.
 - Mobil öncelikli yatay kamera ve dokunma etkileşimleri.
