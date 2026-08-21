@@ -83,6 +83,9 @@ func _run() -> void:
 	var debug_level_button := world.get_node("UI/DebugLevelUpButton") as Button
 	assert(debug_level_button != null)
 	assert(debug_level_button.text.contains("Sv. 1"))
+	var next_goal_label := world.get_node("UI/NextGoalLabel") as Label
+	assert(next_goal_label != null)
+	assert(not next_goal_label.visible)
 	assert(company_manager.get_fleet_asset_value() == 0)
 	assert(company_manager.get_port_asset_value() == 400)
 	assert(company_manager.get_fleet_asset_value() + company_manager.get_port_asset_value() \
@@ -363,6 +366,9 @@ func _run() -> void:
 	await process_frame
 	assert(game_manager.is_tutorial_completed())
 	assert(instruction_label.text.contains("ÖĞRETİCİ TAMAMLANDI"))
+	assert(next_goal_label.visible)
+	assert(next_goal_label.text.contains("İstanbul"))
+	assert(next_goal_label.text.contains("0 / 750"))
 	assert(not pickup_highlight.visible)
 	assert(starter_selection_outline.visible)
 	assert(not starter_map_ship.is_tutorial_focused())
@@ -448,6 +454,7 @@ func _run() -> void:
 	assert(mission.stage == Mission.Stage.COMPLETED)
 	assert(game_manager.money == mission.reward)
 	await process_frame
+	assert(next_goal_label.text.contains("%d / 750" % mission.reward))
 	assert(mission_manager.get_offers().size() == 3)
 	assert(not game_manager.try_unlock_port(&"istanbul"))
 	assert(not port_manager.is_unlocked(&"istanbul"))
@@ -473,6 +480,9 @@ func _run() -> void:
 	assert(game_manager.money == 0)
 	assert(company_manager.company_value == 1400)
 	assert(company_manager.company_level == 2)
+	assert(next_goal_label.visible)
+	assert(next_goal_label.text.contains("Soğutmalı"))
+	assert(next_goal_label.text.contains("0 / 800"))
 
 	var refrigerated_model: ShipData = fleet_manager.get_ship_model(&"refrigerated_freighter")
 	assert(refrigerated_model != null)
@@ -487,6 +497,7 @@ func _run() -> void:
 	assert(fleet_manager.get_all_ship_ids().size() == 2)
 	assert(fleet_manager.get_owned_model_count(&"refrigerated_freighter") == 1)
 	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 1280)
+	assert(not next_goal_label.visible)
 	assert(company_manager.company_value == 2600)
 	assert(company_manager.company_level == 3)
 	assert(headquarters.get_visual_tier() == 2)

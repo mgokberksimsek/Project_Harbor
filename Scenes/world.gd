@@ -3,6 +3,7 @@ extends Node2D
 @onready var _money_label: Label = $UI/MoneyLabel
 @onready var _company_progress_label: Button = $UI/CompanyProgressLabel
 @onready var _debug_level_up_button: Button = $UI/DebugLevelUpButton
+@onready var _next_goal_label: Label = $UI/NextGoalLabel
 @onready var _instruction_label: Label = $UI/InstructionLabel
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
@@ -149,6 +150,7 @@ func _ready() -> void:
 	_update_money(GameManager.money)
 	_update_company_progress()
 	_update_debug_level_button()
+	_update_next_goal()
 	if not _update_tutorial_instruction():
 		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP_LONG")
 	_on_mission_offers_updated(MissionManager.get_offers())
@@ -166,6 +168,7 @@ func _process(delta: float) -> void:
 func _on_money_changed(new_amount: int, _delta: int) -> void:
 	_update_money(new_amount)
 	_port_unlock_panel.update_status(new_amount, CompanyManager.company_level)
+	_update_next_goal()
 
 
 func _on_company_value_changed(_new_value: int, _delta: int) -> void:
@@ -177,11 +180,13 @@ func _on_company_value_changed(_new_value: int, _delta: int) -> void:
 func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
 	_update_tutorial_instruction()
 	_update_tutorial_focus()
+	_update_next_goal()
 
 
 func _on_language_changed(_locale: String) -> void:
 	_update_company_progress()
 	_update_debug_level_button()
+	_update_next_goal()
 	_refresh_fleet_panel()
 	if _company_progress_panel.is_open():
 		_show_company_progress_panel()
@@ -393,12 +398,77 @@ func _update_company_progress() -> void:
 		]
 
 
+func _update_next_goal() -> void:
+	_next_goal_label.visible = false
+	if not GameManager.is_tutorial_completed():
+		return
+	if FleetManager.get_all_ship_ids().is_empty():
+		return
+	var expansion_port_id := _get_first_expansion_port_id()
+	if expansion_port_id != &"":
+		var port_data := PortManager.get_port_data(expansion_port_id)
+		if port_data == null:
+			return
+		_next_goal_label.text = tr("NEXT_GOAL_UNLOCK_PORT") % [
+			_translated_port_name(expansion_port_id),
+			mini(GameManager.money, port_data.base_unlock_cost),
+			port_data.base_unlock_cost,
+		]
+		_next_goal_label.visible = true
+		return
+	if FleetManager.get_all_ship_ids().size() >= 2:
+		return
+	var ship_data := _get_first_expansion_ship_model()
+	if ship_data == null:
+		return
+	var ship_price := FleetManager.get_ship_purchase_price(ship_data.id)
+	_next_goal_label.text = tr("NEXT_GOAL_BUY_SHIP") % [
+		_translated_ship_model_name(ship_data),
+		mini(GameManager.money, ship_price),
+		ship_price,
+	]
+	_next_goal_label.visible = true
+
+
+func _get_first_expansion_port_id() -> StringName:
+	var selected_id: StringName = &""
+	var selected_cost := 2147483647
+	for port_id in PortManager.get_all_port_ids():
+		if PortManager.is_unlocked(port_id):
+			continue
+		var port_data := PortManager.get_port_data(port_id)
+		if port_data == null \
+				or port_data.base_unlock_cost <= 0 \
+				or port_data.required_company_level != 1:
+			continue
+		if port_data.base_unlock_cost < selected_cost:
+			selected_id = port_id
+			selected_cost = port_data.base_unlock_cost
+	return selected_id
+
+
+func _get_first_expansion_ship_model() -> ShipData:
+	var selected: ShipData = null
+	for candidate in FleetManager.get_purchasable_ship_models():
+		if candidate.unlocked_by_default \
+				or FleetManager.get_owned_model_count(candidate.id) > 0 \
+				or candidate.required_company_level > CompanyManager.company_level:
+			continue
+		if selected == null \
+				or candidate.required_company_level < selected.required_company_level \
+				or (candidate.required_company_level == selected.required_company_level \
+				and candidate.purchase_cost < selected.purchase_cost):
+			selected = candidate
+	return selected
+
+
 func _on_port_unlocked(port_id: StringName) -> void:
 	var port_name := _translated_port_name(port_id)
 	_instruction_label.text = tr("INSTRUCTION_PORT_UNLOCKED") % port_name
 	if _port_unlock_panel.is_open_for(port_id):
 		_port_unlock_panel.close_panel()
 	_update_mission_markers()
+	_update_next_goal()
 
 
 func _on_port_unlock_failed(port_id: StringName, required_amount: int, current_amount: int) -> void:
@@ -427,6 +497,7 @@ func _on_ship_purchased(
 			_translated_ship_model_name(ship_data)
 	_refresh_fleet_panel()
 	_update_tutorial_focus()
+	_update_next_goal()
 
 
 func _on_game_loaded() -> void:
@@ -445,6 +516,7 @@ func _on_game_loaded() -> void:
 		_spawn_ship(ship_id, ship_data, home_port_id)
 	_update_money(GameManager.money)
 	_update_company_progress()
+	_update_next_goal()
 	_on_mission_offers_updated(MissionManager.get_offers())
 	_refresh_fleet_panel()
 	_update_tutorial_instruction()

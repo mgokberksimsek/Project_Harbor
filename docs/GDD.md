@@ -408,6 +408,12 @@ tamamlandığında tamamen kapanır. İlk görev başladığında öğretici tam
 bu durum kayıt verisinde saklanır. Eski kayıtlar öğreticiyi tamamlamış kabul
 edilir.
 
+Öğretici tamamlandıktan sonra sol üstte tek satırlık bir “Sonraki Hedef” alanı
+ilk oturum ilerlemesini sürdürür. Önce başlangıç seviyesinde açılabilen en ucuz
+genişleme limanını ve biriken Cash'i, bu liman açılınca da erişilebilir ilk yeni
+gemi modelini ve satın alma ilerlemesini gösterir. İkinci gemi alındığında alan
+kaybolur; kalıcı görev listesine veya yeni bir yönetim sistemine dönüşmez.
+
 ### 12.5 Ayarlar ve dil
 
 Sağ üstteki ayarlar düğmesi tam ekran bir menü açar ve arka plandaki oyunu

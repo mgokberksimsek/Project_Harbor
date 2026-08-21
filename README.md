@@ -22,6 +22,7 @@ Purchase your first cargo ship, transport goods between ports, earn money, upgra
 - JSON save data and offline mission progress
 - Mobile-first landscape camera controls
 - Four-step first-mission tutorial covering ship purchase, selection, mission discovery, and acceptance
+- Data-driven first-session goals leading to the first port expansion and second ship
 - Pause/settings menu with separate sound-effects and music controls
 - Runtime Turkish and English interface support
 
