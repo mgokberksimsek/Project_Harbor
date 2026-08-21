@@ -25,15 +25,7 @@ position = Vector2(0, 25)
 color = Color(0.2, 0.38, 0.48, 1)
 polygon = PackedVector2Array(-18, -30, 18, -30, 18, 37, -18, 37)
 
-[node name="LeftWindow" type="Polygon2D" parent="."]
-position = Vector2(-52, 4)
-color = Color(0.38, 0.72, 0.86, 1)
-polygon = PackedVector2Array(-17, -16, 17, -16, 17, 16, -17, 16)
-
-[node name="RightWindow" type="Polygon2D" parent="."]
-position = Vector2(52, 4)
-color = Color(0.38, 0.72, 0.86, 1)
-polygon = PackedVector2Array(-17, -16, 17, -16, 17, 16, -17, 16)
+[node name="WindowLayer" type="Node2D" parent="."]
 
 [node name="Pier" type="Line2D" parent="."]
 z_index = -1

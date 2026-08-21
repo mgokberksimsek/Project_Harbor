@@ -75,6 +75,8 @@ func _run() -> void:
 	var headquarters := world.get_node("CompanyHeadquarters")
 	assert(headquarters != null)
 	assert(headquarters.get_delivery_position() != Vector2.ZERO)
+	assert(headquarters.get_visual_tier() == 1)
+	assert((headquarters.get_node("Label") as Label).text.contains("Sv. 1"))
 	var company_label := world.get_node("UI/CompanyProgressLabel") as Button
 	assert(company_label != null)
 	assert(company_label.text.contains("400 / 1000 CV"))
@@ -484,6 +486,7 @@ func _run() -> void:
 	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 1280)
 	assert(company_manager.company_value == 2600)
 	assert(company_manager.company_level == 3)
+	assert(headquarters.get_visual_tier() == 2)
 	var shop_buy_button := world.get_node(
 		"UI/ShipShopPanel/Margin/VBox/Body/BuyButton"
 	) as Button

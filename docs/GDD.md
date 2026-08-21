@@ -139,6 +139,11 @@ Company Value = Gemi Değeri + Gemi Geliştirmeleri + Açık Limanların Değeri
 toplama dahil edilir. Tamamlanan görev, taşınan yük, rota çeşitliliği, Cash ve
 geçici verimlilik çarpanları ilk sürümde Company Value üretmez.
 
+Şirket merkezi, yeni bir yönetim katmanı oluşturmadan büyümeyi haritada görünür
+kılar. Prototipte Company Level 1–2 küçük ofis, 3–5 büyümüş merkez, 6–9 bölgesel
+merkez ve 10–15 kule görünümünü kullanır. Bu kademeler otomatik ve yalnızca
+görseldir; oyuncudan ayrıca para, yükseltme işlemi veya merkeze dönüş istemez.
+
 Company Level, şimdiye kadar ulaşılan en yüksek Company Value üzerinden
 hesaplanır. Company Value daha sonra düşse bile seviye düşmez ve açılan içerik
 yeniden kilitlenmez. Company Level yeni gemi, liman bölgesi, teknoloji, filo

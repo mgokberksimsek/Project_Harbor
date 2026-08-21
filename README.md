@@ -15,6 +15,7 @@ Purchase your first cargo ship, transport goods between ports, earn money, upgra
 - Purchasable ships with escalating prices
 - Limited speed and cargo-capacity upgrades
 - Asset-based Company Value and permanent Company Levels
+- Company Headquarters that visually grows across four Company Level tiers
 - Tap-to-open company progress breakdown and next-level unlock preview
 - Curved sea routes with animated route progress
 - Stable harbor berths with smooth docking movement
