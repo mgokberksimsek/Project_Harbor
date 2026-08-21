@@ -12,7 +12,8 @@ Purchase your first cargo ship, transport goods between ports, earn money, upgra
 - Random, ship-compatible mission offers
 - Five data-driven ports across two regions, with level-gated expansion
 - Confirmed port-unlock panel showing cost, level, and Company Value gain
-- Purchasable ships with escalating prices
+- Compact multi-model ship shop with escalating same-model prices
+- General, refrigerated, and bulk ship specializations with compatible cargo offers
 - Limited speed and cargo-capacity upgrades
 - Asset-based Company Value and permanent Company Levels
 - Company Headquarters that visually grows across four Company Level tiers

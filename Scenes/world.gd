@@ -418,18 +418,6 @@ func _update_next_goal() -> void:
 		]
 		_next_goal_label.visible = true
 		return
-	if FleetManager.get_all_ship_ids().size() < 2:
-		var ship_data := _get_first_expansion_ship_model()
-		if ship_data == null:
-			return
-		var ship_price := FleetManager.get_ship_purchase_price(ship_data.id)
-		_next_goal_label.text = tr("NEXT_GOAL_BUY_SHIP") % [
-			_translated_ship_model_name(ship_data),
-			mini(GameManager.money, ship_price),
-			ship_price,
-		]
-		_next_goal_label.visible = true
-		return
 	var regional_port_id := _get_available_regional_port_id()
 	if regional_port_id != &"":
 		var regional_port_data := PortManager.get_port_data(regional_port_id)
@@ -439,6 +427,16 @@ func _update_next_goal() -> void:
 			_translated_port_name(regional_port_id),
 			mini(GameManager.money, regional_port_data.base_unlock_cost),
 			regional_port_data.base_unlock_cost,
+		]
+		_next_goal_label.visible = true
+		return
+	var ship_data := _get_first_expansion_ship_model()
+	if ship_data != null:
+		var ship_price := FleetManager.get_ship_purchase_price(ship_data.id)
+		_next_goal_label.text = tr("NEXT_GOAL_BUY_SHIP") % [
+			_translated_ship_model_name(ship_data),
+			mini(GameManager.money, ship_price),
+			ship_price,
 		]
 		_next_goal_label.visible = true
 		return

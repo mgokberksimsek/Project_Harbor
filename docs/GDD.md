@@ -237,6 +237,12 @@ büyütür ve fiyatı en yakın 10'a yuvarlar.
 Bir gemi modelinin satın alınabilmesi için gereken Company Level'a ulaşılmış
 olmalı ve güncel Cash fiyatı ayrıca ödenmelidir.
 
+Gemi mağazası modelleri gerekli seviye ve fiyata göre sıralar. Oyuncu kompakt
+sağ/sol oklarla modeller arasında geçer; kilitli modeller görülebilir ancak
+gereken Company Level'a ulaşılmadan satın alınamaz. Prototipte Başlangıç Yük
+Gemisi genel, Soğutmalı Yük Gemisi genel ve soğutmalı, Dökme Yük Gemisi ise
+yalnızca dökme yük sınıfında görev alır.
+
 Filo sonsuza kadar büyümez. Prototipte üst sınır 6 gemidir. Nihai sınır ve bu
 sınırı artırabilecek liman/ofis geliştirmeleri dengeleme aşamasında
 kararlaştırılacaktır.
@@ -419,10 +425,12 @@ ilk oturum ilerlemesini sürdürür. Önce başlangıç seviyesinde açılabilen
 genişleme limanını ve biriken Cash'i, bu liman açılınca da erişilebilir ilk yeni
 gemi modelini ve satın alma ilerlemesini gösterir. İkinci gemi alındığında hedef,
 mevcut Company Level ile erişilebilen en erken bölgesel limana döner. Bu liman
-açıldığında sıradaki liman daha yüksek Company Level istiyorsa, hedef o limanın
-seviye ve Company Value eşiğini gösterir; eşiğe ulaşıldığında liman açma
-maliyetine dönüşür. Veri dosyalarında başka genişleme kalmadığında alan kaybolur.
-Bu akış kalıcı görev listesine veya yeni bir yönetim sistemine dönüşmez.
+açıldığında mevcut seviyede edinilebilen yeni bir gemi uzmanlığı varsa önce bu
+yatırımı gösterir. Yeni gemi Company Level eşiğini açtığında hedef sıradaki
+bölgesel limanın açma maliyetine dönüşür; uygun yatırım yoksa limanın seviye ve
+Company Value eşiği gösterilir. Veri dosyalarında başka genişleme kalmadığında
+alan kaybolur. Bu akış kalıcı görev listesine veya yeni bir yönetim sistemine
+dönüşmez.
 
 ### 12.5 Ayarlar ve dil
 
@@ -472,7 +480,7 @@ Tam sürüm yönü için başlangıç hedefleri:
 
 - 15–20 açılabilir liman.
 - Birden fazla gemi modeli ve uzmanlık alanı.
-- Genel, soğutmalı ve ileride eklenebilecek özel kargo sınıfları.
+- Genel, soğutmalı, dökme yük ve ileride eklenebilecek özel kargo sınıfları.
 - Kısa, orta ve uzun görev havuzları.
 - Sınırlı ama anlamlı hız ve kapasite geliştirmeleri.
 - Erken, orta ve ileri oyun için ayrı ekonomi dengesi.
@@ -507,8 +515,8 @@ veri dosyaları üzerinden tanımlanmalıdır.
 Prototipte bulunan içerik:
 
 - Limanlar: Mersin, İzmir, İstanbul, Antalya ve Samsun.
-- Kargolar: Konteyner, Metal, Makine Parçaları, Gıda.
-- Ana gemiler: Başlangıç yük gemisi ve soğutmalı yük gemisi.
+- Kargolar: Konteyner, Metal, Makine Parçaları, Gıda ve Tahıl.
+- Ana gemiler: Başlangıç yük gemisi, soğutmalı yük gemisi ve dökme yük gemisi.
 
 ## 17. MVP kabul ölçütleri
 

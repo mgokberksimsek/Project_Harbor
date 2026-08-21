@@ -181,6 +181,7 @@ func _turkish_messages() -> Dictionary:
 		"SHOP_NOT_FOUND": "Gemi bulunamadı",
 		"SHOP_DETAILS_GENERAL": "Hız: %d · Kapasite: %d\nGenel yük",
 		"SHOP_DETAILS_REFRIGERATED": "Hız: %d · Kapasite: %d\nGenel + Soğutmalı yük",
+		"SHOP_DETAILS_BULK": "Hız: %d · Kapasite: %d\nDökme yük",
 		"SHOP_LEVEL_REQUIRED": "Şirket Sv. %d gerekli",
 		"SHOP_CURRENT_LEVEL": "Şu anki seviye: %d",
 		"SHOP_FLEET_FULL": "Filo kapasitesi dolu",
@@ -219,8 +220,10 @@ func _turkish_messages() -> Dictionary:
 		"PORT_DESCRIPTION_SAMSUN": "Daha uzun rotalara açılan ikinci bölgesel merkez.",
 		"SHIP_STARTER_FREIGHTER": "Başlangıç Yük Gemisi",
 		"SHIP_REFRIGERATED_FREIGHTER": "Soğutmalı Yük Gemisi",
+		"SHIP_BULK_CARRIER": "Dökme Yük Gemisi",
 		"CARGO_CONTAINERS": "Konteyner", "CARGO_FOOD": "Gıda",
 		"CARGO_MACHINERY": "Makine Parçaları", "CARGO_METAL": "Metal",
+		"CARGO_GRAIN": "Tahıl",
 	}
 
 
@@ -271,6 +274,7 @@ func _english_messages() -> Dictionary:
 		"DURATION_SECONDS": "%d sec", "DURATION_MINUTES": "%d min %02d sec",
 		"SHOP_NOT_FOUND": "Ship not found", "SHOP_DETAILS_GENERAL": "Speed: %d · Capacity: %d\nGeneral cargo",
 		"SHOP_DETAILS_REFRIGERATED": "Speed: %d · Capacity: %d\nGeneral + Refrigerated cargo",
+		"SHOP_DETAILS_BULK": "Speed: %d · Capacity: %d\nBulk cargo",
 		"SHOP_LEVEL_REQUIRED": "Company Lv. %d required", "SHOP_CURRENT_LEVEL": "Current level: %d",
 		"SHOP_FLEET_FULL": "Fleet capacity full", "SHOP_FLEET_COUNT": "Fleet: %d/%d",
 		"SHOP_BUY": "Buy · %d ₺", "SHOP_OWNED": "Owned: %d · Next price increases",
@@ -303,7 +307,8 @@ func _english_messages() -> Dictionary:
 		"PORT_DESCRIPTION_ANTALYA": "The western cargo gateway of the first expansion region.",
 		"PORT_DESCRIPTION_SAMSUN": "A second regional hub opening the way to longer routes.",
 		"SHIP_STARTER_FREIGHTER": "Starter Freighter", "SHIP_REFRIGERATED_FREIGHTER": "Refrigerated Freighter",
+		"SHIP_BULK_CARRIER": "Bulk Carrier",
 		"CARGO_CONTAINERS": "Containers", "CARGO_FOOD": "Food",
-		"CARGO_MACHINERY": "Machinery Parts", "CARGO_METAL": "Metal",
+		"CARGO_MACHINERY": "Machinery Parts", "CARGO_METAL": "Metal", "CARGO_GRAIN": "Grain",
 	}, true)
 	return messages

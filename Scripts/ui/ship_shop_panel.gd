@@ -7,12 +7,15 @@ extends PanelContainer
 @onready var _toggle_button: Button = $Margin/VBox/ToggleButton
 @onready var _body: VBoxContainer = $Margin/VBox/Body
 @onready var _title: Label = $Margin/VBox/Body/Title
+@onready var _previous_button: Button = $Margin/VBox/Body/ModelSelector/PreviousButton
+@onready var _model_position_label: Label = $Margin/VBox/Body/ModelSelector/PositionLabel
+@onready var _next_button: Button = $Margin/VBox/Body/ModelSelector/NextButton
 @onready var _details: Label = $Margin/VBox/Body/Details
 @onready var _buy_button: Button = $Margin/VBox/Body/BuyButton
 @onready var _status: Label = $Margin/VBox/Body/Status
 
 const COLLAPSED_HEIGHT := 64.0
-const EXPANDED_HEIGHT := 215.0
+const EXPANDED_HEIGHT := 258.0
 const TUTORIAL_PULSE_SPEED := 4.0
 
 var _ship_data: ShipData
@@ -26,6 +29,8 @@ func _ready() -> void:
 	_default_model_id = model_id
 	_select_model_for_fleet_state()
 	_toggle_button.pressed.connect(_on_toggle_pressed)
+	_previous_button.pressed.connect(_on_previous_model_pressed)
+	_next_button.pressed.connect(_on_next_model_pressed)
 	_buy_button.pressed.connect(_on_buy_pressed)
 	var event_bus := get_node("/root/EventBus")
 	event_bus.money_changed.connect(_on_money_changed)
@@ -62,11 +67,14 @@ func _refresh() -> void:
 	if _ship_data == null:
 		_title.text = tr("SHOP_NOT_FOUND")
 		_buy_button.disabled = true
+		_refresh_model_selector()
 		return
 	_title.text = _translated_ship_name(_ship_data)
-	var details_key := "SHOP_DETAILS_REFRIGERATED" \
-		if _ship_data.cargo_capabilities.has(&"refrigerated") \
-		else "SHOP_DETAILS_GENERAL"
+	var details_key := "SHOP_DETAILS_GENERAL"
+	if _ship_data.cargo_capabilities.has(&"refrigerated"):
+		details_key = "SHOP_DETAILS_REFRIGERATED"
+	elif _ship_data.cargo_capabilities.has(&"bulk"):
+		details_key = "SHOP_DETAILS_BULK"
 	_details.text = tr(details_key) % [
 		roundi(_ship_data.base_speed),
 		_ship_data.cargo_capacity,
@@ -88,6 +96,7 @@ func _refresh() -> void:
 		_buy_button.text = tr("SHOP_BUY") % current_price
 		_buy_button.disabled = GameManager.money < current_price
 		_status.text = tr("SHOP_OWNED") % owned_count
+	_refresh_model_selector()
 
 
 func _on_buy_pressed() -> void:
@@ -101,6 +110,14 @@ func _on_buy_pressed() -> void:
 
 func _on_toggle_pressed() -> void:
 	set_expanded(not _expanded)
+
+
+func _on_previous_model_pressed() -> void:
+	_shift_model(-1)
+
+
+func _on_next_model_pressed() -> void:
+	_shift_model(1)
 
 
 func _on_money_changed(_new_amount: int, _delta: int) -> void:
@@ -118,7 +135,10 @@ func _on_ship_purchased(
 ) -> void:
 	if purchased_data.id == model_id:
 		_status.text = tr("SHOP_SUCCESS")
-	_select_model_for_fleet_state()
+	if FleetManager.get_all_ship_ids().size() == 1 and purchased_data.unlocked_by_default:
+		_ship_data = FleetManager.get_ship_model(_default_model_id)
+		if _ship_data != null:
+			model_id = _ship_data.id
 	_refresh()
 
 
@@ -172,6 +192,60 @@ func _select_model_for_fleet_state() -> void:
 		if _ship_data != null:
 			model_id = _ship_data.id
 		return
+	if _ship_data != null and FleetManager.get_ship_model(model_id) != null:
+		return
 	_ship_data = FleetManager.get_ship_model(_default_model_id)
 	if _ship_data != null:
 		model_id = _ship_data.id
+
+
+func _shift_model(direction: int) -> void:
+	var models := _get_shop_models()
+	if models.size() <= 1:
+		return
+	var current_index := _find_model_index(models, model_id)
+	if current_index < 0:
+		current_index = 0
+	var next_index := posmod(current_index + direction, models.size())
+	_ship_data = models[next_index]
+	model_id = _ship_data.id
+	_refresh()
+
+
+func _refresh_model_selector() -> void:
+	var models := _get_shop_models()
+	var model_index := _find_model_index(models, model_id)
+	_model_position_label.text = "%d / %d" % [
+		model_index + 1 if model_index >= 0 else 0,
+		models.size(),
+	]
+	var navigation_disabled := models.size() <= 1
+	_previous_button.disabled = navigation_disabled
+	_next_button.disabled = navigation_disabled
+
+
+func _get_shop_models() -> Array[ShipData]:
+	if FleetManager.get_all_ship_ids().is_empty():
+		var initial_model := FleetManager.get_initial_ship_model()
+		var initial_models: Array[ShipData] = []
+		if initial_model != null:
+			initial_models.append(initial_model)
+		return initial_models
+	var models := FleetManager.get_purchasable_ship_models()
+	models.sort_custom(_is_ship_model_before)
+	return models
+
+
+func _find_model_index(models: Array[ShipData], target_model_id: StringName) -> int:
+	for model_index in range(models.size()):
+		if models[model_index].id == target_model_id:
+			return model_index
+	return -1
+
+
+func _is_ship_model_before(left: ShipData, right: ShipData) -> bool:
+	if left.required_company_level != right.required_company_level:
+		return left.required_company_level < right.required_company_level
+	if left.purchase_cost != right.purchase_cost:
+		return left.purchase_cost < right.purchase_cost
+	return String(left.id) < String(right.id)
