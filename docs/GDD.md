@@ -417,8 +417,10 @@ edilir.
 Öğretici tamamlandıktan sonra sol üstte tek satırlık bir “Sonraki Hedef” alanı
 ilk oturum ilerlemesini sürdürür. Önce başlangıç seviyesinde açılabilen en ucuz
 genişleme limanını ve biriken Cash'i, bu liman açılınca da erişilebilir ilk yeni
-gemi modelini ve satın alma ilerlemesini gösterir. İkinci gemi alındığında alan
-kaybolur; kalıcı görev listesine veya yeni bir yönetim sistemine dönüşmez.
+gemi modelini ve satın alma ilerlemesini gösterir. İkinci gemi alındığında hedef,
+mevcut Company Level ile erişilebilen en erken bölgesel limana döner. Bu liman
+açıldığında erişilebilir yeni hedef yoksa alan kaybolur; kalıcı görev listesine
+veya yeni bir yönetim sistemine dönüşmez.
 
 ### 12.5 Ayarlar ve dil
 

@@ -522,7 +522,9 @@ func _run() -> void:
 	assert(fleet_manager.get_all_ship_ids().size() == 2)
 	assert(fleet_manager.get_owned_model_count(&"refrigerated_freighter") == 1)
 	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 1280)
-	assert(not next_goal_label.visible)
+	assert(next_goal_label.visible)
+	assert(next_goal_label.text.contains("Antalya"))
+	assert(next_goal_label.text.contains("0 / 1500"))
 	assert(company_manager.company_value == 2600)
 	assert(company_manager.company_level == 3)
 	assert(headquarters.get_visual_tier() == 2)
@@ -566,6 +568,7 @@ func _run() -> void:
 	assert(antalya_status.text == "Sv. 1")
 	assert(company_manager.company_value == 3400)
 	assert(company_manager.company_level == 3)
+	assert(not next_goal_label.visible)
 	var expansion_candidates: Array = mission_manager.call(
 		"_build_offer_candidates",
 		&"izmir",

@@ -416,16 +416,28 @@ func _update_next_goal() -> void:
 		]
 		_next_goal_label.visible = true
 		return
-	if FleetManager.get_all_ship_ids().size() >= 2:
+	if FleetManager.get_all_ship_ids().size() < 2:
+		var ship_data := _get_first_expansion_ship_model()
+		if ship_data == null:
+			return
+		var ship_price := FleetManager.get_ship_purchase_price(ship_data.id)
+		_next_goal_label.text = tr("NEXT_GOAL_BUY_SHIP") % [
+			_translated_ship_model_name(ship_data),
+			mini(GameManager.money, ship_price),
+			ship_price,
+		]
+		_next_goal_label.visible = true
 		return
-	var ship_data := _get_first_expansion_ship_model()
-	if ship_data == null:
+	var regional_port_id := _get_available_regional_port_id()
+	if regional_port_id == &"":
 		return
-	var ship_price := FleetManager.get_ship_purchase_price(ship_data.id)
-	_next_goal_label.text = tr("NEXT_GOAL_BUY_SHIP") % [
-		_translated_ship_model_name(ship_data),
-		mini(GameManager.money, ship_price),
-		ship_price,
+	var regional_port_data := PortManager.get_port_data(regional_port_id)
+	if regional_port_data == null:
+		return
+	_next_goal_label.text = tr("NEXT_GOAL_UNLOCK_PORT") % [
+		_translated_port_name(regional_port_id),
+		mini(GameManager.money, regional_port_data.base_unlock_cost),
+		regional_port_data.base_unlock_cost,
 	]
 	_next_goal_label.visible = true
 
@@ -460,6 +472,28 @@ func _get_first_expansion_ship_model() -> ShipData:
 				and candidate.purchase_cost < selected.purchase_cost):
 			selected = candidate
 	return selected
+
+
+func _get_available_regional_port_id() -> StringName:
+	var selected_id: StringName = &""
+	var selected_level := 2147483647
+	var selected_cost := 2147483647
+	for port_id in PortManager.get_all_port_ids():
+		if PortManager.is_unlocked(port_id):
+			continue
+		var port_data := PortManager.get_port_data(port_id)
+		if port_data == null \
+				or port_data.base_unlock_cost <= 0 \
+				or port_data.required_company_level <= 1 \
+				or port_data.required_company_level > CompanyManager.company_level:
+			continue
+		if port_data.required_company_level < selected_level \
+				or (port_data.required_company_level == selected_level \
+				and port_data.base_unlock_cost < selected_cost):
+			selected_id = port_id
+			selected_level = port_data.required_company_level
+			selected_cost = port_data.base_unlock_cost
+	return selected_id
 
 
 func _on_port_unlocked(port_id: StringName) -> void:
