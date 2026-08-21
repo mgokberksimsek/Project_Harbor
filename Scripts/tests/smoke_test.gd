@@ -130,6 +130,8 @@ func _run() -> void:
 	assert(instruction_label.text.contains("ÖĞRETİCİ 1/3"))
 	var fleet_panel := world.get_node("UI/FleetStatusPanel")
 	assert(fleet_panel != null)
+	var settings_button := settings_menu.get_node("SettingsButton") as Button
+	assert(not fleet_panel.get_global_rect().intersects(settings_button.get_global_rect()))
 	var fleet_toggle := fleet_panel.get_node("Margin/VBox/ToggleButton") as Button
 	assert(not fleet_panel.is_expanded())
 	assert(is_equal_approx(fleet_panel.offset_bottom - fleet_panel.offset_top, 64.0))

@@ -131,9 +131,9 @@ anchors_preset = 2
 offset_top = -86.0
 offset_right = 192.0
 
-[node name="SettingsMenu" parent="UI" instance=ExtResource("10_settings")]
+[node name="SettingsMenu" parent="UI" unique_id=506582069 instance=ExtResource("10_settings")]
 
-[node name="PortUnlockPanel" parent="UI" instance=ExtResource("25_port_unlock")]
+[node name="PortUnlockPanel" parent="UI" unique_id=1388240783 instance=ExtResource("25_port_unlock")]
 
 [node name="MissionOfferPanel" parent="UI" unique_id=843648461 instance=ExtResource("8_mission_offer_panel")]
 visible = true
@@ -144,8 +144,10 @@ offset_bottom = -43.68213
 scale = Vector2(0.68971443, 1.0532308)
 
 [node name="FleetStatusPanel" parent="UI" unique_id=1221162860 instance=ExtResource("11_fleet_status")]
-offset_left = -195.0
-offset_top = 72.0
+offset_left = -182.0
+offset_top = 127.0
+offset_right = -11.0
+offset_bottom = 189.0
 
 [node name="MissionPanel" type="PanelContainer" parent="UI" unique_id=1510682631]
 visible = false
