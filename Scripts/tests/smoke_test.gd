@@ -20,6 +20,7 @@ func _run() -> void:
 	var port_manager := root.get_node("/root/PortManager")
 	var fleet_manager := root.get_node("/root/FleetManager")
 	var mission_manager := root.get_node("/root/MissionManager")
+	var economy_manager := root.get_node("/root/EconomyManager")
 	var company_manager := root.get_node("/root/CompanyManager")
 	var settings_manager := root.get_node("/root/SettingsManager")
 	var game_manager := root.get_node("/root/GameManager")
@@ -174,6 +175,15 @@ func _run() -> void:
 	assert(instruction_label.text.contains("ÖĞRETİCİ 2/4"))
 	assert(not shop_panel.is_tutorial_focused())
 	assert(not shop_panel.is_expanded())
+	var first_port_pacing := _get_mission_count_range_for_cost(
+		mission_manager,
+		fleet_manager,
+		economy_manager,
+		starter_ship_id,
+		750
+	)
+	assert(first_port_pacing.x >= 3)
+	assert(first_port_pacing.y <= 4)
 	var fleet_panel := world.get_node("UI/FleetStatusPanel")
 	assert(fleet_panel != null)
 	var settings_button := settings_menu.get_node("SettingsButton") as Button
@@ -483,6 +493,21 @@ func _run() -> void:
 	assert(next_goal_label.visible)
 	assert(next_goal_label.text.contains("Soğutmalı"))
 	assert(next_goal_label.text.contains("0 / 800"))
+	var second_ship_pacing := _get_mission_count_range_for_cost(
+		mission_manager,
+		fleet_manager,
+		economy_manager,
+		starter_ship_id,
+		800
+	)
+	assert(second_ship_pacing.x >= 3)
+	assert(second_ship_pacing.y <= 4)
+	print("EARLY_GAME_BALANCE first_port=%d-%d second_ship=%d-%d missions" % [
+		first_port_pacing.x,
+		first_port_pacing.y,
+		second_ship_pacing.x,
+		second_ship_pacing.y,
+	])
 
 	var refrigerated_model: ShipData = fleet_manager.get_ship_model(&"refrigerated_freighter")
 	assert(refrigerated_model != null)
@@ -762,3 +787,34 @@ func _assert_all_sea_routes_avoid_land(port_manager: Node, world: Node2D) -> voi
 						land_entry["name"],
 						sample_point,
 					])
+
+
+func _get_mission_count_range_for_cost(
+		mission_manager: Node,
+		fleet_manager: Node,
+		economy_manager: Node,
+		ship_id: StringName,
+		target_cost: int
+) -> Vector2i:
+	var origin_port_id: StringName = fleet_manager.get_ship_current_port(ship_id)
+	var candidates: Array = mission_manager.call(
+		"_build_offer_candidates",
+		origin_port_id,
+		ship_id
+	)
+	assert(not candidates.is_empty())
+	var minimum_reward := 2147483647
+	var maximum_reward := 0
+	for candidate in candidates:
+		var reward: int = economy_manager.calculate_mission_reward(
+			candidate["pickup_id"],
+			candidate["destination_id"],
+			candidate["cargo_type"],
+			1
+		)
+		minimum_reward = mini(minimum_reward, reward)
+		maximum_reward = maxi(maximum_reward, reward)
+	assert(minimum_reward > 0)
+	var best_case_count := ceili(float(target_cost) / float(maximum_reward))
+	var worst_case_count := ceili(float(target_cost) / float(minimum_reward))
+	return Vector2i(best_case_count, worst_case_count)

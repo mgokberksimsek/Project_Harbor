@@ -112,6 +112,12 @@ Mevcut prototipte oyuncu:
 Başlangıç limanları birbirine görece yakın tutulur. Amaç oyuncuya kısa sürede
 ilk hareketi, yüklemeyi, teslimatı ve ödülü göstermektir.
 
+Prototip denge hedefinde ilk genişleme limanı mevcut başlangıç görevleriyle
+3–4 görevde, ikinci gemi de genişleyen rota havuzuyla sonraki 3–4 görevde
+alınabilmelidir. Böylece öğreticiden iki gemili filoya geçiş toplam 6–8 görev
+bandında kalır. Bu bant otomatik denge testinde veri ve ödül formüllerinden
+hesaplanır; nihai gerçek zaman süreleri daha sonraki oynanış testinde belirlenir.
+
 ### 5.2 İlerleme katmanları
 
 Oyuncunun gelişimi dört ana eksende ilerler:
