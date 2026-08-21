@@ -4,7 +4,7 @@ Project Harbor is a mobile-first 2D harbor and fleet management game developed w
 
 ## Gameplay
 
-Start with a small cargo ship, transport goods between ports, earn money, upgrade your fleet, and build your own shipping empire.
+Purchase your first cargo ship, transport goods between ports, earn money, upgrade your fleet, and build your own shipping empire.
 
 ## Current Features
 
@@ -20,7 +20,7 @@ Start with a small cargo ship, transport goods between ports, earn money, upgrad
 - Stable harbor berths with smooth docking movement
 - JSON save data and offline mission progress
 - Mobile-first landscape camera controls
-- Three-step first-mission tutorial with pulsing target guidance and saved progress
+- Four-step first-mission tutorial covering ship purchase, selection, mission discovery, and acceptance
 - Pause/settings menu with separate sound-effects and music controls
 - Runtime Turkish and English interface support
 

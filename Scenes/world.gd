@@ -5,6 +5,7 @@ extends Node2D
 @onready var _instruction_label: Label = $UI/InstructionLabel
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
+@onready var _ship_shop_panel = $UI/ShipShopPanel
 @onready var _port_unlock_panel: PortUnlockPanel = $UI/PortUnlockPanel
 @onready var _company_progress_panel: CompanyProgressPanel = $UI/CompanyProgressPanel
 @onready var _settings_menu: SettingsMenu = $UI/SettingsMenu
@@ -98,12 +99,6 @@ func _is_ui_at_screen_position(screen_position: Vector2) -> bool:
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color("#256BB8"))
-	var starter_ship := get_node_or_null("StarterShip") as Ship
-	if starter_ship != null:
-		starter_ship.set_initial_world_position(
-			_company_headquarters.get_delivery_position(),
-			true
-		)
 	# Ships and ports can occupy the same dock position. Sorted, first-only
 	# picking guarantees that the higher-z ship receives the tap.
 	get_viewport().physics_object_picking_sort = true
@@ -340,20 +335,23 @@ func _on_port_tapped(port_id: StringName) -> void:
 
 func _update_tutorial_instruction() -> bool:
 	match GameManager.tutorial_step:
+		GameManager.TutorialStep.PURCHASE_SHIP:
+			_instruction_label.text = tr("TUTORIAL_1_PURCHASE")
+			return true
 		GameManager.TutorialStep.SELECT_SHIP:
-			_instruction_label.text = tr("TUTORIAL_1")
+			_instruction_label.text = tr("TUTORIAL_2_SELECT_SHIP")
 			return true
 		GameManager.TutorialStep.SELECT_MISSION_PORT:
 			if _selected_ship_id == &"":
-				_instruction_label.text = tr("TUTORIAL_2_NO_SHIP")
+				_instruction_label.text = tr("TUTORIAL_3_NO_SHIP")
 			else:
-				_instruction_label.text = tr("TUTORIAL_2")
+				_instruction_label.text = tr("TUTORIAL_3_SELECT_PORT")
 			return true
 		GameManager.TutorialStep.ACCEPT_MISSION:
 			if _open_mission_port_id == &"":
-				_instruction_label.text = tr("TUTORIAL_3_NO_PORT")
+				_instruction_label.text = tr("TUTORIAL_4_NO_PORT")
 			else:
-				_instruction_label.text = tr("TUTORIAL_3")
+				_instruction_label.text = tr("TUTORIAL_4_ACCEPT")
 			return true
 		_:
 			return false
@@ -407,8 +405,11 @@ func _on_ship_purchased(
 		_company_headquarters.get_delivery_position(),
 		true
 	)
-	_instruction_label.text = tr("INSTRUCTION_SHIP_JOINED") % _translated_ship_model_name(ship_data)
+	if not _update_tutorial_instruction():
+		_instruction_label.text = tr("INSTRUCTION_SHIP_JOINED") % \
+			_translated_ship_model_name(ship_data)
 	_refresh_fleet_panel()
+	_update_tutorial_focus()
 
 
 func _on_game_loaded() -> void:
@@ -602,6 +603,9 @@ func _update_mission_markers() -> void:
 
 
 func _update_tutorial_focus() -> void:
+	_ship_shop_panel.set_tutorial_focus(
+		GameManager.tutorial_step == GameManager.TutorialStep.PURCHASE_SHIP
+	)
 	var focus_ships := GameManager.tutorial_step == GameManager.TutorialStep.SELECT_SHIP
 	for ship_id in FleetManager.get_all_ship_ids():
 		var ship_node := FleetManager.get_ship_node(ship_id) as Ship

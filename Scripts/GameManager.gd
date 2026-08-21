@@ -5,14 +5,17 @@ enum TutorialStep {
 	SELECT_MISSION_PORT,
 	ACCEPT_MISSION,
 	COMPLETED,
+	PURCHASE_SHIP,
 }
 
 var money: int = 0
-var tutorial_step: TutorialStep = TutorialStep.SELECT_SHIP
+var tutorial_step: TutorialStep = TutorialStep.PURCHASE_SHIP
 
 
 func _ready() -> void:
+	money = _get_starting_cash()
 	EventBus.mission_completed.connect(_on_mission_completed)
+	EventBus.ship_purchased.connect(_on_ship_purchased)
 
 
 func add_money(amount: int) -> void:
@@ -119,6 +122,15 @@ func _on_mission_completed(mission: Mission) -> void:
 	add_money(mission.reward)
 
 
+func _on_ship_purchased(
+		_ship_id: StringName,
+		_ship_data: ShipData,
+		_home_port_id: StringName
+) -> void:
+	if tutorial_step == TutorialStep.PURCHASE_SHIP:
+		set_tutorial_step(TutorialStep.SELECT_SHIP)
+
+
 func set_tutorial_step(new_step: TutorialStep) -> void:
 	if tutorial_step == new_step:
 		return
@@ -142,20 +154,25 @@ func apply_save_state(saved: Dictionary) -> void:
 	var previous := money
 	money = maxi(int(saved.get("money", 0)), 0)
 	EventBus.money_changed.emit(money, money - previous)
-	var default_tutorial_step := TutorialStep.SELECT_SHIP
+	var default_tutorial_step := TutorialStep.PURCHASE_SHIP
 	if not saved.is_empty() and not saved.has("tutorial_step"):
 		# Existing saves created before the tutorial should not be forced back
 		# through first-time onboarding.
 		default_tutorial_step = TutorialStep.COMPLETED
-	set_tutorial_step(clampi(
-		int(saved.get("tutorial_step", default_tutorial_step)),
-		TutorialStep.SELECT_SHIP,
-		TutorialStep.COMPLETED
-	))
+	var saved_tutorial_step := int(saved.get("tutorial_step", default_tutorial_step))
+	if saved_tutorial_step < TutorialStep.SELECT_SHIP \
+			or saved_tutorial_step > TutorialStep.PURCHASE_SHIP:
+		saved_tutorial_step = TutorialStep.PURCHASE_SHIP
+	set_tutorial_step(saved_tutorial_step as TutorialStep)
 
 
 func reset_state() -> void:
 	apply_save_state({
-		"money": 0,
-		"tutorial_step": TutorialStep.SELECT_SHIP,
+		"money": _get_starting_cash(),
+		"tutorial_step": TutorialStep.PURCHASE_SHIP,
 	})
+
+
+func _get_starting_cash() -> int:
+	var initial_ship := FleetManager.get_initial_ship_model()
+	return maxi(initial_ship.purchase_cost, 0) if initial_ship != null else 0

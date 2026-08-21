@@ -63,9 +63,10 @@ bekleme, tekrarlanan bakım veya gereksiz mikro yönetim oluşturulmaz. Aynı am
 daha az adımla karşılayan çözüm her zaman tercih edilir.
 
 Yeni satın alınan gemiler şirket merkezinin teslimat iskelesinde görünür ve
-ayrılmış liman yuvasına kısa bir tanıtım hareketiyle geçer. Başlangıç gemisi
-de yeni oyunda bu iskelede bekler ve ilk görevini alınca buradan ayrılır. Bu
-yalnızca görsel bir teslimat akışıdır; oyuncuya ek işlem veya bekleme yüklemez.
+ayrılmış liman yuvasına kısa bir tanıtım hareketiyle geçer. Oyuncu ilk gemisini
+öğreticinin ilk adımında satın alır; gemi şirket merkezinde görünerek aynı
+teslimat akışını izler. Bu yalnızca görsel bir teslimat akışıdır; oyuncuya ek
+işlem veya bekleme yüklemez.
 
 ## 3. Hedef oyuncu ve deneyim
 
@@ -98,13 +99,15 @@ yalnızca görsel bir teslimat akışıdır; oyuncuya ek işlem veya bekleme yü
 
 Mevcut prototipte oyuncu:
 
-- Bir adet başlangıç yük gemisine sahiptir.
+- Sıfır gemiyle başlar.
+- Başlangıç yük gemisini satın almaya tam yetecek 500 TL'ye sahiptir.
 - Mersin ve İzmir limanları açık başlar.
 - İstanbul kilitlidir.
 - Antalya, Şirket Seviyesi 3; Samsun ise Şirket Seviyesi 4 genişleme
   hedefi olarak kilitlidir.
-- Sıfır para ile başlar ve ilk parasını görevlerden kazanır.
-- Aynı anda seçili gemiye ait üç görev teklifi görür.
+- İlk gemiyi satın aldıktan sonra kasası sıfırlanır ve ilk yeni parasını
+  görevlerden kazanır.
+- Bir gemi seçildiğinde o gemiye ait üç görev teklifi görür.
 
 Başlangıç limanları birbirine görece yakın tutulur. Amaç oyuncuya kısa sürede
 ilk hareketi, yüklemeyi, teslimatı ve ödülü göstermektir.
@@ -390,13 +393,15 @@ eklenebilir.
 ### 12.4 Başlangıç öğreticisi
 
 Öğretici ayrı bir modal ekran açmadan mevcut üst yönlendirme alanını kullanır.
-Oyuncudan sırasıyla şirket merkezindeki başlangıç gemisini seçmesi, görev
-işaretli bir limana dokunması ve bir görev teklifini kabul etmesi istenir.
-Her adımda dokunulması gereken gemi silueti, uygun liman görev rozetleri veya
-görev kartları hafif bir nabız/parlama hareketiyle vurgulanır. Bu yönlendirme
-normal seçim vurgularından ayrılır ve öğretici tamamlandığında tamamen kapanır.
-İlk görev başladığında öğretici tamamlanır ve bu durum kayıt verisinde saklanır.
-Eski kayıtlar öğreticiyi tamamlamış kabul edilir.
+Oyuncudan sırasıyla başlangıç yük gemisini satın alması, şirket merkezine teslim
+edilen gemiyi seçmesi, görev işaretli bir limana dokunması ve bir görev teklifini
+kabul etmesi istenir. İlgili satın alma düğmesi, gemi silueti, uygun liman görev
+rozetleri ve görev kartları kendi adımlarında hafif bir nabız/parlama hareketiyle
+vurgulanır. Gemi mağazası ilk adımda otomatik açılır ve satın alma tamamlanınca
+kapanır. Bu yönlendirme normal seçim vurgularından ayrılır ve öğretici
+tamamlandığında tamamen kapanır. İlk görev başladığında öğretici tamamlanır ve
+bu durum kayıt verisinde saklanır. Eski kayıtlar öğreticiyi tamamlamış kabul
+edilir.
 
 ### 12.5 Ayarlar ve dil
 
@@ -473,7 +478,8 @@ veri dosyaları üzerinden tanımlanmalıdır.
 - Sürüm kontrollü JSON kayıt, otomatik kayıt ve kayıt sıfırlama.
 - Uygulama kapalıyken görev ilerlemesi.
 - Mobil öncelikli yatay kamera ve dokunma etkileşimleri.
-- Üç adım boyunca hedef gemi, liman rozeti ve görev kartını vurgulayan öğretici.
+- Dört adım boyunca gemi satın alma düğmesi, hedef gemi, liman rozeti ve görev
+  kartını vurgulayan öğretici.
 - Oyunu duraklatan ayarlar menüsü; bağımsız efekt/müzik kontrolleri.
 - Oyun sırasında değiştirilebilen Türkçe ve İngilizce arayüz.
 

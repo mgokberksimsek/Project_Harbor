@@ -69,7 +69,7 @@ func _run() -> void:
 	var antalya_status := world.get_node("Ports/Antalya/StatusLabel") as Label
 	assert(antalya_status.text.contains("Sv. 3"))
 	assert(antalya_status.text.contains("1500"))
-	assert(company_manager.company_value == 900)
+	assert(company_manager.company_value == 400)
 	assert(company_manager.company_level == 1)
 	assert(company_manager.get_next_level_threshold() == 1000)
 	var headquarters := world.get_node("CompanyHeadquarters")
@@ -77,8 +77,8 @@ func _run() -> void:
 	assert(headquarters.get_delivery_position() != Vector2.ZERO)
 	var company_label := world.get_node("UI/CompanyProgressLabel") as Button
 	assert(company_label != null)
-	assert(company_label.text.contains("900 / 1000 CV"))
-	assert(company_manager.get_fleet_asset_value() == 500)
+	assert(company_label.text.contains("400 / 1000 CV"))
+	assert(company_manager.get_fleet_asset_value() == 0)
 	assert(company_manager.get_port_asset_value() == 400)
 	assert(company_manager.get_fleet_asset_value() + company_manager.get_port_asset_value() \
 		== company_manager.company_value)
@@ -132,16 +132,40 @@ func _run() -> void:
 	await process_frame
 	var company_panel := world.get_node("UI/CompanyProgressPanel")
 	assert(company_panel.visible)
-	assert(company_panel.get_node("Margin/VBox/TotalValue").text.contains("900 CV"))
-	assert(company_panel.get_node("Margin/VBox/Breakdown/FleetValue").text.contains("500 CV"))
+	assert(company_panel.get_node("Margin/VBox/TotalValue").text.contains("400 CV"))
+	assert(company_panel.get_node("Margin/VBox/Breakdown/FleetValue").text.contains("0 CV"))
 	assert(company_panel.get_node("Margin/VBox/Breakdown/PortValue").text.contains("400 CV"))
 	assert(company_panel.get_node("Margin/VBox/NextUnlocks").text.contains("Soğutmalı"))
 	company_panel.get_node("Margin/VBox/CloseButton").pressed.emit()
 	assert(not company_panel.visible)
 	var instruction_label := world.get_node("UI/InstructionLabel") as Label
 	assert(instruction_label != null)
+	assert(int(game_manager.get("tutorial_step")) == 4)
+	assert(instruction_label.text.contains("ÖĞRETİCİ 1/4"))
+	var shop_panel := world.get_node("UI/ShipShopPanel")
+	assert(shop_panel != null)
+	assert(shop_panel.is_tutorial_focused())
+	assert(shop_panel.is_expanded())
+	assert(fleet_manager.get_all_ship_ids().is_empty())
+	assert(mission_manager.get_offers().is_empty())
+	var starter_model: ShipData = fleet_manager.get_initial_ship_model()
+	assert(starter_model != null)
+	assert(starter_model.purchase_cost == 500)
+	assert(game_manager.money == starter_model.purchase_cost)
+	var tutorial_buy_button := shop_panel.get_node("Margin/VBox/Body/BuyButton") as Button
+	assert(not tutorial_buy_button.disabled)
+	assert(tutorial_buy_button.text.contains("500"))
+	tutorial_buy_button.pressed.emit()
+	await process_frame
+	await process_frame
+	assert(game_manager.money == 0)
+	assert(fleet_manager.get_all_ship_ids().size() == 1)
+	var starter_ship_id: StringName = fleet_manager.get_all_ship_ids()[0]
+	assert(fleet_manager.get_ship_data(starter_ship_id).id == starter_model.id)
 	assert(int(game_manager.get("tutorial_step")) == 0)
-	assert(instruction_label.text.contains("ÖĞRETİCİ 1/3"))
+	assert(instruction_label.text.contains("ÖĞRETİCİ 2/4"))
+	assert(not shop_panel.is_tutorial_focused())
+	assert(not shop_panel.is_expanded())
 	var fleet_panel := world.get_node("UI/FleetStatusPanel")
 	assert(fleet_panel != null)
 	var settings_button := settings_menu.get_node("SettingsButton") as Button
@@ -156,17 +180,15 @@ func _run() -> void:
 	assert(fleet_panel.get_node("Margin/VBox/Body").visible)
 	fleet_toggle.pressed.emit()
 	assert(not fleet_panel.is_expanded())
-	var shop_panel := world.get_node("UI/ShipShopPanel") as PanelContainer
-	assert(shop_panel != null)
 	var shop_toggle := shop_panel.get_node("Margin/VBox/ToggleButton") as Button
-	assert(not bool(shop_panel.call("is_expanded")))
+	assert(not shop_panel.is_expanded())
 	assert(is_equal_approx(shop_panel.offset_bottom - shop_panel.offset_top, 64.0))
 	shop_toggle.pressed.emit()
-	assert(bool(shop_panel.call("is_expanded")))
+	assert(shop_panel.is_expanded())
 	assert(is_equal_approx(shop_panel.offset_bottom - shop_panel.offset_top, 215.0))
 	assert(shop_panel.get_node("Margin/VBox/Body").visible)
 	shop_toggle.pressed.emit()
-	assert(not bool(shop_panel.call("is_expanded")))
+	assert(not shop_panel.is_expanded())
 	var initial_company_value: int = company_manager.company_value
 	game_manager.add_money(800)
 	assert(company_manager.company_value == initial_company_value)
@@ -204,12 +226,13 @@ func _run() -> void:
 	) * 0.5
 	assert(not route_midpoint.is_equal_approx(direct_midpoint))
 	assert(fleet_manager.get_all_ship_ids().size() == 1)
-	var starter_map_ship: Area2D = fleet_manager.get_ship_node(&"starter_ship") as Area2D
+	var starter_map_ship: Area2D = fleet_manager.get_ship_node(starter_ship_id) as Area2D
 	var mersin_map_port: Area2D = port_manager.get_port_node(&"mersin") as Area2D
 	assert(starter_map_ship != null)
-	assert(starter_map_ship.global_position.is_equal_approx(
+	assert(starter_map_ship.global_position.distance_to(
 		headquarters.get_delivery_position()
-	))
+	) < 40.0)
+	assert(bool(starter_map_ship.get("_dock_transition_active")))
 	var starter_icon := starter_map_ship.get_node("Icon") as Sprite2D
 	assert(starter_icon != null)
 	var starter_selection_outline := starter_icon.get_node("SelectionOutline") as Sprite2D
@@ -226,8 +249,8 @@ func _run() -> void:
 	assert(starter_route_line.get_remaining_length() < full_route_length)
 	starter_route_line.clear_route()
 	assert(port_manager.get_port_data(&"mersin").dock_slot_offsets.size() == 6)
-	assert(fleet_manager.get_ship_dock_slot_index(&"starter_ship") == 0)
-	assert(fleet_manager.get_ship_dock_position(&"starter_ship") != mersin_map_port.global_position)
+	assert(fleet_manager.get_ship_dock_slot_index(starter_ship_id) == 0)
+	assert(fleet_manager.get_ship_dock_position(starter_ship_id) != mersin_map_port.global_position)
 	assert(starter_map_ship.z_index > mersin_map_port.z_index)
 	assert(world.get_viewport().physics_object_picking_sort)
 	assert(world.get_viewport().physics_object_picking_first_only)
@@ -239,14 +262,14 @@ func _run() -> void:
 	ship_tap_event.global_position = ship_tap_event.position
 	world.set("_selected_ship_id", &"")
 	assert(world.try_select_ship_at_screen_position(ship_tap_event.position))
-	assert(world.get("_selected_ship_id") == &"starter_ship")
+	assert(world.get("_selected_ship_id") == starter_ship_id)
 	assert(starter_selection_outline.visible)
 
 	# Re-registering a ship (as scene reload does after New Game) must rebuild offers.
 	mission_manager.reset_state()
-	var starter_node: Node2D = fleet_manager.get_ship_node(&"starter_ship")
-	var starter_data: ShipData = fleet_manager.get_ship_data(&"starter_ship")
-	fleet_manager.register_ship(&"starter_ship", starter_data, &"mersin", starter_node)
+	var starter_node: Node2D = fleet_manager.get_ship_node(starter_ship_id)
+	var starter_data: ShipData = fleet_manager.get_ship_data(starter_ship_id)
+	fleet_manager.register_ship(starter_ship_id, starter_data, &"mersin", starter_node)
 	await process_frame
 	assert(not mission_manager.get_offers().is_empty())
 
@@ -254,7 +277,7 @@ func _run() -> void:
 
 	var offers: Array = mission_manager.get_offers()
 	assert(offers.size() == 3)
-	var starter_ship_data: ShipData = fleet_manager.get_ship_data(&"starter_ship")
+	var starter_ship_data: ShipData = fleet_manager.get_ship_data(starter_ship_id)
 	var food_cargo: CargoTypeData = mission_manager.get_cargo_type(&"food")
 	assert(starter_ship_data != null)
 	assert(food_cargo != null)
@@ -262,7 +285,7 @@ func _run() -> void:
 	var has_local_pickup_offer := false
 	var has_remote_pickup_offer := false
 	for offer in offers:
-		assert(offer.offered_ship_id == &"starter_ship")
+		assert(offer.offered_ship_id == starter_ship_id)
 		assert(offer.origin_port_id == &"mersin")
 		assert(port_manager.is_unlocked(offer.pickup_port_id))
 		assert(port_manager.is_unlocked(offer.delivery_port_id))
@@ -301,10 +324,10 @@ func _run() -> void:
 		port_manager.get_port_node(local_offer.delivery_port_id).global_position
 	))
 
-	event_bus.ship_tapped.emit(&"starter_ship")
+	event_bus.ship_tapped.emit(starter_ship_id)
 	await process_frame
 	assert(int(game_manager.get("tutorial_step")) == 1)
-	assert(instruction_label.text.contains("ÖĞRETİCİ 2/3"))
+	assert(instruction_label.text.contains("ÖĞRETİCİ 3/4"))
 	var first_offer: Mission = null
 	for offer in offers:
 		if offer.pickup_port_id != &"mersin":
@@ -323,7 +346,7 @@ func _run() -> void:
 	event_bus.port_tapped.emit(first_offer.pickup_port_id)
 	await process_frame
 	assert(int(game_manager.get("tutorial_step")) == 2)
-	assert(instruction_label.text.contains("ÖĞRETİCİ 3/3"))
+	assert(instruction_label.text.contains("ÖĞRETİCİ 4/4"))
 	var pickup_icon := pickup_node.get_node("Icon") as Sprite2D
 	var pickup_highlight := pickup_icon.get_node("SelectionOutline") as Sprite2D
 	assert(pickup_highlight != null)
@@ -349,7 +372,7 @@ func _run() -> void:
 	assert(mission.pickup_port_id == first_offer.pickup_port_id)
 	assert(mission.delivery_port_id == first_offer.delivery_port_id)
 	assert(mission.reward > 0)
-	assert(fleet_manager.get_ship_mission_remaining_sec(&"starter_ship") > 0.0)
+	assert(fleet_manager.get_ship_mission_remaining_sec(starter_ship_id) > 0.0)
 	await process_frame
 	var complete_preview_route: PackedVector2Array = starter_map_ship.get(
 		"_mission_preview_route_points"
@@ -391,16 +414,16 @@ func _run() -> void:
 	var delivery_state_safety := 0
 	mission.leg_duration_sec = 0.0
 	await process_frame
-	assert(fleet_manager.get_ship_state(&"starter_ship") == ShipRuntimeState.State.LOADING)
-	assert(fleet_manager.get_ship_dock_slot_index(&"starter_ship") == -1)
+	assert(fleet_manager.get_ship_state(starter_ship_id) == ShipRuntimeState.State.LOADING)
+	assert(fleet_manager.get_ship_dock_slot_index(starter_ship_id) == -1)
 	assert(starter_map_ship.global_position.is_equal_approx(pickup_port_node.global_position))
-	while fleet_manager.get_ship_state(&"starter_ship") \
+	while fleet_manager.get_ship_state(starter_ship_id) \
 			!= ShipRuntimeState.State.SAILING_TO_DELIVERY \
 			and delivery_state_safety < 3:
 		mission.leg_duration_sec = 0.0
 		await process_frame
 		delivery_state_safety += 1
-	assert(fleet_manager.get_ship_state(&"starter_ship") \
+	assert(fleet_manager.get_ship_state(starter_ship_id) \
 		== ShipRuntimeState.State.SAILING_TO_DELIVERY)
 	assert(starter_route_line.get_remaining_length() < complete_preview_length)
 	var delivery_route: PackedVector2Array = starter_map_ship.get("_sailing_route_points")
@@ -473,7 +496,7 @@ func _run() -> void:
 
 	var refrigerated_ship_found := false
 	for ship_id in fleet_manager.get_all_ship_ids():
-		if ship_id == &"starter_ship":
+		if ship_id == starter_ship_id:
 			continue
 		var purchased_data: ShipData = fleet_manager.get_ship_data(ship_id)
 		assert(purchased_data != null)
@@ -504,7 +527,7 @@ func _run() -> void:
 	var expansion_candidates: Array = mission_manager.call(
 		"_build_offer_candidates",
 		&"izmir",
-		&"starter_ship"
+		starter_ship_id
 	)
 	var has_antalya_candidate := false
 	for candidate in expansion_candidates:
@@ -513,27 +536,27 @@ func _run() -> void:
 			or candidate["destination_id"] == &"antalya"
 	assert(has_antalya_candidate)
 
-	var starter_speed_before: float = fleet_manager.get_ship_effective_speed(&"starter_ship")
+	var starter_speed_before: float = fleet_manager.get_ship_effective_speed(starter_ship_id)
 	var company_value_before_speed_upgrade: int = company_manager.company_value
-	var starter_upgrade_cost: int = fleet_manager.get_ship_speed_upgrade_cost(&"starter_ship")
+	var starter_upgrade_cost: int = fleet_manager.get_ship_speed_upgrade_cost(starter_ship_id)
 	assert(starter_upgrade_cost > 0)
 	game_manager.add_money(starter_upgrade_cost)
-	assert(game_manager.try_upgrade_ship_speed(&"starter_ship"))
+	assert(game_manager.try_upgrade_ship_speed(starter_ship_id))
 	assert(game_manager.money == 0)
-	assert(fleet_manager.get_ship_speed_level(&"starter_ship") == 1)
+	assert(fleet_manager.get_ship_speed_level(starter_ship_id) == 1)
 	assert(is_equal_approx(
-		fleet_manager.get_ship_effective_speed(&"starter_ship"),
+		fleet_manager.get_ship_effective_speed(starter_ship_id),
 		starter_speed_before * 1.15
 	))
 	assert(company_manager.company_value == company_value_before_speed_upgrade + 100)
-	var starter_capacity_upgrade_cost: int = fleet_manager.get_ship_capacity_upgrade_cost(&"starter_ship")
+	var starter_capacity_upgrade_cost: int = fleet_manager.get_ship_capacity_upgrade_cost(starter_ship_id)
 	var company_value_before_capacity_upgrade: int = company_manager.company_value
 	assert(starter_capacity_upgrade_cost > 0)
 	game_manager.add_money(starter_capacity_upgrade_cost)
-	assert(game_manager.try_upgrade_ship_capacity(&"starter_ship"))
+	assert(game_manager.try_upgrade_ship_capacity(starter_ship_id))
 	assert(game_manager.money == 0)
-	assert(fleet_manager.get_ship_capacity_level(&"starter_ship") == 1)
-	assert(fleet_manager.get_ship_effective_capacity(&"starter_ship") == 2)
+	assert(fleet_manager.get_ship_capacity_level(starter_ship_id) == 1)
+	assert(fleet_manager.get_ship_effective_capacity(starter_ship_id) == 2)
 	assert(company_manager.company_value == company_value_before_capacity_upgrade + 120)
 	await process_frame
 
@@ -575,26 +598,26 @@ func _run() -> void:
 	assert(game_manager.money == expected_offline_reward)
 	assert(mission_manager.get_active_missions().is_empty())
 	assert(fleet_manager.get_idle_ship_ids().size() == 2)
-	assert(fleet_manager.get_ship_speed_level(&"starter_ship") == 1)
-	assert(fleet_manager.get_ship_capacity_level(&"starter_ship") == 1)
+	assert(fleet_manager.get_ship_speed_level(starter_ship_id) == 1)
+	assert(fleet_manager.get_ship_capacity_level(starter_ship_id) == 1)
 	assert(company_manager.company_value == saved_company_value)
 	assert(company_manager.company_level == saved_company_level)
 	assert(company_manager.peak_company_value >= company_manager.company_value)
 	assert(game_manager.is_tutorial_completed())
 
 	var starter_max_speed_level := starter_ship_data.max_speed_level
-	while fleet_manager.get_ship_speed_level(&"starter_ship") < starter_max_speed_level:
-		assert(fleet_manager.upgrade_ship_speed(&"starter_ship"))
-	assert(fleet_manager.get_ship_speed_level(&"starter_ship") == starter_max_speed_level)
-	assert(fleet_manager.get_ship_speed_upgrade_cost(&"starter_ship") == -1)
-	assert(not fleet_manager.upgrade_ship_speed(&"starter_ship"))
+	while fleet_manager.get_ship_speed_level(starter_ship_id) < starter_max_speed_level:
+		assert(fleet_manager.upgrade_ship_speed(starter_ship_id))
+	assert(fleet_manager.get_ship_speed_level(starter_ship_id) == starter_max_speed_level)
+	assert(fleet_manager.get_ship_speed_upgrade_cost(starter_ship_id) == -1)
+	assert(not fleet_manager.upgrade_ship_speed(starter_ship_id))
 
 	var starter_max_capacity_level := starter_ship_data.max_capacity_level
-	while fleet_manager.get_ship_capacity_level(&"starter_ship") < starter_max_capacity_level:
-		assert(fleet_manager.upgrade_ship_capacity(&"starter_ship"))
-	assert(fleet_manager.get_ship_capacity_level(&"starter_ship") == starter_max_capacity_level)
-	assert(fleet_manager.get_ship_capacity_upgrade_cost(&"starter_ship") == -1)
-	assert(not fleet_manager.upgrade_ship_capacity(&"starter_ship"))
+	while fleet_manager.get_ship_capacity_level(starter_ship_id) < starter_max_capacity_level:
+		assert(fleet_manager.upgrade_ship_capacity(starter_ship_id))
+	assert(fleet_manager.get_ship_capacity_level(starter_ship_id) == starter_max_capacity_level)
+	assert(fleet_manager.get_ship_capacity_upgrade_cost(starter_ship_id) == -1)
+	assert(not fleet_manager.upgrade_ship_capacity(starter_ship_id))
 
 	var fleet_capacity: int = fleet_manager.get_fleet_capacity()
 	while fleet_manager.get_all_ship_ids().size() < fleet_capacity:
@@ -659,7 +682,8 @@ func _run() -> void:
 	game_manager.apply_save_state({"money": 0})
 	assert(game_manager.is_tutorial_completed())
 	game_manager.reset_state()
-	assert(int(game_manager.get("tutorial_step")) == 0)
+	assert(int(game_manager.get("tutorial_step")) == 4)
+	assert(game_manager.money == starter_model.purchase_cost)
 	print("SMOKE_TEST_OK reward=%d" % mission.reward)
 	quit(0)
 

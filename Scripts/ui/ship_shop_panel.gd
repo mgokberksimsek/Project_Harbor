@@ -13,24 +13,38 @@ extends PanelContainer
 
 const COLLAPSED_HEIGHT := 64.0
 const EXPANDED_HEIGHT := 215.0
+const TUTORIAL_PULSE_SPEED := 4.0
 
 var _ship_data: ShipData
 var _expanded := false
+var _tutorial_focused := false
+var _tutorial_pulse_elapsed := 0.0
+var _default_model_id: StringName
 
 
 func _ready() -> void:
-	_ship_data = FleetManager.get_ship_model(model_id)
+	_default_model_id = model_id
+	_select_model_for_fleet_state()
 	_toggle_button.pressed.connect(_on_toggle_pressed)
 	_buy_button.pressed.connect(_on_buy_pressed)
-	EventBus.money_changed.connect(_on_money_changed)
-	EventBus.company_level_changed.connect(_on_company_level_changed)
-	EventBus.ship_purchased.connect(_on_ship_purchased)
-	EventBus.ship_purchase_failed.connect(_on_ship_purchase_failed)
-	EventBus.fleet_capacity_reached.connect(_on_fleet_capacity_reached)
-	EventBus.language_changed.connect(_on_language_changed)
-	EventBus.game_loaded.connect(_on_game_loaded)
+	var event_bus := get_node("/root/EventBus")
+	event_bus.money_changed.connect(_on_money_changed)
+	event_bus.company_level_changed.connect(_on_company_level_changed)
+	event_bus.ship_purchased.connect(_on_ship_purchased)
+	event_bus.ship_purchase_failed.connect(_on_ship_purchase_failed)
+	event_bus.fleet_capacity_reached.connect(_on_fleet_capacity_reached)
+	event_bus.language_changed.connect(_on_language_changed)
+	event_bus.game_loaded.connect(_on_game_loaded)
 	set_expanded(start_expanded)
 	_refresh()
+
+
+func _process(delta: float) -> void:
+	if not _tutorial_focused:
+		return
+	_tutorial_pulse_elapsed += delta
+	var pulse := (sin(_tutorial_pulse_elapsed * TUTORIAL_PULSE_SPEED) + 1.0) * 0.5
+	_buy_button.modulate = Color(1.0, 0.78 + pulse * 0.22, 0.5, 0.8 + pulse * 0.2)
 
 
 func set_expanded(expanded: bool) -> void:
@@ -50,7 +64,10 @@ func _refresh() -> void:
 		_buy_button.disabled = true
 		return
 	_title.text = _translated_ship_name(_ship_data)
-	_details.text = tr("SHOP_DETAILS") % [
+	var details_key := "SHOP_DETAILS_REFRIGERATED" \
+		if _ship_data.cargo_capabilities.has(&"refrigerated") \
+		else "SHOP_DETAILS_GENERAL"
+	_details.text = tr(details_key) % [
 		roundi(_ship_data.base_speed),
 		_ship_data.cargo_capacity,
 	]
@@ -101,6 +118,7 @@ func _on_ship_purchased(
 ) -> void:
 	if purchased_data.id == model_id:
 		_status.text = tr("SHOP_SUCCESS")
+	_select_model_for_fleet_state()
 	_refresh()
 
 
@@ -118,7 +136,7 @@ func _on_fleet_capacity_reached(_current_count: int, _maximum_count: int) -> voi
 
 
 func _on_game_loaded() -> void:
-	_ship_data = FleetManager.get_ship_model(model_id)
+	_select_model_for_fleet_state()
 	_refresh()
 
 
@@ -131,3 +149,29 @@ func _translated_ship_name(ship_data: ShipData) -> String:
 	var key := StringName("SHIP_%s" % String(ship_data.id).to_upper())
 	var translated := TranslationServer.translate(key)
 	return ship_data.display_name if translated == String(key) else translated
+
+
+func set_tutorial_focus(enabled: bool) -> void:
+	var was_focused := _tutorial_focused
+	_tutorial_focused = enabled
+	if enabled:
+		set_expanded(true)
+	elif was_focused:
+		_tutorial_pulse_elapsed = 0.0
+		_buy_button.modulate = Color.WHITE
+		set_expanded(false)
+
+
+func is_tutorial_focused() -> bool:
+	return _tutorial_focused
+
+
+func _select_model_for_fleet_state() -> void:
+	if FleetManager.get_all_ship_ids().is_empty():
+		_ship_data = FleetManager.get_initial_ship_model()
+		if _ship_data != null:
+			model_id = _ship_data.id
+		return
+	_ship_data = FleetManager.get_ship_model(_default_model_id)
+	if _ship_data != null:
+		model_id = _ship_data.id

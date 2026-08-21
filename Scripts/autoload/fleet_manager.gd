@@ -358,6 +358,13 @@ func get_ship_model(model_id: StringName) -> ShipData:
 	return _catalog.get(model_id, null)
 
 
+func get_initial_ship_model() -> ShipData:
+	for ship_data in _catalog.values():
+		if ship_data.unlocked_by_default and ship_data.scene != null:
+			return ship_data
+	return null
+
+
 func get_purchasable_ship_models() -> Array[ShipData]:
 	var models: Array[ShipData] = []
 	for ship_data in _catalog.values():

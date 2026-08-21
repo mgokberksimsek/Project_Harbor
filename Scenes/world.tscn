@@ -6,7 +6,6 @@
 [ext_resource type="Resource" uid="uid://d36lwlle5krwq" path="res://Resources/Ports/port_mersin.tres" id="4_mersin"]
 [ext_resource type="Resource" uid="uid://bhqlpgs8dbotq" path="res://Resources/Ports/port_izmir.tres" id="5_izmir"]
 [ext_resource type="Resource" uid="uid://d2ajnmsckon5i" path="res://Resources/Ports/port_istanbul.tres" id="6_istanbul"]
-[ext_resource type="Resource" path="res://Resources/ships/ship_starter_freighter.tres" id="7_ship_data"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/MissionOfferPanel.tscn" id="8_mission_offer_panel"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/ShipShopPanel.tscn" id="9_ship_shop"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/SettingsMenu.tscn" id="10_settings"]
@@ -85,11 +84,6 @@ port_data = ExtResource("20_samsun")
 [node name="SeaRoutes" type="Node" parent="." unique_id=156795111]
 script = ExtResource("13_route_registry")
 routes = Array[ExtResource("17_route_data")]([ExtResource("14_route_mersin_izmir"), ExtResource("15_route_izmir_istanbul"), ExtResource("16_route_mersin_istanbul"), ExtResource("21_route_izmir_antalya"), ExtResource("22_route_istanbul_antalya"), ExtResource("23_route_antalya_samsun"), ExtResource("24_route_mersin_samsun")])
-
-[node name="StarterShip" parent="." unique_id=598908117 instance=ExtResource("3_ship")]
-ship_id = &"starter_ship"
-ship_data = ExtResource("7_ship_data")
-home_port_id = &"mersin"
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1288995194]
 position = Vector2(1950, 1900)
