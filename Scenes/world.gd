@@ -178,6 +178,7 @@ func _on_company_value_changed(_new_value: int, _delta: int) -> void:
 
 func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
 	_update_tutorial_instruction()
+	_update_tutorial_focus()
 
 
 func _on_language_changed(_locale: String) -> void:
@@ -231,6 +232,7 @@ func _on_mission_offers_updated(offers: Array) -> void:
 		if offer is Mission:
 			_mission_offers.append(offer)
 	_update_mission_markers()
+	_update_tutorial_focus()
 	if _open_mission_port_id != &"":
 		_show_port_offers(_open_mission_port_id)
 
@@ -252,6 +254,7 @@ func _on_mission_panel_dismissed() -> void:
 	_open_mission_port_id = &""
 	EventBus.port_selection_changed.emit(&"")
 	_update_tutorial_instruction()
+	_update_tutorial_focus()
 
 
 func _on_fleet_ship_selected(ship_id: StringName) -> void:
@@ -332,6 +335,7 @@ func _on_port_tapped(port_id: StringName) -> void:
 			and GameManager.tutorial_step == GameManager.TutorialStep.SELECT_MISSION_PORT:
 		GameManager.set_tutorial_step(GameManager.TutorialStep.ACCEPT_MISSION)
 	_update_tutorial_instruction()
+	_update_tutorial_focus()
 
 
 func _update_tutorial_instruction() -> bool:
@@ -591,6 +595,26 @@ func _update_mission_markers() -> void:
 		var port_node := PortManager.get_port_node(port_id) as Port
 		if port_node != null:
 			port_node.set_mission_offer_count(offer_count)
+			port_node.set_tutorial_focus(
+				GameManager.tutorial_step == GameManager.TutorialStep.SELECT_MISSION_PORT \
+				and offer_count > 0
+			)
+
+
+func _update_tutorial_focus() -> void:
+	var focus_ships := GameManager.tutorial_step == GameManager.TutorialStep.SELECT_SHIP
+	for ship_id in FleetManager.get_all_ship_ids():
+		var ship_node := FleetManager.get_ship_node(ship_id) as Ship
+		if ship_node != null:
+			ship_node.set_tutorial_focus(
+				focus_ships \
+				and FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.IDLE
+			)
+	_update_mission_markers()
+	_mission_offer_panel.set_tutorial_focus(
+		GameManager.tutorial_step == GameManager.TutorialStep.ACCEPT_MISSION \
+		and _mission_offer_panel.visible
+	)
 
 
 func _get_ship_state_text(state: ShipRuntimeState.State) -> String:

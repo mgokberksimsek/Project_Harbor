@@ -214,7 +214,8 @@ func _run() -> void:
 	assert(starter_icon != null)
 	var starter_selection_outline := starter_icon.get_node("SelectionOutline") as Sprite2D
 	assert(starter_selection_outline != null)
-	assert(not starter_selection_outline.visible)
+	assert(starter_map_ship.is_tutorial_focused())
+	assert(starter_selection_outline.visible)
 	assert(is_equal_approx(starter_icon.scale.x, 0.8))
 	assert(is_equal_approx(starter_icon.scale.y, 0.8))
 	var starter_route_line := starter_map_ship.get_node("RouteLine") as ShipRouteLine
@@ -318,6 +319,7 @@ func _run() -> void:
 			pickup_offer_count += 1
 	assert(mission_badge.visible)
 	assert(mission_badge.text == str(pickup_offer_count))
+	assert(pickup_node.is_tutorial_focused())
 	event_bus.port_tapped.emit(first_offer.pickup_port_id)
 	await process_frame
 	assert(int(game_manager.get("tutorial_step")) == 2)
@@ -327,6 +329,7 @@ func _run() -> void:
 	assert(pickup_highlight != null)
 	assert(pickup_highlight.visible)
 	assert(world.get_node("UI/MissionOfferPanel").visible)
+	assert(world.get_node("UI/MissionOfferPanel").is_tutorial_focused())
 
 	world.call("_on_offer_accepted", first_offer.id)
 	await process_frame
@@ -334,6 +337,8 @@ func _run() -> void:
 	assert(instruction_label.text.contains("ÖĞRETİCİ TAMAMLANDI"))
 	assert(not pickup_highlight.visible)
 	assert(starter_selection_outline.visible)
+	assert(not starter_map_ship.is_tutorial_focused())
+	assert(not pickup_node.is_tutorial_focused())
 	world.clear_map_selection()
 	assert(world.get("_selected_ship_id") == &"")
 	assert(not starter_selection_outline.visible)

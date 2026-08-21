@@ -20,7 +20,7 @@ Start with a small cargo ship, transport goods between ports, earn money, upgrad
 - Stable harbor berths with smooth docking movement
 - JSON save data and offline mission progress
 - Mobile-first landscape camera controls
-- Three-step first-mission tutorial with saved progress
+- Three-step first-mission tutorial with pulsing target guidance and saved progress
 - Pause/settings menu with separate sound-effects and music controls
 - Runtime Turkish and English interface support
 

@@ -13,6 +13,10 @@ signal dismissed()
 ]
 
 var _offers: Array[Mission] = []
+var _tutorial_focused := false
+var _tutorial_pulse_elapsed := 0.0
+
+const TUTORIAL_PULSE_SPEED := 4.0
 
 
 func _ready() -> void:
@@ -24,6 +28,17 @@ func _ready() -> void:
 	hide()
 
 
+func _process(delta: float) -> void:
+	if not _tutorial_focused or not visible:
+		return
+	_tutorial_pulse_elapsed += delta
+	var pulse := (sin(_tutorial_pulse_elapsed * TUTORIAL_PULSE_SPEED) + 1.0) * 0.5
+	var focus_color := Color(1.0, 0.78 + pulse * 0.22, 0.5, 0.78 + pulse * 0.22)
+	for button in _buttons:
+		if not button.disabled:
+			button.modulate = focus_color
+
+
 func show_offers(offers: Array, title: String) -> void:
 	_title.text = title
 	set_offers(offers, true)
@@ -32,6 +47,7 @@ func show_offers(offers: Array, title: String) -> void:
 
 func close_panel() -> void:
 	hide()
+	set_tutorial_focus(false)
 
 
 func set_offers(offers: Array, has_idle_ship: bool) -> void:
@@ -46,6 +62,19 @@ func set_offers(offers: Array, has_idle_ship: bool) -> void:
 		button.disabled = not has_idle_ship or not has_offer
 		button.modulate = Color.WHITE if not button.disabled else Color(1.0, 1.0, 1.0, 0.5)
 		button.text = _format_offer(_offers[index]) if has_offer else tr("MISSION_WAITING")
+
+
+func set_tutorial_focus(enabled: bool) -> void:
+	_tutorial_focused = enabled
+	if not enabled:
+		_tutorial_pulse_elapsed = 0.0
+		for button in _buttons:
+			button.modulate = Color.WHITE if not button.disabled \
+				else Color(1.0, 1.0, 1.0, 0.5)
+
+
+func is_tutorial_focused() -> bool:
+	return _tutorial_focused
 
 
 func _on_language_changed(_locale: String) -> void:

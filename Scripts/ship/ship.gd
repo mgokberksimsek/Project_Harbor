@@ -25,12 +25,15 @@ const DEPARTURE_TURN_SPEED_RAD_PER_SEC := 1.8
 const DEPARTURE_TURN_SNAP_RAD := 0.02
 const SELECTED_SCALE_MULTIPLIER := 1.05
 const SELECTION_SCALE_TWEEN_SEC := 0.16
+const TUTORIAL_PULSE_SPEED := 4.0
 
 var _sailing_route_points := PackedVector2Array()
 var _mission_preview_route_points := PackedVector2Array()
 var _preview_pickup_route_length := 0.0
 var _preview_total_route_length := 0.0
 var _is_selected := false
+var _tutorial_focused := false
+var _tutorial_pulse_elapsed := 0.0
 var _turn_velocity := 0.0
 var _departure_start_rotation := 0.0
 var _preparing_departure_heading := false
@@ -83,6 +86,7 @@ func _process(delta: float) -> void:
 	if not heading_locked_to_route and not heading_prepared_for_departure:
 		_update_heading(previous_position, delta)
 	_update_route_visual(state)
+	_update_tutorial_focus_visual(delta)
 
 
 func set_initial_world_position(
@@ -420,7 +424,7 @@ func _clear_mission_preview() -> void:
 
 func _on_ship_selection_changed(selected_ship_id: StringName) -> void:
 	_is_selected = selected_ship_id == ship_id
-	_selection_outline.visible = _is_selected
+	_selection_outline.visible = _is_selected or _tutorial_focused
 	if _selection_scale_tween != null and _selection_scale_tween.is_valid():
 		_selection_scale_tween.kill()
 	var target_scale := _base_icon_scale * (
@@ -435,6 +439,26 @@ func _on_ship_selection_changed(selected_ship_id: StringName) -> void:
 		target_scale,
 		SELECTION_SCALE_TWEEN_SEC
 	)
+
+
+func set_tutorial_focus(enabled: bool) -> void:
+	_tutorial_focused = enabled
+	if not enabled:
+		_tutorial_pulse_elapsed = 0.0
+		_selection_outline.modulate = Color.WHITE
+	_selection_outline.visible = _is_selected or _tutorial_focused
+
+
+func is_tutorial_focused() -> bool:
+	return _tutorial_focused
+
+
+func _update_tutorial_focus_visual(delta: float) -> void:
+	if not _tutorial_focused:
+		return
+	_tutorial_pulse_elapsed += delta
+	var pulse := (sin(_tutorial_pulse_elapsed * TUTORIAL_PULSE_SPEED) + 1.0) * 0.5
+	_selection_outline.modulate = Color(1.0, 0.72 + pulse * 0.28, 0.35, 0.55 + pulse * 0.45)
 
 
 func _update_route_visual(state: ShipRuntimeState.State) -> void:

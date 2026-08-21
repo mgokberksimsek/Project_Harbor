@@ -12,9 +12,12 @@ extends Area2D
 const LOCKED_TINT := Color(0.35, 0.35, 0.35)
 const SELECTED_SCALE_MULTIPLIER := 1.05
 const SELECTION_SCALE_TWEEN_SEC := 0.16
+const TUTORIAL_PULSE_SPEED := 4.0
 
 var _base_icon_scale := Vector2.ONE
 var _selection_scale_tween: Tween = null
+var _tutorial_focused := false
+var _tutorial_pulse_elapsed := 0.0
 
 
 func _ready() -> void:
@@ -38,6 +41,14 @@ func _ready() -> void:
 	_mission_badge.pressed.connect(_on_mission_badge_pressed)
 
 	_refresh_visuals()
+
+
+func _process(delta: float) -> void:
+	if not _tutorial_focused or not _mission_badge.visible:
+		return
+	_tutorial_pulse_elapsed += delta
+	var pulse := (sin(_tutorial_pulse_elapsed * TUTORIAL_PULSE_SPEED) + 1.0) * 0.5
+	_mission_badge.modulate = Color(1.0, 0.72 + pulse * 0.28, 0.35, 0.72 + pulse * 0.28)
 
 
 func _on_port_unlocked(port_id: StringName) -> void:
@@ -89,6 +100,17 @@ func set_mission_offer_count(count: int) -> void:
 	var safe_count := maxi(count, 0)
 	_mission_badge.visible = safe_count > 0
 	_mission_badge.text = str(safe_count)
+
+
+func set_tutorial_focus(enabled: bool) -> void:
+	_tutorial_focused = enabled
+	if not enabled:
+		_tutorial_pulse_elapsed = 0.0
+		_mission_badge.modulate = Color.WHITE
+
+
+func is_tutorial_focused() -> bool:
+	return _tutorial_focused
 
 
 func _refresh_visuals() -> void:

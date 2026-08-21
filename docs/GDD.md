@@ -392,6 +392,9 @@ eklenebilir.
 Öğretici ayrı bir modal ekran açmadan mevcut üst yönlendirme alanını kullanır.
 Oyuncudan sırasıyla şirket merkezindeki başlangıç gemisini seçmesi, görev
 işaretli bir limana dokunması ve bir görev teklifini kabul etmesi istenir.
+Her adımda dokunulması gereken gemi silueti, uygun liman görev rozetleri veya
+görev kartları hafif bir nabız/parlama hareketiyle vurgulanır. Bu yönlendirme
+normal seçim vurgularından ayrılır ve öğretici tamamlandığında tamamen kapanır.
 İlk görev başladığında öğretici tamamlanır ve bu durum kayıt verisinde saklanır.
 Eski kayıtlar öğreticiyi tamamlamış kabul edilir.
 
@@ -470,6 +473,7 @@ veri dosyaları üzerinden tanımlanmalıdır.
 - Sürüm kontrollü JSON kayıt, otomatik kayıt ve kayıt sıfırlama.
 - Uygulama kapalıyken görev ilerlemesi.
 - Mobil öncelikli yatay kamera ve dokunma etkileşimleri.
+- Üç adım boyunca hedef gemi, liman rozeti ve görev kartını vurgulayan öğretici.
 - Oyunu duraklatan ayarlar menüsü; bağımsız efekt/müzik kontrolleri.
 - Oyun sırasında değiştirilebilen Türkçe ve İngilizce arayüz.
 
