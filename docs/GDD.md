@@ -419,8 +419,10 @@ ilk oturum ilerlemesini sürdürür. Önce başlangıç seviyesinde açılabilen
 genişleme limanını ve biriken Cash'i, bu liman açılınca da erişilebilir ilk yeni
 gemi modelini ve satın alma ilerlemesini gösterir. İkinci gemi alındığında hedef,
 mevcut Company Level ile erişilebilen en erken bölgesel limana döner. Bu liman
-açıldığında erişilebilir yeni hedef yoksa alan kaybolur; kalıcı görev listesine
-veya yeni bir yönetim sistemine dönüşmez.
+açıldığında sıradaki liman daha yüksek Company Level istiyorsa, hedef o limanın
+seviye ve Company Value eşiğini gösterir; eşiğe ulaşıldığında liman açma
+maliyetine dönüşür. Veri dosyalarında başka genişleme kalmadığında alan kaybolur.
+Bu akış kalıcı görev listesine veya yeni bir yönetim sistemine dönüşmez.
 
 ### 12.5 Ayarlar ve dil
 

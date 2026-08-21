@@ -568,7 +568,17 @@ func _run() -> void:
 	assert(antalya_status.text == "Sv. 1")
 	assert(company_manager.company_value == 3400)
 	assert(company_manager.company_level == 3)
-	assert(not next_goal_label.visible)
+	assert(next_goal_label.visible)
+	assert(next_goal_label.text.contains("Samsun"))
+	assert(next_goal_label.text.contains("Sv. 4"))
+	assert(next_goal_label.text.contains("3400 / 4800 CV"))
+	settings_manager.set_locale("en")
+	assert(next_goal_label.text.contains("Samsun at Company Lv. 4"))
+	settings_manager.set_locale("tr")
+	debug_level_button.pressed.emit()
+	assert(company_manager.company_level == 4)
+	assert(next_goal_label.text.contains("Samsun"))
+	assert(next_goal_label.text.contains("0 / 2600"))
 	var expansion_candidates: Array = mission_manager.call(
 		"_build_offer_candidates",
 		&"izmir",

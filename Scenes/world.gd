@@ -173,6 +173,7 @@ func _on_money_changed(new_amount: int, _delta: int) -> void:
 
 func _on_company_value_changed(_new_value: int, _delta: int) -> void:
 	_update_company_progress()
+	_update_next_goal()
 	if _company_progress_panel.is_open():
 		_show_company_progress_panel()
 
@@ -212,6 +213,7 @@ func _on_new_game_confirmed() -> void:
 func _on_company_level_changed(new_level: int, previous_level: int) -> void:
 	_update_company_progress()
 	_update_debug_level_button()
+	_update_next_goal()
 	_port_unlock_panel.update_status(GameManager.money, new_level)
 	if _company_progress_panel.is_open():
 		_show_company_progress_panel()
@@ -429,15 +431,33 @@ func _update_next_goal() -> void:
 		_next_goal_label.visible = true
 		return
 	var regional_port_id := _get_available_regional_port_id()
-	if regional_port_id == &"":
+	if regional_port_id != &"":
+		var regional_port_data := PortManager.get_port_data(regional_port_id)
+		if regional_port_data == null:
+			return
+		_next_goal_label.text = tr("NEXT_GOAL_UNLOCK_PORT") % [
+			_translated_port_name(regional_port_id),
+			mini(GameManager.money, regional_port_data.base_unlock_cost),
+			regional_port_data.base_unlock_cost,
+		]
+		_next_goal_label.visible = true
 		return
-	var regional_port_data := PortManager.get_port_data(regional_port_id)
-	if regional_port_data == null:
+	var future_port_id := _get_next_level_regional_port_id()
+	if future_port_id == &"":
 		return
-	_next_goal_label.text = tr("NEXT_GOAL_UNLOCK_PORT") % [
-		_translated_port_name(regional_port_id),
-		mini(GameManager.money, regional_port_data.base_unlock_cost),
-		regional_port_data.base_unlock_cost,
+	var future_port_data := PortManager.get_port_data(future_port_id)
+	if future_port_data == null:
+		return
+	var required_value := CompanyManager.get_level_threshold(
+		future_port_data.required_company_level
+	)
+	if required_value < 0:
+		return
+	_next_goal_label.text = tr("NEXT_GOAL_REACH_LEVEL_FOR_PORT") % [
+		_translated_port_name(future_port_id),
+		future_port_data.required_company_level,
+		mini(CompanyManager.company_value, required_value),
+		required_value,
 	]
 	_next_goal_label.visible = true
 
@@ -486,6 +506,27 @@ func _get_available_regional_port_id() -> StringName:
 				or port_data.base_unlock_cost <= 0 \
 				or port_data.required_company_level <= 1 \
 				or port_data.required_company_level > CompanyManager.company_level:
+			continue
+		if port_data.required_company_level < selected_level \
+				or (port_data.required_company_level == selected_level \
+				and port_data.base_unlock_cost < selected_cost):
+			selected_id = port_id
+			selected_level = port_data.required_company_level
+			selected_cost = port_data.base_unlock_cost
+	return selected_id
+
+
+func _get_next_level_regional_port_id() -> StringName:
+	var selected_id: StringName = &""
+	var selected_level := 2147483647
+	var selected_cost := 2147483647
+	for port_id in PortManager.get_all_port_ids():
+		if PortManager.is_unlocked(port_id):
+			continue
+		var port_data := PortManager.get_port_data(port_id)
+		if port_data == null \
+				or port_data.base_unlock_cost <= 0 \
+				or port_data.required_company_level <= CompanyManager.company_level:
 			continue
 		if port_data.required_company_level < selected_level \
 				or (port_data.required_company_level == selected_level \
