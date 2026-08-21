@@ -5,6 +5,7 @@ extends Node2D
 @onready var _instruction_label: Label = $UI/InstructionLabel
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
+@onready var _port_unlock_panel: PortUnlockPanel = $UI/PortUnlockPanel
 @onready var _settings_menu: SettingsMenu = $UI/SettingsMenu
 @onready var _world_camera: WorldCamera = $Camera2D
 @onready var _company_headquarters: CompanyHeadquarters = $CompanyHeadquarters
@@ -75,6 +76,7 @@ func clear_map_selection() -> void:
 	EventBus.ship_selection_changed.emit(&"")
 	EventBus.port_selection_changed.emit(&"")
 	_mission_offer_panel.close_panel()
+	_port_unlock_panel.close_panel()
 	_fleet_status_panel.select_ship(&"")
 	_refresh_fleet_panel()
 	_update_mission_markers()
@@ -130,6 +132,8 @@ func _ready() -> void:
 	_fleet_status_panel.ship_selected.connect(_on_fleet_ship_selected)
 	_fleet_status_panel.speed_upgrade_requested.connect(_on_speed_upgrade_requested)
 	_fleet_status_panel.capacity_upgrade_requested.connect(_on_capacity_upgrade_requested)
+	_port_unlock_panel.unlock_requested.connect(_on_port_unlock_requested)
+	_port_unlock_panel.closed.connect(_on_port_unlock_panel_closed)
 	_settings_menu.menu_opened.connect(_on_settings_opened)
 	_settings_menu.resumed.connect(_on_settings_resumed)
 	_settings_menu.sound_effects_toggled.connect(SettingsManager.set_sound_effects_enabled)
@@ -160,6 +164,7 @@ func _process(delta: float) -> void:
 
 func _on_money_changed(new_amount: int, _delta: int) -> void:
 	_update_money(new_amount)
+	_port_unlock_panel.update_status(new_amount, CompanyManager.company_level)
 
 
 func _on_company_value_changed(_new_value: int, _delta: int) -> void:
@@ -194,6 +199,7 @@ func _on_new_game_confirmed() -> void:
 
 func _on_company_level_changed(new_level: int, previous_level: int) -> void:
 	_update_company_progress()
+	_port_unlock_panel.update_status(GameManager.money, new_level)
 	if new_level > previous_level:
 		_instruction_label.text = tr("INSTRUCTION_LEVEL_UP") % new_level
 
@@ -284,6 +290,7 @@ func _on_ship_tapped(ship_id: StringName) -> void:
 	EventBus.ship_selection_changed.emit(ship_id)
 	EventBus.port_selection_changed.emit(&"")
 	_mission_offer_panel.close_panel()
+	_port_unlock_panel.close_panel()
 	_fleet_status_panel.select_ship(ship_id)
 	_refresh_fleet_panel()
 	_update_mission_markers()
@@ -299,7 +306,12 @@ func _on_ship_tapped(ship_id: StringName) -> void:
 
 func _on_port_tapped(port_id: StringName) -> void:
 	if not PortManager.is_unlocked(port_id):
+		_open_mission_port_id = &""
+		_mission_offer_panel.close_panel()
+		EventBus.port_selection_changed.emit(port_id)
+		_show_port_unlock_panel(port_id)
 		return
+	_port_unlock_panel.close_panel()
 	EventBus.port_selection_changed.emit(port_id)
 	if _selected_ship_id == &"":
 		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP_FIRST")
@@ -354,6 +366,8 @@ func _update_company_progress() -> void:
 func _on_port_unlocked(port_id: StringName) -> void:
 	var port_name := _translated_port_name(port_id)
 	_instruction_label.text = tr("INSTRUCTION_PORT_UNLOCKED") % port_name
+	if _port_unlock_panel.is_open_for(port_id):
+		_port_unlock_panel.close_panel()
 	_update_mission_markers()
 
 
@@ -383,6 +397,7 @@ func _on_ship_purchased(
 
 
 func _on_game_loaded() -> void:
+	_port_unlock_panel.close_panel()
 	if SaveManager.loaded_existing_save:
 		for existing_ship_id in FleetManager.get_all_ship_ids():
 			var existing_ship := FleetManager.get_ship_node(existing_ship_id) as Ship
@@ -475,6 +490,7 @@ func _refresh_fleet_panel() -> void:
 
 
 func _show_port_offers(port_id: StringName) -> void:
+	_port_unlock_panel.close_panel()
 	var matching_offers: Array[Mission] = []
 	for offer in _mission_offers:
 		if offer.offered_ship_id == _selected_ship_id and offer.pickup_port_id == port_id:
@@ -488,6 +504,31 @@ func _show_port_offers(port_id: StringName) -> void:
 	_open_mission_port_id = port_id
 	var title := tr("MISSION_OFFERS_TITLE") % _translated_port_name(port_id)
 	_mission_offer_panel.show_offers(matching_offers, title)
+
+
+func _show_port_unlock_panel(port_id: StringName) -> void:
+	var port_data := PortManager.get_port_data(port_id)
+	if port_data == null:
+		return
+	_port_unlock_panel.show_port(
+		port_id,
+		port_data.display_name,
+		port_data.description,
+		port_data.base_unlock_cost,
+		port_data.base_company_value,
+		port_data.required_company_level,
+		GameManager.money,
+		CompanyManager.company_level
+	)
+
+
+func _on_port_unlock_requested(port_id: StringName) -> void:
+	GameManager.try_unlock_port(port_id)
+	_port_unlock_panel.update_status(GameManager.money, CompanyManager.company_level)
+
+
+func _on_port_unlock_panel_closed() -> void:
+	EventBus.port_selection_changed.emit(&"")
 
 
 func _update_mission_markers() -> void:

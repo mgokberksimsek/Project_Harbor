@@ -80,6 +80,9 @@ func _run() -> void:
 	assert(company_label.text.contains("900 / 1000 CV"))
 	var settings_menu := world.get_node("UI/SettingsMenu")
 	assert(settings_menu != null)
+	var port_unlock_panel := world.get_node("UI/PortUnlockPanel")
+	assert(port_unlock_panel != null)
+	assert(not port_unlock_panel.visible)
 	assert(settings_manager.locale == "tr")
 	assert(settings_manager.sound_effects_enabled)
 	assert(settings_manager.music_enabled)
@@ -383,10 +386,24 @@ func _run() -> void:
 	assert(not game_manager.try_unlock_port(&"istanbul"))
 	assert(not port_manager.is_unlocked(&"istanbul"))
 
-	game_manager.add_money(750 - game_manager.money)
 	event_bus.port_tapped.emit(&"istanbul")
 	await process_frame
+	assert(not port_manager.is_unlocked(&"istanbul"))
+	assert(port_unlock_panel.visible)
+	assert(port_unlock_panel.is_open_for(&"istanbul"))
+	assert(port_unlock_panel.get_node("Margin/VBox/CompanyValue").text.contains("+500 CV"))
+	var port_unlock_button := port_unlock_panel.get_node(
+		"Margin/VBox/Buttons/UnlockButton"
+	) as Button
+	assert(port_unlock_button.disabled)
+	assert(port_unlock_button.text.contains("Eksik"))
+	game_manager.add_money(750 - game_manager.money)
+	await process_frame
+	assert(not port_unlock_button.disabled)
+	port_unlock_button.pressed.emit()
+	await process_frame
 	assert(port_manager.is_unlocked(&"istanbul"))
+	assert(not port_unlock_panel.visible)
 	assert(game_manager.money == 0)
 	assert(company_manager.company_value == 1400)
 	assert(company_manager.company_level == 2)
@@ -433,6 +450,12 @@ func _run() -> void:
 	assert(refrigerated_ship_found)
 	assert(not game_manager.try_unlock_port(&"samsun"))
 	assert(not port_manager.is_unlocked(&"samsun"))
+	event_bus.port_tapped.emit(&"samsun")
+	await process_frame
+	assert(port_unlock_panel.is_open_for(&"samsun"))
+	assert(port_unlock_button.disabled)
+	assert(port_unlock_button.text.contains("Sv. 4"))
+	port_unlock_panel.close_panel()
 	game_manager.add_money(1500)
 	assert(game_manager.try_unlock_port(&"antalya"))
 	assert(game_manager.money == 0)

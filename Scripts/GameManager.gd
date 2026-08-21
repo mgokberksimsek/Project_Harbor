@@ -13,7 +13,6 @@ var tutorial_step: TutorialStep = TutorialStep.SELECT_SHIP
 
 func _ready() -> void:
 	EventBus.mission_completed.connect(_on_mission_completed)
-	EventBus.port_tapped.connect(_on_port_tapped)
 
 
 func add_money(amount: int) -> void:
@@ -118,11 +117,6 @@ func try_upgrade_ship_capacity(ship_id: StringName) -> bool:
 
 func _on_mission_completed(mission: Mission) -> void:
 	add_money(mission.reward)
-
-
-func _on_port_tapped(port_id: StringName) -> void:
-	if not PortManager.is_unlocked(port_id):
-		try_unlock_port(port_id)
 
 
 func set_tutorial_step(new_step: TutorialStep) -> void:

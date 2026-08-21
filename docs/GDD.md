@@ -171,9 +171,13 @@ Her limanın şu temel özellikleri vardır:
 - Birden fazla gemi için tanımlı yanaşma yuvaları.
 - Bağlı olduğu deniz rotaları.
 
-Kilitli limana dokunulduğunda açma işlemi denenir. Para yetersizse oyuncuya
-gereken ve mevcut miktar bildirilir. Açık limana dokunmak, seçili gemi varsa o
-limandaki uygun görev tekliflerini gösterir.
+Kilitli limana dokunulduğunda doğrudan para harcanmaz. Önce limanın açıklamasını,
+açma bedelini, gereken ve mevcut Şirket Seviyesini, mevcut kasayı ve sağlayacağı
+Company Value katkısını gösteren kompakt bir onay paneli açılır. Koşullar
+sağlanmıyorsa açma düğmesi eksik para veya seviye nedenini göstererek devre dışı
+kalır. Liman yalnızca oyuncu etkin açma düğmesine dokunduğunda satın alınır.
+Açık limana dokunmak, seçili gemi varsa o limandaki uygun görev tekliflerini
+gösterir.
 
 Bir limanda birden fazla gemi bulunduğunda gemiler üst üste binmez. Yeni gelen
 gemi ilk boş yuvaya yerleşir. Daha öndeki bir yuva boşaldığında en sondaki gemi
@@ -451,6 +455,7 @@ veri dosyaları üzerinden tanımlanmalıdır.
 - Yumuşak hareket, dönüş, yükleme ve yanaşma geçişleri.
 - Kararlı ve sıkışık liman yuvası düzeni.
 - Liman açma, gemi satın alma ve gemi geliştirme ekonomisi.
+- Maliyet, seviye ve Company Value katkısını gösteren onaylı liman açma paneli.
 - Artan gemi fiyatları ve sınırlı filo/geliştirme seviyeleri.
 - Varlık tabanlı Company Value ve kalıcı Company Level ilerlemesi.
 - Sürüm kontrollü JSON kayıt, otomatik kayıt ve kayıt sıfırlama.

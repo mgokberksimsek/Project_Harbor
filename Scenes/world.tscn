@@ -24,6 +24,7 @@
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_istanbul_antalya.tres" id="22_route_istanbul_antalya"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_antalya_samsun.tres" id="23_route_antalya_samsun"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_mersin_samsun.tres" id="24_route_mersin_samsun"]
+[ext_resource type="PackedScene" path="res://Scenes/ui/PortUnlockPanel.tscn" id="25_port_unlock"]
 
 [node name="World" type="Node2D" unique_id=1405839556]
 script = ExtResource("1_world")
@@ -131,6 +132,8 @@ offset_top = -86.0
 offset_right = 192.0
 
 [node name="SettingsMenu" parent="UI" instance=ExtResource("10_settings")]
+
+[node name="PortUnlockPanel" parent="UI" instance=ExtResource("25_port_unlock")]
 
 [node name="MissionOfferPanel" parent="UI" unique_id=843648461 instance=ExtResource("8_mission_offer_panel")]
 visible = true
