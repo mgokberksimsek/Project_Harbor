@@ -505,4 +505,14 @@ func _on_input_event(viewport: Node, event: InputEvent, _shape_idx: int) -> void
 
 func _refresh_visuals() -> void:
 	var state := FleetManager.get_ship_state(ship_id)
-	_status_label.text = ShipRuntimeState.State.keys()[state]
+	match state:
+		ShipRuntimeState.State.SAILING_TO_PICKUP:
+			_status_label.text = tr("STATE_SAILING_TO_PICKUP")
+		ShipRuntimeState.State.LOADING:
+			_status_label.text = tr("STATE_LOADING")
+		ShipRuntimeState.State.SAILING_TO_DELIVERY:
+			_status_label.text = tr("STATE_SAILING_TO_DELIVERY")
+		ShipRuntimeState.State.UNLOADING:
+			_status_label.text = tr("STATE_UNLOADING")
+		_:
+			_status_label.text = tr("STATE_IDLE")

@@ -19,6 +19,8 @@ Start with a small cargo ship, transport goods between ports, earn money, upgrad
 - JSON save data and offline mission progress
 - Mobile-first landscape camera controls
 - Three-step first-mission tutorial with saved progress
+- Pause/settings menu with separate sound-effects and music controls
+- Runtime Turkish and English interface support
 
 ## Tech Stack
 
@@ -31,6 +33,7 @@ Start with a small cargo ship, transport goods between ports, earn money, upgrad
 - Add more ship models and cargo specializations
 - Balance mission durations, fuel costs, and rewards
 - Replace prototype land, ships, ports, and mission badges with final art
+- Add sound effects and background music to the prepared audio buses
 - Improve large-fleet controls and fleet overview tools
 - Prepare Android builds and Google Play release
 

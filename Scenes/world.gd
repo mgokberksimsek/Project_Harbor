@@ -5,6 +5,7 @@ extends Node2D
 @onready var _instruction_label: Label = $UI/InstructionLabel
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
+@onready var _settings_menu: SettingsMenu = $UI/SettingsMenu
 @onready var _world_camera: WorldCamera = $Camera2D
 @onready var _company_headquarters: CompanyHeadquarters = $CompanyHeadquarters
 
@@ -78,7 +79,7 @@ func clear_map_selection() -> void:
 	_refresh_fleet_panel()
 	_update_mission_markers()
 	if not _update_tutorial_instruction():
-		_instruction_label.text = "Görevleri görmek için bir gemi seç."
+		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP")
 
 
 func _is_ui_at_screen_position(screen_position: Vector2) -> bool:
@@ -120,6 +121,7 @@ func _ready() -> void:
 	EventBus.ship_capacity_upgraded.connect(_on_ship_capacity_upgraded)
 	EventBus.ship_upgrade_failed.connect(_on_ship_upgrade_failed)
 	EventBus.fleet_capacity_reached.connect(_on_fleet_capacity_reached)
+	EventBus.language_changed.connect(_on_language_changed)
 	EventBus.tutorial_step_changed.connect(_on_tutorial_step_changed)
 	EventBus.game_loaded.connect(_on_game_loaded)
 	EventBus.offline_progress_applied.connect(_on_offline_progress_applied)
@@ -128,11 +130,22 @@ func _ready() -> void:
 	_fleet_status_panel.ship_selected.connect(_on_fleet_ship_selected)
 	_fleet_status_panel.speed_upgrade_requested.connect(_on_speed_upgrade_requested)
 	_fleet_status_panel.capacity_upgrade_requested.connect(_on_capacity_upgrade_requested)
+	_settings_menu.menu_opened.connect(_on_settings_opened)
+	_settings_menu.resumed.connect(_on_settings_resumed)
+	_settings_menu.sound_effects_toggled.connect(SettingsManager.set_sound_effects_enabled)
+	_settings_menu.music_toggled.connect(SettingsManager.set_music_enabled)
+	_settings_menu.locale_selected.connect(SettingsManager.set_locale)
+	_settings_menu.new_game_confirmed.connect(_on_new_game_confirmed)
+	_settings_menu.set_preferences(
+		SettingsManager.sound_effects_enabled,
+		SettingsManager.music_enabled,
+		SettingsManager.locale
+	)
 
 	_update_money(GameManager.money)
 	_update_company_progress()
 	if not _update_tutorial_instruction():
-		_instruction_label.text = "Görevleri görmek için haritadaki veya filo panelindeki bir gemiyi seç."
+		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP_LONG")
 	_on_mission_offers_updated(MissionManager.get_offers())
 	_refresh_fleet_panel()
 
@@ -157,10 +170,32 @@ func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
 	_update_tutorial_instruction()
 
 
+func _on_language_changed(_locale: String) -> void:
+	_update_company_progress()
+	_refresh_fleet_panel()
+	if _open_mission_port_id != &"":
+		_show_port_offers(_open_mission_port_id)
+	if not _update_tutorial_instruction():
+		_refresh_context_instruction()
+
+
+func _on_settings_opened() -> void:
+	get_tree().paused = true
+
+
+func _on_settings_resumed() -> void:
+	get_tree().paused = false
+
+
+func _on_new_game_confirmed() -> void:
+	get_tree().paused = false
+	SaveManager.reset_game()
+
+
 func _on_company_level_changed(new_level: int, previous_level: int) -> void:
 	_update_company_progress()
 	if new_level > previous_level:
-		_instruction_label.text = "Şirket seviyesi %d oldu! Yeni içerikler açıldı." % new_level
+		_instruction_label.text = tr("INSTRUCTION_LEVEL_UP") % new_level
 
 
 func _on_company_level_requirement_failed(
@@ -169,7 +204,7 @@ func _on_company_level_requirement_failed(
 		required_level: int,
 		current_level: int
 ) -> void:
-	_instruction_label.text = "Bu yatırım için Şirket Seviyesi %d gerekli (şu an %d)." % [
+	_instruction_label.text = tr("INSTRUCTION_LEVEL_REQUIRED") % [
 		required_level,
 		current_level,
 	]
@@ -192,9 +227,9 @@ func _on_offer_accepted(offer_id: String) -> void:
 	if MissionManager.accept_offer(offer_id):
 		if GameManager.tutorial_step == GameManager.TutorialStep.ACCEPT_MISSION:
 			GameManager.set_tutorial_step(GameManager.TutorialStep.COMPLETED)
-			_instruction_label.text = "ÖĞRETİCİ TAMAMLANDI · İlk görevin başladı; gemi otomatik ilerliyor."
+			_instruction_label.text = tr("INSTRUCTION_TUTORIAL_COMPLETE")
 		else:
-			_instruction_label.text = "Görev başladı. Gemi rotasına otomatik ilerliyor."
+			_instruction_label.text = tr("INSTRUCTION_MISSION_STARTED")
 	_update_mission_markers()
 
 
@@ -217,13 +252,15 @@ func _on_capacity_upgrade_requested(ship_id: StringName) -> void:
 
 
 func _on_ship_speed_upgraded(ship_id: StringName, new_level: int, new_speed: float) -> void:
-	_instruction_label.text = "%s hız seviyesi %d oldu (%.0f hız)." % [ship_id, new_level, new_speed]
+	_instruction_label.text = tr("INSTRUCTION_SPEED_UPGRADED") % [
+		_translated_ship_name(ship_id), new_level, new_speed
+	]
 	_refresh_fleet_panel()
 
 
 func _on_ship_capacity_upgraded(ship_id: StringName, new_level: int, new_capacity: int) -> void:
-	_instruction_label.text = "%s kapasite seviyesi %d oldu (%d birim)." % [
-		ship_id,
+	_instruction_label.text = tr("INSTRUCTION_CAPACITY_UPGRADED") % [
+		_translated_ship_name(ship_id),
 		new_level,
 		new_capacity,
 	]
@@ -231,14 +268,14 @@ func _on_ship_capacity_upgraded(ship_id: StringName, new_level: int, new_capacit
 
 
 func _on_ship_upgrade_failed(ship_id: StringName, required_amount: int, current_amount: int) -> void:
-	_instruction_label.text = "%s geliştirmesi için %d ₺ eksik." % [
-		ship_id,
+	_instruction_label.text = tr("INSTRUCTION_UPGRADE_SHORT") % [
+		_translated_ship_name(ship_id),
 		required_amount - current_amount,
 	]
 
 
 func _on_fleet_capacity_reached(current_count: int, maximum_count: int) -> void:
-	_instruction_label.text = "Filo kapasitesi dolu: %d/%d gemi." % [current_count, maximum_count]
+	_instruction_label.text = tr("INSTRUCTION_FLEET_FULL") % [current_count, maximum_count]
 
 
 func _on_ship_tapped(ship_id: StringName) -> void:
@@ -250,15 +287,14 @@ func _on_ship_tapped(ship_id: StringName) -> void:
 	_fleet_status_panel.select_ship(ship_id)
 	_refresh_fleet_panel()
 	_update_mission_markers()
-	var ship_data := FleetManager.get_ship_data(ship_id)
-	var ship_name := ship_data.display_name if ship_data != null else String(ship_id)
+	var ship_name := _translated_ship_name(ship_id)
 	if FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.IDLE:
 		if GameManager.tutorial_step == GameManager.TutorialStep.SELECT_SHIP:
 			GameManager.set_tutorial_step(GameManager.TutorialStep.SELECT_MISSION_PORT)
 		if not _update_tutorial_instruction():
-			_instruction_label.text = "%s seçildi. Görev işareti bulunan bir limana dokun." % ship_name
+			_instruction_label.text = tr("INSTRUCTION_SHIP_SELECTED") % ship_name
 	else:
-		_instruction_label.text = "%s şu anda görevde." % ship_name
+		_instruction_label.text = tr("INSTRUCTION_SHIP_BUSY") % ship_name
 
 
 func _on_port_tapped(port_id: StringName) -> void:
@@ -266,7 +302,7 @@ func _on_port_tapped(port_id: StringName) -> void:
 		return
 	EventBus.port_selection_changed.emit(port_id)
 	if _selected_ship_id == &"":
-		_instruction_label.text = "Önce görev vereceğin gemiyi seç."
+		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP_FIRST")
 		return
 	_show_port_offers(port_id)
 	if _open_mission_port_id == port_id \
@@ -278,19 +314,19 @@ func _on_port_tapped(port_id: StringName) -> void:
 func _update_tutorial_instruction() -> bool:
 	match GameManager.tutorial_step:
 		GameManager.TutorialStep.SELECT_SHIP:
-			_instruction_label.text = "ÖĞRETİCİ 1/3 · Şirket merkezindeki başlangıç gemisine dokun."
+			_instruction_label.text = tr("TUTORIAL_1")
 			return true
 		GameManager.TutorialStep.SELECT_MISSION_PORT:
 			if _selected_ship_id == &"":
-				_instruction_label.text = "ÖĞRETİCİ 2/3 · Gemiyi seç, sonra görev işaretli bir limana dokun."
+				_instruction_label.text = tr("TUTORIAL_2_NO_SHIP")
 			else:
-				_instruction_label.text = "ÖĞRETİCİ 2/3 · Görev işareti bulunan bir limana dokun."
+				_instruction_label.text = tr("TUTORIAL_2")
 			return true
 		GameManager.TutorialStep.ACCEPT_MISSION:
 			if _open_mission_port_id == &"":
-				_instruction_label.text = "ÖĞRETİCİ 3/3 · Görev işaretli limana yeniden dokun."
+				_instruction_label.text = tr("TUTORIAL_3_NO_PORT")
 			else:
-				_instruction_label.text = "ÖĞRETİCİ 3/3 · Açılan tekliflerden bir görevi seç."
+				_instruction_label.text = tr("TUTORIAL_3")
 			return true
 		_:
 			return false
@@ -303,12 +339,12 @@ func _update_money(amount: int) -> void:
 func _update_company_progress() -> void:
 	var next_threshold := CompanyManager.get_next_level_threshold()
 	if next_threshold < 0:
-		_company_progress_label.text = "Şirket Sv. %d · %d CV · MAKS" % [
+		_company_progress_label.text = tr("COMPANY_PROGRESS_MAX") % [
 			CompanyManager.company_level,
 			CompanyManager.company_value,
 		]
 	else:
-		_company_progress_label.text = "Şirket Sv. %d · %d / %d CV" % [
+		_company_progress_label.text = tr("COMPANY_PROGRESS") % [
 			CompanyManager.company_level,
 			CompanyManager.company_value,
 			next_threshold,
@@ -316,16 +352,14 @@ func _update_company_progress() -> void:
 
 
 func _on_port_unlocked(port_id: StringName) -> void:
-	var port_data: PortData = PortManager.get_port_data(port_id)
-	var port_name := port_data.display_name if port_data != null else String(port_id)
-	_instruction_label.text = "%s limanı açıldı!" % port_name
+	var port_name := _translated_port_name(port_id)
+	_instruction_label.text = tr("INSTRUCTION_PORT_UNLOCKED") % port_name
 	_update_mission_markers()
 
 
 func _on_port_unlock_failed(port_id: StringName, required_amount: int, current_amount: int) -> void:
-	var port_data: PortData = PortManager.get_port_data(port_id)
-	var port_name := port_data.display_name if port_data != null else String(port_id)
-	_instruction_label.text = "%s için %d ₺ gerekli. Eksik: %d ₺" % [
+	var port_name := _translated_port_name(port_id)
+	_instruction_label.text = tr("INSTRUCTION_PORT_MONEY") % [
 		port_name,
 		required_amount,
 		required_amount - current_amount,
@@ -344,7 +378,7 @@ func _on_ship_purchased(
 		_company_headquarters.get_delivery_position(),
 		true
 	)
-	_instruction_label.text = "%s filoya katıldı!" % ship_data.display_name
+	_instruction_label.text = tr("INSTRUCTION_SHIP_JOINED") % _translated_ship_model_name(ship_data)
 	_refresh_fleet_panel()
 
 
@@ -369,7 +403,7 @@ func _on_game_loaded() -> void:
 
 func _on_offline_progress_applied(elapsed_sec: float) -> void:
 	if elapsed_sec >= 60.0:
-		_instruction_label.text = "Çevrimdışı ilerleme uygulandı: %d dakika." % floori(elapsed_sec / 60.0)
+		_instruction_label.text = tr("INSTRUCTION_OFFLINE") % floori(elapsed_sec / 60.0)
 
 
 func _spawn_ship(
@@ -406,16 +440,22 @@ func _refresh_fleet_panel() -> void:
 		var remaining_sec := FleetManager.get_ship_mission_remaining_sec(ship_id)
 		var has_mission := mission != null
 		var progress := 0.0
-		var route_text := "Limanda: %s" % String(FleetManager.get_ship_current_port(ship_id))
-		var cargo_text := "Yük yok"
+		var route_text := tr("AT_PORT") % _translated_port_name(
+			FleetManager.get_ship_current_port(ship_id)
+		)
+		var cargo_text := tr("NO_CARGO")
 		if mission != null:
 			var total_duration := maxf(mission.estimated_duration_sec, 0.001)
 			progress = clampf(1.0 - remaining_sec / total_duration, 0.0, 1.0)
-			route_text = "%s → %s" % [mission.pickup_port_id, mission.delivery_port_id]
-			cargo_text = "Kargo: %s" % String(mission.cargo_type_id)
+			route_text = "%s → %s" % [
+				_translated_port_name(mission.pickup_port_id),
+				_translated_port_name(mission.delivery_port_id),
+			]
+			cargo_text = tr("CARGO_LABEL") % _translated_cargo_name(mission.cargo_type_id)
 		entries.append({
 			"ship_id": String(ship_id),
-			"display_name": ship_data.display_name if ship_data != null else String(ship_id),
+			"display_name": _translated_ship_model_name(ship_data) \
+				if ship_data != null else String(ship_id),
 			"state_text": _get_ship_state_text(state),
 			"route_text": route_text,
 			"cargo_text": cargo_text,
@@ -443,10 +483,10 @@ func _show_port_offers(port_id: StringName) -> void:
 		_open_mission_port_id = &""
 		EventBus.port_selection_changed.emit(&"")
 		_mission_offer_panel.close_panel()
-		_instruction_label.text = "Seçili gemi için bu limanda uygun görev yok."
+		_instruction_label.text = tr("INSTRUCTION_NO_OFFERS")
 		return
 	_open_mission_port_id = port_id
-	var title := "%s limanındaki yükler" % String(port_id)
+	var title := tr("MISSION_OFFERS_TITLE") % _translated_port_name(port_id)
 	_mission_offer_panel.show_offers(matching_offers, title)
 
 
@@ -465,12 +505,52 @@ func _update_mission_markers() -> void:
 func _get_ship_state_text(state: ShipRuntimeState.State) -> String:
 	match state:
 		ShipRuntimeState.State.SAILING_TO_PICKUP:
-			return "Yük almaya gidiyor"
+			return tr("STATE_SAILING_TO_PICKUP")
 		ShipRuntimeState.State.LOADING:
-			return "Yükleniyor"
+			return tr("STATE_LOADING")
 		ShipRuntimeState.State.SAILING_TO_DELIVERY:
-			return "Teslimata gidiyor"
+			return tr("STATE_SAILING_TO_DELIVERY")
 		ShipRuntimeState.State.UNLOADING:
-			return "Boşaltılıyor"
+			return tr("STATE_UNLOADING")
 		_:
-			return "Boşta"
+			return tr("STATE_IDLE")
+
+
+func _refresh_context_instruction() -> void:
+	if _selected_ship_id == &"":
+		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP_LONG")
+	elif FleetManager.get_ship_state(_selected_ship_id) == ShipRuntimeState.State.IDLE:
+		_instruction_label.text = tr("INSTRUCTION_SHIP_SELECTED") % \
+			_translated_ship_name(_selected_ship_id)
+	else:
+		_instruction_label.text = tr("INSTRUCTION_SHIP_BUSY") % \
+			_translated_ship_name(_selected_ship_id)
+
+
+func _translated_port_name(port_id: StringName) -> String:
+	var port_data := PortManager.get_port_data(port_id)
+	var fallback := port_data.display_name if port_data != null else String(port_id)
+	return _translated_entity_name("PORT", port_id, fallback)
+
+
+func _translated_ship_name(ship_id: StringName) -> String:
+	var ship_data := FleetManager.get_ship_data(ship_id)
+	return _translated_ship_model_name(ship_data) if ship_data != null else String(ship_id)
+
+
+func _translated_ship_model_name(ship_data: ShipData) -> String:
+	if ship_data == null:
+		return tr("SHIP_DEFAULT")
+	return _translated_entity_name("SHIP", ship_data.id, ship_data.display_name)
+
+
+func _translated_cargo_name(cargo_id: StringName) -> String:
+	var cargo_data := MissionManager.get_cargo_type(cargo_id)
+	var fallback := cargo_data.display_name if cargo_data != null else String(cargo_id)
+	return _translated_entity_name("CARGO", cargo_id, fallback)
+
+
+func _translated_entity_name(prefix: String, entity_id: StringName, fallback: String) -> String:
+	var key := StringName("%s_%s" % [prefix, String(entity_id).to_upper()])
+	var translated := TranslationServer.translate(key)
+	return fallback if translated == String(key) else translated

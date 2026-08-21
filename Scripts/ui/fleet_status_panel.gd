@@ -20,13 +20,14 @@ var _expanded := false
 
 func _ready() -> void:
 	_toggle_button.pressed.connect(_on_toggle_pressed)
+	get_node("/root/EventBus").language_changed.connect(_on_language_changed)
 	set_expanded(start_expanded)
 
 
 func set_expanded(expanded: bool) -> void:
 	_expanded = expanded
 	_body.visible = expanded
-	_toggle_button.text = "Filo Durumu ▼" if expanded else "Filo Durumu ▶"
+	_toggle_button.text = "%s %s" % [tr("FLEET_TITLE"), "▼" if expanded else "▶"]
 	offset_bottom = offset_top + (EXPANDED_HEIGHT if expanded else COLLAPSED_HEIGHT)
 
 
@@ -99,25 +100,25 @@ func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
 	var progress: ProgressBar = card["progress"]
 	var upgrade_button: Button = card["upgrade_button"]
 	var capacity_button: Button = card["capacity_button"]
-	button.text = "%s · %s\n%s\n%s · Kalan: %s" % [
-		entry.get("display_name", entry.get("ship_id", "Gemi")),
+	button.text = "%s · %s\n%s\n%s · %s" % [
+		entry.get("display_name", entry.get("ship_id", tr("SHIP_DEFAULT"))),
 		entry.get("state_text", ""),
-		entry.get("route_text", "Limanda"),
-		entry.get("cargo_text", "Yük yok"),
-		_format_duration(float(entry.get("remaining_sec", 0.0))),
+		entry.get("route_text", ""),
+		entry.get("cargo_text", tr("NO_CARGO")),
+		tr("REMAINING") % _format_duration(float(entry.get("remaining_sec", 0.0))),
 	]
 	button.modulate = Color("#BDE3FF") if selected else Color.WHITE
 	progress.value = clampf(float(entry.get("progress", 0.0)) * 100.0, 0.0, 100.0)
 	progress.visible = bool(entry.get("has_mission", false))
 	var upgrade_cost := int(entry.get("speed_upgrade_cost", -1))
 	if upgrade_cost < 0:
-		upgrade_button.text = "Hız maksimum · Lv.%d · %.0f hız" % [
+		upgrade_button.text = tr("SPEED_MAX") % [
 			int(entry.get("speed_level", 0)),
 			float(entry.get("effective_speed", 0.0)),
 		]
 		upgrade_button.disabled = true
 	else:
-		upgrade_button.text = "Hız Lv.%d · %.0f hız · %d ₺" % [
+		upgrade_button.text = tr("SPEED_UPGRADE") % [
 			int(entry.get("speed_level", 0)),
 			float(entry.get("effective_speed", 0.0)),
 			upgrade_cost,
@@ -126,13 +127,13 @@ func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
 
 	var capacity_cost := int(entry.get("capacity_upgrade_cost", -1))
 	if capacity_cost < 0:
-		capacity_button.text = "Kapasite maksimum · Lv.%d · %d birim" % [
+		capacity_button.text = tr("CAPACITY_MAX") % [
 			int(entry.get("capacity_level", 0)),
 			int(entry.get("effective_capacity", 0)),
 		]
 		capacity_button.disabled = true
 	else:
-		capacity_button.text = "Kapasite Lv.%d · %d birim · %d ₺" % [
+		capacity_button.text = tr("CAPACITY_UPGRADE") % [
 			int(entry.get("capacity_level", 0)),
 			int(entry.get("effective_capacity", 0)),
 			capacity_cost,
@@ -148,6 +149,10 @@ func _on_toggle_pressed() -> void:
 	set_expanded(not _expanded)
 
 
+func _on_language_changed(_locale: String) -> void:
+	set_expanded(_expanded)
+
+
 func _on_speed_upgrade_pressed(ship_id: StringName) -> void:
 	speed_upgrade_requested.emit(ship_id)
 
@@ -159,5 +164,5 @@ func _on_capacity_upgrade_pressed(ship_id: StringName) -> void:
 func _format_duration(duration_sec: float) -> String:
 	var total_seconds := maxi(ceili(duration_sec), 0)
 	if total_seconds < 60:
-		return "%d sn" % total_seconds
-	return "%d dk %02d sn" % [total_seconds / 60, total_seconds % 60]
+		return tr("DURATION_SECONDS") % total_seconds
+	return tr("DURATION_MINUTES") % [total_seconds / 60, total_seconds % 60]

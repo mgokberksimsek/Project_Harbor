@@ -21,6 +21,7 @@ func _run() -> void:
 	var fleet_manager := root.get_node("/root/FleetManager")
 	var mission_manager := root.get_node("/root/MissionManager")
 	var company_manager := root.get_node("/root/CompanyManager")
+	var settings_manager := root.get_node("/root/SettingsManager")
 	var game_manager := root.get_node("/root/GameManager")
 	var save_manager := root.get_node("/root/SaveManager")
 	var event_bus := root.get_node("/root/EventBus")
@@ -71,17 +72,60 @@ func _run() -> void:
 	assert(company_manager.company_value == 900)
 	assert(company_manager.company_level == 1)
 	assert(company_manager.get_next_level_threshold() == 1000)
-	var headquarters := world.get_node("CompanyHeadquarters") as CompanyHeadquarters
+	var headquarters := world.get_node("CompanyHeadquarters")
 	assert(headquarters != null)
 	assert(headquarters.get_delivery_position() != Vector2.ZERO)
 	var company_label := world.get_node("UI/CompanyProgressLabel") as Label
 	assert(company_label != null)
 	assert(company_label.text.contains("900 / 1000 CV"))
+	var settings_menu := world.get_node("UI/SettingsMenu")
+	assert(settings_menu != null)
+	assert(settings_manager.locale == "tr")
+	assert(settings_manager.sound_effects_enabled)
+	assert(settings_manager.music_enabled)
+	var sfx_bus := AudioServer.get_bus_index("SFX")
+	var music_bus := AudioServer.get_bus_index("Music")
+	assert(sfx_bus >= 0)
+	assert(music_bus >= 0)
+	settings_menu.open_menu()
+	assert(settings_menu.is_open())
+	assert(paused)
+	var sfx_button := settings_menu.get_node(
+		"Overlay/Center/Panel/Margin/VBox/SoundEffectsButton"
+	) as Button
+	var music_button := settings_menu.get_node(
+		"Overlay/Center/Panel/Margin/VBox/MusicButton"
+	) as Button
+	var language_select := settings_menu.get_node(
+		"Overlay/Center/Panel/Margin/VBox/LanguageSelect"
+	) as OptionButton
+	sfx_button.pressed.emit()
+	assert(not settings_manager.sound_effects_enabled)
+	assert(AudioServer.is_bus_mute(sfx_bus))
+	sfx_button.pressed.emit()
+	assert(settings_manager.sound_effects_enabled)
+	assert(not AudioServer.is_bus_mute(sfx_bus))
+	music_button.pressed.emit()
+	assert(not settings_manager.music_enabled)
+	assert(AudioServer.is_bus_mute(music_bus))
+	music_button.pressed.emit()
+	assert(settings_manager.music_enabled)
+	assert(not AudioServer.is_bus_mute(music_bus))
+	language_select.item_selected.emit(1)
+	assert(settings_manager.locale == "en")
+	assert(company_label.text.contains("Company Lv."))
+	assert(world.get_node("Ports/Antalya/StatusLabel").text.contains("Locked"))
+	assert(settings_menu.get_node("SettingsButton").text.contains("Settings"))
+	language_select.item_selected.emit(0)
+	assert(settings_manager.locale == "tr")
+	settings_menu.close_menu()
+	assert(not settings_menu.is_open())
+	assert(not paused)
 	var instruction_label := world.get_node("UI/InstructionLabel") as Label
 	assert(instruction_label != null)
 	assert(int(game_manager.get("tutorial_step")) == 0)
 	assert(instruction_label.text.contains("ÖĞRETİCİ 1/3"))
-	var fleet_panel := world.get_node("UI/FleetStatusPanel") as FleetStatusPanel
+	var fleet_panel := world.get_node("UI/FleetStatusPanel")
 	assert(fleet_panel != null)
 	var fleet_toggle := fleet_panel.get_node("Margin/VBox/ToggleButton") as Button
 	assert(not fleet_panel.is_expanded())
@@ -393,7 +437,7 @@ func _run() -> void:
 	assert(game_manager.try_unlock_port(&"antalya"))
 	assert(game_manager.money == 0)
 	assert(port_manager.is_unlocked(&"antalya"))
-	assert(antalya_status.text == "Lv. 1")
+	assert(antalya_status.text == "Sv. 1")
 	assert(company_manager.company_value == 3400)
 	assert(company_manager.company_level == 3)
 	var expansion_candidates: Array = mission_manager.call(

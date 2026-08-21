@@ -34,6 +34,7 @@ Data resources (.tres)  →  Autoload managers  →  EventBus  →  Scenes & UI
   ShipData                    MissionManager
 							   EconomyManager
 							   CompanyManager
+							   SettingsManager
 							   GameManager
 							   SaveManager
 ```
@@ -43,6 +44,7 @@ Data resources (.tres)  →  Autoload managers  →  EventBus  →  Scenes & UI
 | Autoload | Owns | Does NOT own |
 |---|---|---|
 | `EventBus` | All cross-system signals | Any state |
+| `SettingsManager` | Locale and independent sound-effects/music preferences | Gameplay progress or audio playback |
 | `GameManager` | Currency, tutorial and game-flow/session state | Ports, ships, missions |
 | `PortManager` | Port registry, unlock/level state, id lookup | Port visuals (Port scene) |
 | `FleetManager` | Ship registry (player + future AI), mission assignment | Mission generation |
@@ -55,13 +57,20 @@ Data resources (.tres)  →  Autoload managers  →  EventBus  →  Scenes & UI
 bottom, since later autoloads may reference earlier ones on `_ready()`:
 
 1. `EventBus`
-2. `PortManager`
-3. `FleetManager`
-4. `EconomyManager`
-5. `MissionManager`
-6. `CompanyManager`
-7. `GameManager`
-8. `SaveManager`
+2. `SettingsManager`
+3. `PortManager`
+4. `FleetManager`
+5. `EconomyManager`
+6. `MissionManager`
+7. `CompanyManager`
+8. `GameManager`
+9. `SaveManager`
+
+`SettingsManager` stores device preferences in `user://settings.cfg`, separate
+from the versioned gameplay JSON. Starting a new game therefore clears player
+progress without unexpectedly resetting language or audio preferences. Runtime
+audio uses the `SFX` and `Music` buses so both categories can be muted
+independently before final audio assets are added.
 
 ## Folder structure
 

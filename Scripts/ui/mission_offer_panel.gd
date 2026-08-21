@@ -19,6 +19,7 @@ func _ready() -> void:
 	for index in range(_buttons.size()):
 		_buttons[index].pressed.connect(_on_offer_pressed.bind(index))
 	_close_button.pressed.connect(_on_close_pressed)
+	get_node("/root/EventBus").language_changed.connect(_on_language_changed)
 	set_offers([], false)
 	hide()
 
@@ -44,7 +45,11 @@ func set_offers(offers: Array, has_idle_ship: bool) -> void:
 		var has_offer := index < _offers.size()
 		button.disabled = not has_idle_ship or not has_offer
 		button.modulate = Color.WHITE if not button.disabled else Color(1.0, 1.0, 1.0, 0.5)
-		button.text = _format_offer(_offers[index]) if has_offer else "Görev bekleniyor..."
+		button.text = _format_offer(_offers[index]) if has_offer else tr("MISSION_WAITING")
+
+
+func _on_language_changed(_locale: String) -> void:
+	set_offers(_offers.duplicate(), true)
 
 
 func _on_offer_pressed(index: int) -> void:
@@ -61,11 +66,14 @@ func _on_close_pressed() -> void:
 
 
 func _format_offer(mission: Mission) -> String:
+	var pickup_data := PortManager.get_port_data(mission.pickup_port_id)
+	var delivery_data := PortManager.get_port_data(mission.delivery_port_id)
+	var cargo_data := MissionManager.get_cargo_type(mission.cargo_type_id)
 	return "%s → %s    %d ₺\n%s ×%d · %s" % [
-		String(mission.pickup_port_id),
-		String(mission.delivery_port_id),
+		_translate_entity("PORT", mission.pickup_port_id, pickup_data.display_name),
+		_translate_entity("PORT", mission.delivery_port_id, delivery_data.display_name),
 		mission.reward,
-		String(mission.cargo_type_id),
+		_translate_entity("CARGO", mission.cargo_type_id, cargo_data.display_name),
 		mission.cargo_amount,
 		_format_duration(mission.estimated_duration_sec),
 	]
@@ -74,5 +82,11 @@ func _format_offer(mission: Mission) -> String:
 func _format_duration(duration_sec: float) -> String:
 	var total_seconds := maxi(ceili(duration_sec), 0)
 	if total_seconds < 60:
-		return "%d sn" % total_seconds
-	return "%d dk %02d sn" % [total_seconds / 60, total_seconds % 60]
+		return tr("DURATION_SECONDS") % total_seconds
+	return tr("DURATION_MINUTES") % [total_seconds / 60, total_seconds % 60]
+
+
+func _translate_entity(prefix: String, entity_id: StringName, fallback: String) -> String:
+	var key := StringName("%s_%s" % [prefix, String(entity_id).to_upper()])
+	var translated := TranslationServer.translate(key)
+	return fallback if translated == String(key) else translated

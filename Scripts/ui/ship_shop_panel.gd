@@ -27,6 +27,7 @@ func _ready() -> void:
 	EventBus.ship_purchased.connect(_on_ship_purchased)
 	EventBus.ship_purchase_failed.connect(_on_ship_purchase_failed)
 	EventBus.fleet_capacity_reached.connect(_on_fleet_capacity_reached)
+	EventBus.language_changed.connect(_on_language_changed)
 	EventBus.game_loaded.connect(_on_game_loaded)
 	set_expanded(start_expanded)
 	_refresh()
@@ -35,7 +36,7 @@ func _ready() -> void:
 func set_expanded(expanded: bool) -> void:
 	_expanded = expanded
 	_body.visible = expanded
-	_toggle_button.text = "Gemi Satın Al ▼" if expanded else "Gemi Satın Al ▶"
+	_toggle_button.text = "%s %s" % [tr("SHIP_SHOP_TITLE"), "▼" if expanded else "▶"]
 	offset_top = offset_bottom - (EXPANDED_HEIGHT if expanded else COLLAPSED_HEIGHT)
 
 
@@ -45,31 +46,31 @@ func is_expanded() -> bool:
 
 func _refresh() -> void:
 	if _ship_data == null:
-		_title.text = "Gemi bulunamadı"
+		_title.text = tr("SHOP_NOT_FOUND")
 		_buy_button.disabled = true
 		return
-	_title.text = _ship_data.display_name
-	_details.text = "Hız: %d · Kapasite: %d\nGenel + Soğutmalı yük" % [
+	_title.text = _translated_ship_name(_ship_data)
+	_details.text = tr("SHOP_DETAILS") % [
 		roundi(_ship_data.base_speed),
 		_ship_data.cargo_capacity,
 	]
 	var current_price := FleetManager.get_ship_purchase_price(model_id)
 	var owned_count := FleetManager.get_owned_model_count(model_id)
 	if CompanyManager.company_level < _ship_data.required_company_level:
-		_buy_button.text = "Şirket Sv. %d gerekli" % _ship_data.required_company_level
+		_buy_button.text = tr("SHOP_LEVEL_REQUIRED") % _ship_data.required_company_level
 		_buy_button.disabled = true
-		_status.text = "Şu anki seviye: %d" % CompanyManager.company_level
+		_status.text = tr("SHOP_CURRENT_LEVEL") % CompanyManager.company_level
 	elif FleetManager.is_fleet_at_capacity():
-		_buy_button.text = "Filo kapasitesi dolu"
+		_buy_button.text = tr("SHOP_FLEET_FULL")
 		_buy_button.disabled = true
-		_status.text = "Filo: %d/%d" % [
+		_status.text = tr("SHOP_FLEET_COUNT") % [
 			FleetManager.get_all_ship_ids().size(),
 			FleetManager.get_fleet_capacity(),
 		]
 	else:
-		_buy_button.text = "Satın Al · %d ₺" % current_price
+		_buy_button.text = tr("SHOP_BUY") % current_price
 		_buy_button.disabled = GameManager.money < current_price
-		_status.text = "Filoda: %d · Sonraki fiyat artar" % owned_count
+		_status.text = tr("SHOP_OWNED") % owned_count
 
 
 func _on_buy_pressed() -> void:
@@ -99,7 +100,7 @@ func _on_ship_purchased(
 		_home_port_id: StringName
 ) -> void:
 	if purchased_data.id == model_id:
-		_status.text = "Satın alma başarılı."
+		_status.text = tr("SHOP_SUCCESS")
 	_refresh()
 
 
@@ -109,7 +110,7 @@ func _on_ship_purchase_failed(
 		current_amount: int
 ) -> void:
 	if failed_model_id == model_id:
-		_status.text = "Yetersiz bakiye: %d ₺ eksik" % (required_amount - current_amount)
+		_status.text = tr("SHOP_INSUFFICIENT") % (required_amount - current_amount)
 
 
 func _on_fleet_capacity_reached(_current_count: int, _maximum_count: int) -> void:
@@ -119,3 +120,14 @@ func _on_fleet_capacity_reached(_current_count: int, _maximum_count: int) -> voi
 func _on_game_loaded() -> void:
 	_ship_data = FleetManager.get_ship_model(model_id)
 	_refresh()
+
+
+func _on_language_changed(_locale: String) -> void:
+	set_expanded(_expanded)
+	_refresh()
+
+
+func _translated_ship_name(ship_data: ShipData) -> String:
+	var key := StringName("SHIP_%s" % String(ship_data.id).to_upper())
+	var translated := TranslationServer.translate(key)
+	return ship_data.display_name if translated == String(key) else translated

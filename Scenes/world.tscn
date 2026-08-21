@@ -9,7 +9,7 @@
 [ext_resource type="Resource" path="res://Resources/ships/ship_starter_freighter.tres" id="7_ship_data"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/MissionOfferPanel.tscn" id="8_mission_offer_panel"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/ShipShopPanel.tscn" id="9_ship_shop"]
-[ext_resource type="PackedScene" path="res://Scenes/ui/NewGameButton.tscn" id="10_new_game"]
+[ext_resource type="PackedScene" path="res://Scenes/ui/SettingsMenu.tscn" id="10_settings"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/FleetStatusPanel.tscn" id="11_fleet_status"]
 [ext_resource type="Script" uid="uid://bis3wmyn8relq" path="res://Scripts/camera/world_camera.gd" id="12_world_camera"]
 [ext_resource type="Script" uid="uid://slwfs8f8ho3y" path="res://Scripts/routes/sea_route_registry.gd" id="13_route_registry"]
@@ -130,11 +130,7 @@ anchors_preset = 2
 offset_top = -86.0
 offset_right = 192.0
 
-[node name="NewGameButton" parent="UI" unique_id=306073066 instance=ExtResource("10_new_game")]
-offset_left = 25.0
-offset_top = 95.0
-offset_right = 175.0
-offset_bottom = 137.0
+[node name="SettingsMenu" parent="UI" instance=ExtResource("10_settings")]
 
 [node name="MissionOfferPanel" parent="UI" unique_id=843648461 instance=ExtResource("8_mission_offer_panel")]
 visible = true

@@ -1,0 +1,254 @@
+extends Node
+## Persistent device preferences. These settings deliberately live outside
+## the gameplay save, so starting a new company does not reset language/audio.
+
+const SETTINGS_PATH := "user://settings.cfg"
+const SUPPORTED_LOCALES := ["tr", "en"]
+
+var sound_effects_enabled := true
+var music_enabled := true
+var locale := "tr"
+var _persist_enabled := true
+
+
+func _ready() -> void:
+	_persist_enabled = not OS.get_cmdline_user_args().has("--disable-auto-save")
+	_install_translations()
+	if _persist_enabled:
+		_load_settings()
+	_apply_all(false)
+
+
+func set_sound_effects_enabled(enabled: bool) -> void:
+	if sound_effects_enabled == enabled:
+		return
+	sound_effects_enabled = enabled
+	_apply_audio_buses()
+	_save_settings()
+	EventBus.sound_effects_setting_changed.emit(sound_effects_enabled)
+
+
+func set_music_enabled(enabled: bool) -> void:
+	if music_enabled == enabled:
+		return
+	music_enabled = enabled
+	_apply_audio_buses()
+	_save_settings()
+	EventBus.music_setting_changed.emit(music_enabled)
+
+
+func set_locale(value: String) -> void:
+	var normalized := value.to_lower().substr(0, 2)
+	if not SUPPORTED_LOCALES.has(normalized):
+		normalized = "tr"
+	if locale == normalized:
+		return
+	locale = normalized
+	TranslationServer.set_locale(locale)
+	_save_settings()
+	EventBus.language_changed.emit(locale)
+
+
+func _load_settings() -> void:
+	var config := ConfigFile.new()
+	if config.load(SETTINGS_PATH) != OK:
+		return
+	var legacy_enabled := bool(config.get_value("audio", "enabled", true))
+	sound_effects_enabled = bool(config.get_value("audio", "sound_effects_enabled", legacy_enabled))
+	music_enabled = bool(config.get_value("audio", "music_enabled", legacy_enabled))
+	var saved_locale := String(config.get_value("language", "locale", "tr"))
+	locale = saved_locale if SUPPORTED_LOCALES.has(saved_locale) else "tr"
+
+
+func _save_settings() -> void:
+	if not _persist_enabled:
+		return
+	var config := ConfigFile.new()
+	config.set_value("audio", "sound_effects_enabled", sound_effects_enabled)
+	config.set_value("audio", "music_enabled", music_enabled)
+	config.set_value("language", "locale", locale)
+	var error := config.save(SETTINGS_PATH)
+	if error != OK:
+		push_warning("Could not save device settings: %s" % error)
+
+
+func _apply_all(emit_signals: bool) -> void:
+	TranslationServer.set_locale(locale)
+	_apply_audio_buses()
+	if emit_signals:
+		EventBus.language_changed.emit(locale)
+		EventBus.sound_effects_setting_changed.emit(sound_effects_enabled)
+		EventBus.music_setting_changed.emit(music_enabled)
+
+
+func _apply_audio_buses() -> void:
+	_set_bus_muted("SFX", not sound_effects_enabled)
+	_set_bus_muted("Music", not music_enabled)
+
+
+func _set_bus_muted(bus_name: String, muted: bool) -> void:
+	var bus_index := AudioServer.get_bus_index(bus_name)
+	if bus_index < 0:
+		AudioServer.add_bus()
+		bus_index = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(bus_index, bus_name)
+	AudioServer.set_bus_mute(bus_index, muted)
+
+
+func _install_translations() -> void:
+	_add_translation("tr", _turkish_messages())
+	_add_translation("en", _english_messages())
+
+
+func _add_translation(target_locale: String, messages: Dictionary) -> void:
+	var translation := Translation.new()
+	translation.locale = target_locale
+	for key in messages.keys():
+		translation.add_message(StringName(key), String(messages[key]))
+	TranslationServer.add_translation(translation)
+
+
+func _turkish_messages() -> Dictionary:
+	return {
+		"SETTINGS_TITLE": "Ayarlar",
+		"SETTINGS_BUTTON": "⚙ Ayarlar",
+		"SETTINGS_RESUME": "Devam Et",
+		"SETTINGS_SFX_ON": "Ses Efektleri: Açık",
+		"SETTINGS_SFX_OFF": "Ses Efektleri: Kapalı",
+		"SETTINGS_MUSIC_ON": "Müzik: Açık",
+		"SETTINGS_MUSIC_OFF": "Müzik: Kapalı",
+		"SETTINGS_LANGUAGE": "Dil",
+		"SETTINGS_LANGUAGE_TR": "Türkçe",
+		"SETTINGS_LANGUAGE_EN": "English",
+		"SETTINGS_NEW_GAME": "Yeni Oyuna Başla",
+		"SETTINGS_NEW_GAME_TITLE": "Yeni oyuna başla",
+		"SETTINGS_NEW_GAME_CONFIRM": "Tüm para, liman, gemi, görev ve şirket ilerlemesi kalıcı olarak silinecek.\nYeni oyuna başlamak istediğine emin misin?",
+		"SETTINGS_NEW_GAME_OK": "Evet, ilerlemeyi sil",
+		"SETTINGS_CANCEL": "Vazgeç",
+		"SETTINGS_RESETTING": "Sıfırlanıyor...",
+		"COMPANY_PROGRESS_MAX": "Şirket Sv. %d · %d CV · MAKS",
+		"COMPANY_PROGRESS": "Şirket Sv. %d · %d / %d CV",
+		"COMPANY_HEADQUARTERS": "Şirket Merkezi",
+		"PORT_UNLOCKED_LEVEL": "Sv. %d",
+		"PORT_LOCKED_REQUIREMENTS": "Kilitli · Sv. %d · %d ₺",
+		"FLEET_TITLE": "Filo Durumu",
+		"SHIP_SHOP_TITLE": "Gemi Satın Al",
+		"MISSION_OFFERS_TITLE": "%s limanındaki yükler",
+		"MISSION_WAITING": "Görev bekleniyor...",
+		"REMAINING": "Kalan: %s",
+		"SHIP_DEFAULT": "Gemi",
+		"AT_PORT": "Limanda: %s",
+		"NO_CARGO": "Yük yok",
+		"CARGO_LABEL": "Kargo: %s",
+		"STATE_IDLE": "Boşta",
+		"STATE_SAILING_TO_PICKUP": "Yük almaya gidiyor",
+		"STATE_LOADING": "Yükleniyor",
+		"STATE_SAILING_TO_DELIVERY": "Teslimata gidiyor",
+		"STATE_UNLOADING": "Boşaltılıyor",
+		"SPEED_MAX": "Hız maksimum · Sv.%d · %.0f hız",
+		"SPEED_UPGRADE": "Hız Sv.%d · %.0f hız · %d ₺",
+		"CAPACITY_MAX": "Kapasite maksimum · Sv.%d · %d birim",
+		"CAPACITY_UPGRADE": "Kapasite Sv.%d · %d birim · %d ₺",
+		"DURATION_SECONDS": "%d sn",
+		"DURATION_MINUTES": "%d dk %02d sn",
+		"SHOP_NOT_FOUND": "Gemi bulunamadı",
+		"SHOP_DETAILS": "Hız: %d · Kapasite: %d\nGenel + Soğutmalı yük",
+		"SHOP_LEVEL_REQUIRED": "Şirket Sv. %d gerekli",
+		"SHOP_CURRENT_LEVEL": "Şu anki seviye: %d",
+		"SHOP_FLEET_FULL": "Filo kapasitesi dolu",
+		"SHOP_FLEET_COUNT": "Filo: %d/%d",
+		"SHOP_BUY": "Satın Al · %d ₺",
+		"SHOP_OWNED": "Filoda: %d · Sonraki fiyat artar",
+		"SHOP_SUCCESS": "Satın alma başarılı.",
+		"SHOP_INSUFFICIENT": "Yetersiz bakiye: %d ₺ eksik",
+		"INSTRUCTION_SELECT_SHIP": "Görevleri görmek için bir gemi seç.",
+		"INSTRUCTION_SELECT_SHIP_LONG": "Görevleri görmek için haritadaki veya filo panelindeki bir gemiyi seç.",
+		"INSTRUCTION_LEVEL_UP": "Şirket seviyesi %d oldu! Yeni içerikler açıldı.",
+		"INSTRUCTION_LEVEL_REQUIRED": "Bu yatırım için Şirket Seviyesi %d gerekli (şu an %d).",
+		"INSTRUCTION_MISSION_STARTED": "Görev başladı. Gemi rotasına otomatik ilerliyor.",
+		"INSTRUCTION_TUTORIAL_COMPLETE": "ÖĞRETİCİ TAMAMLANDI · İlk görevin başladı; gemi otomatik ilerliyor.",
+		"INSTRUCTION_SPEED_UPGRADED": "%s hız seviyesi %d oldu (%.0f hız).",
+		"INSTRUCTION_CAPACITY_UPGRADED": "%s kapasite seviyesi %d oldu (%d birim).",
+		"INSTRUCTION_UPGRADE_SHORT": "%s geliştirmesi için %d ₺ eksik.",
+		"INSTRUCTION_FLEET_FULL": "Filo kapasitesi dolu: %d/%d gemi.",
+		"INSTRUCTION_SHIP_SELECTED": "%s seçildi. Görev işareti bulunan bir limana dokun.",
+		"INSTRUCTION_SHIP_BUSY": "%s şu anda görevde.",
+		"INSTRUCTION_SELECT_SHIP_FIRST": "Önce görev vereceğin gemiyi seç.",
+		"TUTORIAL_1": "ÖĞRETİCİ 1/3 · Şirket merkezindeki başlangıç gemisine dokun.",
+		"TUTORIAL_2_NO_SHIP": "ÖĞRETİCİ 2/3 · Gemiyi seç, sonra görev işaretli bir limana dokun.",
+		"TUTORIAL_2": "ÖĞRETİCİ 2/3 · Görev işareti bulunan bir limana dokun.",
+		"TUTORIAL_3_NO_PORT": "ÖĞRETİCİ 3/3 · Görev işaretli limana yeniden dokun.",
+		"TUTORIAL_3": "ÖĞRETİCİ 3/3 · Açılan tekliflerden bir görevi seç.",
+		"INSTRUCTION_PORT_UNLOCKED": "%s limanı açıldı!",
+		"INSTRUCTION_PORT_MONEY": "%s için %d ₺ gerekli. Eksik: %d ₺",
+		"INSTRUCTION_SHIP_JOINED": "%s filoya katıldı!",
+		"INSTRUCTION_OFFLINE": "Çevrimdışı ilerleme uygulandı: %d dakika.",
+		"INSTRUCTION_NO_OFFERS": "Seçili gemi için bu limanda uygun görev yok.",
+		"PORT_MERSIN": "Mersin", "PORT_IZMIR": "İzmir", "PORT_ISTANBUL": "İstanbul",
+		"PORT_ANTALYA": "Antalya", "PORT_SAMSUN": "Samsun",
+		"SHIP_STARTER_FREIGHTER": "Başlangıç Yük Gemisi",
+		"SHIP_REFRIGERATED_FREIGHTER": "Soğutmalı Yük Gemisi",
+		"CARGO_CONTAINERS": "Konteyner", "CARGO_FOOD": "Gıda",
+		"CARGO_MACHINERY": "Makine Parçaları", "CARGO_METAL": "Metal",
+	}
+
+
+func _english_messages() -> Dictionary:
+	var messages := _turkish_messages()
+	messages.merge({
+		"SETTINGS_TITLE": "Settings", "SETTINGS_BUTTON": "⚙ Settings",
+		"SETTINGS_RESUME": "Resume", "SETTINGS_SFX_ON": "Sound Effects: On",
+		"SETTINGS_SFX_OFF": "Sound Effects: Off", "SETTINGS_MUSIC_ON": "Music: On",
+		"SETTINGS_MUSIC_OFF": "Music: Off", "SETTINGS_LANGUAGE": "Language",
+		"SETTINGS_LANGUAGE_TR": "Türkçe", "SETTINGS_LANGUAGE_EN": "English",
+		"SETTINGS_NEW_GAME": "Start New Game", "SETTINGS_NEW_GAME_TITLE": "Start a new game",
+		"SETTINGS_NEW_GAME_CONFIRM": "All cash, ports, ships, missions, and company progress will be permanently deleted.\nAre you sure you want to start a new game?",
+		"SETTINGS_NEW_GAME_OK": "Yes, delete progress", "SETTINGS_CANCEL": "Cancel",
+		"SETTINGS_RESETTING": "Resetting...",
+		"COMPANY_PROGRESS_MAX": "Company Lv. %d · %d CV · MAX",
+		"COMPANY_PROGRESS": "Company Lv. %d · %d / %d CV",
+		"COMPANY_HEADQUARTERS": "Company Headquarters",
+		"PORT_UNLOCKED_LEVEL": "Lv. %d", "PORT_LOCKED_REQUIREMENTS": "Locked · Lv. %d · %d ₺",
+		"FLEET_TITLE": "Fleet Status", "SHIP_SHOP_TITLE": "Buy Ship",
+		"MISSION_OFFERS_TITLE": "Cargo at %s Port", "MISSION_WAITING": "Waiting for missions...",
+		"REMAINING": "Remaining: %s", "SHIP_DEFAULT": "Ship", "AT_PORT": "At port: %s",
+		"NO_CARGO": "No cargo", "CARGO_LABEL": "Cargo: %s", "STATE_IDLE": "Idle",
+		"STATE_SAILING_TO_PICKUP": "Sailing to pickup", "STATE_LOADING": "Loading",
+		"STATE_SAILING_TO_DELIVERY": "Sailing to delivery", "STATE_UNLOADING": "Unloading",
+		"SPEED_MAX": "Speed max · Lv.%d · %.0f speed", "SPEED_UPGRADE": "Speed Lv.%d · %.0f speed · %d ₺",
+		"CAPACITY_MAX": "Capacity max · Lv.%d · %d units", "CAPACITY_UPGRADE": "Capacity Lv.%d · %d units · %d ₺",
+		"DURATION_SECONDS": "%d sec", "DURATION_MINUTES": "%d min %02d sec",
+		"SHOP_NOT_FOUND": "Ship not found", "SHOP_DETAILS": "Speed: %d · Capacity: %d\nGeneral + Refrigerated cargo",
+		"SHOP_LEVEL_REQUIRED": "Company Lv. %d required", "SHOP_CURRENT_LEVEL": "Current level: %d",
+		"SHOP_FLEET_FULL": "Fleet capacity full", "SHOP_FLEET_COUNT": "Fleet: %d/%d",
+		"SHOP_BUY": "Buy · %d ₺", "SHOP_OWNED": "Owned: %d · Next price increases",
+		"SHOP_SUCCESS": "Purchase successful.", "SHOP_INSUFFICIENT": "Insufficient balance: %d ₺ short",
+		"INSTRUCTION_SELECT_SHIP": "Select a ship to view missions.",
+		"INSTRUCTION_SELECT_SHIP_LONG": "Select a ship on the map or in the fleet panel to view missions.",
+		"INSTRUCTION_LEVEL_UP": "Company level reached %d! New content unlocked.",
+		"INSTRUCTION_LEVEL_REQUIRED": "Company Level %d is required for this investment (currently %d).",
+		"INSTRUCTION_MISSION_STARTED": "Mission started. The ship is sailing automatically.",
+		"INSTRUCTION_TUTORIAL_COMPLETE": "TUTORIAL COMPLETE · Your first mission has started; the ship sails automatically.",
+		"INSTRUCTION_SPEED_UPGRADED": "%s reached speed level %d (%.0f speed).",
+		"INSTRUCTION_CAPACITY_UPGRADED": "%s reached capacity level %d (%d units).",
+		"INSTRUCTION_UPGRADE_SHORT": "%s upgrade needs %d ₺ more.",
+		"INSTRUCTION_FLEET_FULL": "Fleet capacity full: %d/%d ships.",
+		"INSTRUCTION_SHIP_SELECTED": "%s selected. Tap a port with a mission marker.",
+		"INSTRUCTION_SHIP_BUSY": "%s is currently on a mission.",
+		"INSTRUCTION_SELECT_SHIP_FIRST": "Select the ship you want to assign first.",
+		"TUTORIAL_1": "TUTORIAL 1/3 · Tap the starter ship at Company Headquarters.",
+		"TUTORIAL_2_NO_SHIP": "TUTORIAL 2/3 · Select the ship, then tap a port with a mission marker.",
+		"TUTORIAL_2": "TUTORIAL 2/3 · Tap a port with a mission marker.",
+		"TUTORIAL_3_NO_PORT": "TUTORIAL 3/3 · Tap the marked port again.",
+		"TUTORIAL_3": "TUTORIAL 3/3 · Choose one of the mission offers.",
+		"INSTRUCTION_PORT_UNLOCKED": "%s Port unlocked!",
+		"INSTRUCTION_PORT_MONEY": "%s requires %d ₺. Short by: %d ₺",
+		"INSTRUCTION_SHIP_JOINED": "%s joined the fleet!",
+		"INSTRUCTION_OFFLINE": "Offline progress applied: %d minutes.",
+		"INSTRUCTION_NO_OFFERS": "No suitable missions at this port for the selected ship.",
+		"PORT_IZMIR": "Izmir", "PORT_ISTANBUL": "Istanbul",
+		"SHIP_STARTER_FREIGHTER": "Starter Freighter", "SHIP_REFRIGERATED_FREIGHTER": "Refrigerated Freighter",
+		"CARGO_CONTAINERS": "Containers", "CARGO_FOOD": "Food",
+		"CARGO_MACHINERY": "Machinery Parts", "CARGO_METAL": "Metal",
+	}, true)
+	return messages

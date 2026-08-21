@@ -383,6 +383,18 @@ işaretli bir limana dokunması ve bir görev teklifini kabul etmesi istenir.
 İlk görev başladığında öğretici tamamlanır ve bu durum kayıt verisinde saklanır.
 Eski kayıtlar öğreticiyi tamamlamış kabul edilir.
 
+### 12.5 Ayarlar ve dil
+
+Sağ üstteki ayarlar düğmesi tam ekran bir menü açar ve arka plandaki oyunu
+duraklatır. Oyuncu buradan oyuna devam edebilir, ses efektlerini ve arka plan
+müziğini birbirinden bağımsız açıp kapatabilir, Türkçe veya İngilizce arayüzü
+seçebilir ve onay adımından sonra temiz bir oyuna başlayabilir.
+
+Dil ve ses tercihleri oyun ilerlemesinden ayrı saklanır. Yeni oyuna başlamak
+para, filo, liman, görev ve şirket ilerlemesini sıfırlar; seçili dil ile ses
+ayarlarını değiştirmez. Henüz müzik veya efekt varlığı bulunmasa da iki ayrı
+ses kanalı hazırdır ve ileride eklenecek sesler uygun kanala bağlanacaktır.
+
 ## 13. Görsel yön
 
 Görsel stil henüz kesinleşmemiştir. İşlevsel prototip önceliklidir. Korunması
@@ -408,6 +420,10 @@ Ses tasarımı henüz planlama aşamasındadır. Olası ihtiyaçlar:
 - Gemi motoru ve hareket sesleri.
 - Liman açma, gemi satın alma ve geliştirme sesleri.
 - Uzun oturumlarda yormayan, kapatılabilir arka plan müziği.
+
+Ses efektleri ve müzik için ayrı açma/kapama tercihleri kullanılır. Böylece
+oyuncu görsel/işlevsel geri bildirim seslerini korurken yalnızca müziği veya
+tam tersini kapatabilir.
 
 ## 15. İçerik hedefleri
 
@@ -440,6 +456,8 @@ veri dosyaları üzerinden tanımlanmalıdır.
 - Sürüm kontrollü JSON kayıt, otomatik kayıt ve kayıt sıfırlama.
 - Uygulama kapalıyken görev ilerlemesi.
 - Mobil öncelikli yatay kamera ve dokunma etkileşimleri.
+- Oyunu duraklatan ayarlar menüsü; bağımsız efekt/müzik kontrolleri.
+- Oyun sırasında değiştirilebilen Türkçe ve İngilizce arayüz.
 
 Prototipte bulunan içerik:
 

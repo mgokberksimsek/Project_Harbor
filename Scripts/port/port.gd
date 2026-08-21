@@ -26,13 +26,14 @@ func _ready() -> void:
 		_icon.texture = port_data.icon
 	_base_icon_scale = _icon.scale
 	_selection_outline.texture = _icon.texture
-	_name_label.text = port_data.display_name
+	_name_label.text = _translated_name()
 
 	PortManager.register_port(port_data, self)
 
 	EventBus.port_unlocked.connect(_on_port_unlocked)
 	EventBus.port_leveled_up.connect(_on_port_leveled_up)
 	EventBus.port_selection_changed.connect(_on_port_selection_changed)
+	get_node("/root/EventBus").language_changed.connect(_on_language_changed)
 	input_event.connect(_on_input_event)
 	_mission_badge.pressed.connect(_on_mission_badge_pressed)
 
@@ -47,6 +48,11 @@ func _on_port_unlocked(port_id: StringName) -> void:
 func _on_port_leveled_up(port_id: StringName, _new_level: int) -> void:
 	if port_id == port_data.id:
 		_refresh_visuals()
+
+
+func _on_language_changed(_locale: String) -> void:
+	_name_label.text = _translated_name()
+	_refresh_visuals()
 
 
 func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
@@ -90,9 +96,15 @@ func _refresh_visuals() -> void:
 	_icon.modulate = Color.WHITE if unlocked else LOCKED_TINT
 
 	if unlocked:
-		_status_label.text = "Lv. %d" % PortManager.get_level(port_data.id)
+		_status_label.text = tr("PORT_UNLOCKED_LEVEL") % PortManager.get_level(port_data.id)
 	else:
-		_status_label.text = "Kilitli · Sv. %d · %d ₺" % [
+		_status_label.text = tr("PORT_LOCKED_REQUIREMENTS") % [
 			port_data.required_company_level,
 			port_data.base_unlock_cost,
 		]
+
+
+func _translated_name() -> String:
+	var key := StringName("PORT_%s" % String(port_data.id).to_upper())
+	var translated := TranslationServer.translate(key)
+	return port_data.display_name if translated == String(key) else translated
