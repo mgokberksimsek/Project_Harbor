@@ -282,6 +282,23 @@ func _run() -> void:
 		assert(offer.cargo_type_id != &"food")
 	assert(has_local_pickup_offer)
 	assert(has_remote_pickup_offer)
+	var local_offer: Mission = null
+	for offer in offers:
+		if offer.pickup_port_id == offer.origin_port_id:
+			local_offer = offer
+			break
+	assert(local_offer != null)
+	var local_pickup_route: PackedVector2Array = starter_map_ship.call(
+		"_build_delivery_route",
+		local_offer
+	)
+	var local_pickup_port: Node2D = port_manager.get_port_node(local_offer.pickup_port_id)
+	assert(local_pickup_route.size() > 2)
+	assert(local_pickup_route[0].is_equal_approx(starter_map_ship.global_position))
+	assert(local_pickup_route[1].is_equal_approx(local_pickup_port.global_position))
+	assert(local_pickup_route[local_pickup_route.size() - 1].is_equal_approx(
+		port_manager.get_port_node(local_offer.delivery_port_id).global_position
+	))
 
 	event_bus.ship_tapped.emit(&"starter_ship")
 	await process_frame

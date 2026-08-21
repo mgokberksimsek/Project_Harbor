@@ -328,6 +328,25 @@ func _on_ship_dock_slot_changed(
 
 
 func _build_delivery_route(mission: Mission) -> PackedVector2Array:
+	# A local pickup still begins with a short visual handling leg from the
+	# assigned berth into the pickup port center. Keep that center in the
+	# preview before joining the authored sea route to the destination.
+	if mission.origin_port_id == mission.pickup_port_id:
+		var pickup_port := PortManager.get_port_node(mission.pickup_port_id)
+		if pickup_port != null \
+				and global_position.distance_squared_to(pickup_port.global_position) > 0.25:
+			var delivery_points := PortManager.get_smoothed_route_points(
+				mission.pickup_port_id,
+				mission.delivery_port_id
+			)
+			if delivery_points.size() >= 2:
+				var local_pickup_route := PackedVector2Array([
+					global_position,
+					pickup_port.global_position,
+				])
+				for point_index in range(1, delivery_points.size()):
+					local_pickup_route.append(delivery_points[point_index])
+				return local_pickup_route
 	return _build_route_from_current_position(
 		mission.pickup_port_id,
 		mission.delivery_port_id
