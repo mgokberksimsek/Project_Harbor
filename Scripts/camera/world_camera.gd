@@ -8,9 +8,10 @@ const MIN_ZOOM := 0.45
 const MAX_ZOOM := 1.30
 const ZOOM_STEP := 0.10
 const TAP_DRAG_THRESHOLD_PX := 32.0
-const PAN_INERTIA_DAMPING := 6.5
-const PAN_INERTIA_MAX_SPEED_PX := 2200.0
-const PAN_INERTIA_STOP_SPEED_PX := 25.0
+const PAN_DRAG_SENSITIVITY := 0.70
+const PAN_INERTIA_DAMPING := 3.5
+const PAN_INERTIA_MAX_SPEED_PX := 2400.0
+const PAN_INERTIA_STOP_SPEED_PX := 20.0
 
 var _mouse_dragging := false
 var _mouse_pointer_active := false
@@ -115,7 +116,7 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 		_mouse_dragged = true
 	if not _mouse_dragged:
 		return
-	pan_by_screen_delta(event.relative)
+	pan_by_screen_delta(event.relative * PAN_DRAG_SENSITIVITY)
 	_capture_pan_velocity(event.velocity, event.relative)
 	get_viewport().set_input_as_handled()
 
@@ -179,7 +180,7 @@ func _handle_screen_drag(event: InputEventScreenDrag) -> void:
 	if _touches.size() == 1:
 		_touches[event.index] = event.position
 		if bool(_touch_dragged[event.index]):
-			pan_by_screen_delta(event.relative)
+			pan_by_screen_delta(event.relative * PAN_DRAG_SENSITIVITY)
 			_capture_pan_velocity(event.velocity, event.relative)
 	else:
 		_stop_pan_inertia()
@@ -205,6 +206,7 @@ func _capture_pan_velocity(event_velocity: Vector2, relative: Vector2) -> void:
 	var candidate := event_velocity
 	if candidate.is_zero_approx() and not relative.is_zero_approx():
 		candidate = relative * 60.0
+	candidate *= PAN_DRAG_SENSITIVITY
 	_pan_velocity_screen = candidate.limit_length(PAN_INERTIA_MAX_SPEED_PX)
 
 
