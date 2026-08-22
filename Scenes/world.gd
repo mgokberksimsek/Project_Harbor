@@ -5,6 +5,8 @@ extends Node2D
 @onready var _debug_level_up_button: Button = $UI/DebugLevelUpButton
 @onready var _next_goal_label: Label = $UI/NextGoalLabel
 @onready var _instruction_label: Label = $UI/InstructionLabel
+@onready var _skip_tutorial_button: Button = $UI/SkipTutorialButton
+@onready var _tutorial_complete_dialog: AcceptDialog = $UI/TutorialCompleteDialog
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
 @onready var _ship_shop_panel = $UI/ShipShopPanel
@@ -18,9 +20,13 @@ var _selected_ship_id: StringName = &""
 var _open_mission_port_id: StringName = &""
 var _mission_offers: Array[Mission] = []
 var _fleet_refresh_elapsed := 0.0
+var _tutorial_completion_skipped := false
 
 const MAP_SHIP_TAP_RADIUS_PX := 48.0
 const MAP_PORT_TAP_RADIUS_PX := 48.0
+const TUTORIAL_PULSE_SPEED := 4.0
+
+var _company_progress_tutorial_elapsed := 0.0
 
 
 func _handle_map_tap(screen_position: Vector2) -> void:
@@ -30,6 +36,10 @@ func _handle_map_tap(screen_position: Vector2) -> void:
 		return
 	if _is_port_at_screen_position(screen_position):
 		_ship_shop_panel.set_expanded(false)
+		return
+	if not GameManager.is_tutorial_completed():
+		_update_tutorial_instruction()
+		_update_tutorial_focus()
 		return
 	clear_map_selection()
 
@@ -122,8 +132,15 @@ func _ready() -> void:
 	_fleet_status_panel.capacity_upgrade_requested.connect(_on_capacity_upgrade_requested)
 	_port_unlock_panel.unlock_requested.connect(_on_port_unlock_requested)
 	_port_unlock_panel.closed.connect(_on_port_unlock_panel_closed)
+	_company_progress_panel.closed.connect(_on_company_progress_panel_closed)
+	_company_progress_panel.company_value_info_confirmed.connect(
+		_on_company_value_info_confirmed
+	)
+	_ship_shop_panel.expanded_changed.connect(_on_ship_shop_expanded_changed)
 	_company_progress_label.pressed.connect(_on_company_progress_pressed)
 	_debug_level_up_button.pressed.connect(_on_debug_level_up_pressed)
+	_skip_tutorial_button.pressed.connect(_on_skip_tutorial_pressed)
+	_tutorial_complete_dialog.confirmed.connect(_on_tutorial_complete_confirmed)
 	_settings_menu.menu_opened.connect(_on_settings_opened)
 	_settings_menu.resumed.connect(_on_settings_resumed)
 	_settings_menu.sound_effects_toggled.connect(SettingsManager.set_sound_effects_enabled)
@@ -135,6 +152,7 @@ func _ready() -> void:
 		SettingsManager.music_enabled,
 		SettingsManager.locale
 	)
+	_refresh_skip_tutorial_ui()
 
 	_update_money(GameManager.money)
 	_update_company_progress()
@@ -147,6 +165,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_update_company_progress_tutorial_visual(delta)
 	_fleet_refresh_elapsed += delta
 	if _fleet_refresh_elapsed < 0.25:
 		return
@@ -171,6 +190,7 @@ func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
 	_update_tutorial_instruction()
 	_update_tutorial_focus()
 	_update_next_goal()
+	_refresh_skip_tutorial_ui()
 
 
 func _on_language_changed(_locale: String) -> void:
@@ -178,6 +198,7 @@ func _on_language_changed(_locale: String) -> void:
 	_update_debug_level_button()
 	_update_next_goal()
 	_refresh_fleet_panel()
+	_refresh_skip_tutorial_ui()
 	if _company_progress_panel.is_open():
 		_show_company_progress_panel()
 	if _open_mission_port_id != &"":
@@ -217,7 +238,7 @@ func _on_debug_level_up_pressed() -> void:
 
 func _update_debug_level_button() -> void:
 	_debug_level_up_button.text = tr("DEBUG_LEVEL_UP") % CompanyManager.company_level
-	_debug_level_up_button.disabled = (
+	_debug_level_up_button.disabled = not GameManager.is_tutorial_completed() or (
 		CompanyManager.company_level >= CompanyManager.get_max_level()
 	)
 
@@ -246,13 +267,18 @@ func _on_mission_offers_updated(offers: Array) -> void:
 
 
 func _on_offer_accepted(offer_id: String) -> void:
+	if not GameManager.is_tutorial_completed() \
+			and GameManager.tutorial_step != GameManager.TutorialStep.ACCEPT_MISSION:
+		_update_tutorial_instruction()
+		_update_tutorial_focus()
+		return
 	_open_mission_port_id = &""
 	EventBus.port_selection_changed.emit(&"")
 	_mission_offer_panel.close_panel()
 	if MissionManager.accept_offer(offer_id):
 		if GameManager.tutorial_step == GameManager.TutorialStep.ACCEPT_MISSION:
-			GameManager.set_tutorial_step(GameManager.TutorialStep.COMPLETED)
-			_instruction_label.text = tr("INSTRUCTION_TUTORIAL_COMPLETE")
+			GameManager.set_tutorial_step(GameManager.TutorialStep.WELCOME_CAPTAIN)
+			_show_tutorial_complete_dialog(false)
 		else:
 			_instruction_label.text = tr("INSTRUCTION_MISSION_STARTED")
 	_update_mission_markers()
@@ -261,6 +287,8 @@ func _on_offer_accepted(offer_id: String) -> void:
 func _on_mission_panel_dismissed() -> void:
 	_open_mission_port_id = &""
 	EventBus.port_selection_changed.emit(&"")
+	if GameManager.tutorial_step == GameManager.TutorialStep.ACCEPT_MISSION:
+		GameManager.set_tutorial_step(GameManager.TutorialStep.SELECT_MISSION_PORT)
 	_update_tutorial_instruction()
 	_update_tutorial_focus()
 
@@ -270,10 +298,14 @@ func _on_fleet_ship_selected(ship_id: StringName) -> void:
 
 
 func _on_speed_upgrade_requested(ship_id: StringName) -> void:
+	if not GameManager.is_tutorial_completed():
+		return
 	GameManager.try_upgrade_ship_speed(ship_id)
 
 
 func _on_capacity_upgrade_requested(ship_id: StringName) -> void:
+	if not GameManager.is_tutorial_completed():
+		return
 	GameManager.try_upgrade_ship_capacity(ship_id)
 
 
@@ -305,6 +337,11 @@ func _on_fleet_capacity_reached(current_count: int, maximum_count: int) -> void:
 
 
 func _on_ship_tapped(ship_id: StringName) -> void:
+	if not GameManager.is_tutorial_completed() \
+			and GameManager.tutorial_step != GameManager.TutorialStep.SELECT_SHIP:
+		_update_tutorial_instruction()
+		_update_tutorial_focus()
+		return
 	_selected_ship_id = ship_id
 	_open_mission_port_id = &""
 	EventBus.ship_selection_changed.emit(ship_id)
@@ -326,7 +363,16 @@ func _on_ship_tapped(ship_id: StringName) -> void:
 
 
 func _on_port_tapped(port_id: StringName) -> void:
+	if not GameManager.is_tutorial_completed() \
+			and GameManager.tutorial_step != GameManager.TutorialStep.SELECT_MISSION_PORT:
+		_update_tutorial_instruction()
+		_update_tutorial_focus()
+		return
 	_company_progress_panel.close_panel()
+	if not GameManager.is_tutorial_completed() and not PortManager.is_unlocked(port_id):
+		_update_tutorial_instruction()
+		_update_tutorial_focus()
+		return
 	if not PortManager.is_unlocked(port_id):
 		_open_mission_port_id = &""
 		_mission_offer_panel.close_panel()
@@ -348,23 +394,38 @@ func _on_port_tapped(port_id: StringName) -> void:
 
 func _update_tutorial_instruction() -> bool:
 	match GameManager.tutorial_step:
+		GameManager.TutorialStep.OPEN_SHIP_SHOP:
+			_instruction_label.text = tr("TUTORIAL_1_OPEN_SHOP")
+			return true
 		GameManager.TutorialStep.PURCHASE_SHIP:
-			_instruction_label.text = tr("TUTORIAL_1_PURCHASE")
+			_instruction_label.text = tr("TUTORIAL_2_PURCHASE")
+			return true
+		GameManager.TutorialStep.OPEN_COMPANY_PROGRESS:
+			_instruction_label.text = tr("TUTORIAL_3_OPEN_COMPANY_PROGRESS")
+			return true
+		GameManager.TutorialStep.READ_COMPANY_VALUE_INFO:
+			if _company_progress_panel.is_open():
+				_instruction_label.text = tr("TUTORIAL_4_READ_COMPANY_VALUE")
+			else:
+				_instruction_label.text = tr("TUTORIAL_4_REOPEN_COMPANY_PROGRESS")
 			return true
 		GameManager.TutorialStep.SELECT_SHIP:
-			_instruction_label.text = tr("TUTORIAL_2_SELECT_SHIP")
+			_instruction_label.text = tr("TUTORIAL_5_SELECT_SHIP")
 			return true
 		GameManager.TutorialStep.SELECT_MISSION_PORT:
 			if _selected_ship_id == &"":
-				_instruction_label.text = tr("TUTORIAL_3_NO_SHIP")
+				_instruction_label.text = tr("TUTORIAL_6_NO_SHIP")
 			else:
-				_instruction_label.text = tr("TUTORIAL_3_SELECT_PORT")
+				_instruction_label.text = tr("TUTORIAL_6_SELECT_PORT")
 			return true
 		GameManager.TutorialStep.ACCEPT_MISSION:
 			if _open_mission_port_id == &"":
-				_instruction_label.text = tr("TUTORIAL_4_NO_PORT")
+				_instruction_label.text = tr("TUTORIAL_7_NO_PORT")
 			else:
-				_instruction_label.text = tr("TUTORIAL_4_ACCEPT")
+				_instruction_label.text = tr("TUTORIAL_7_ACCEPT")
+			return true
+		GameManager.TutorialStep.WELCOME_CAPTAIN:
+			_instruction_label.text = tr("TUTORIAL_8_WELCOME")
 			return true
 		_:
 			return false
@@ -691,6 +752,9 @@ func _show_port_unlock_panel(port_id: StringName) -> void:
 
 
 func _on_port_unlock_requested(port_id: StringName) -> void:
+	if not GameManager.is_tutorial_completed():
+		_update_tutorial_instruction()
+		return
 	GameManager.try_unlock_port(port_id)
 	_port_unlock_panel.update_status(GameManager.money, CompanyManager.company_level)
 
@@ -700,12 +764,75 @@ func _on_port_unlock_panel_closed() -> void:
 
 
 func _on_company_progress_pressed() -> void:
+	if not GameManager.is_tutorial_completed() \
+			and GameManager.tutorial_step != GameManager.TutorialStep.OPEN_COMPANY_PROGRESS \
+			and GameManager.tutorial_step != GameManager.TutorialStep.READ_COMPANY_VALUE_INFO:
+		_update_tutorial_instruction()
+		return
 	if _company_progress_panel.is_open():
 		_company_progress_panel.close_panel()
 		return
 	_mission_offer_panel.close_panel()
 	_port_unlock_panel.close_panel()
 	_show_company_progress_panel()
+	if GameManager.tutorial_step == GameManager.TutorialStep.OPEN_COMPANY_PROGRESS:
+		GameManager.set_tutorial_step(GameManager.TutorialStep.READ_COMPANY_VALUE_INFO)
+
+
+func _on_company_progress_panel_closed() -> void:
+	_update_tutorial_instruction()
+	_update_tutorial_focus()
+
+
+func _on_company_value_info_confirmed() -> void:
+	if GameManager.tutorial_step == GameManager.TutorialStep.READ_COMPANY_VALUE_INFO:
+		_company_progress_panel.close_panel()
+		GameManager.set_tutorial_step(GameManager.TutorialStep.SELECT_SHIP)
+
+
+func _on_ship_shop_expanded_changed(expanded: bool) -> void:
+	if expanded and GameManager.tutorial_step == GameManager.TutorialStep.OPEN_SHIP_SHOP:
+		GameManager.set_tutorial_step(GameManager.TutorialStep.PURCHASE_SHIP)
+
+
+func _on_skip_tutorial_pressed() -> void:
+	_show_tutorial_complete_dialog(true)
+
+
+func _show_tutorial_complete_dialog(skipped: bool) -> void:
+	_tutorial_completion_skipped = skipped
+	_tutorial_complete_dialog.title = tr("TUTORIAL_COMPLETE_TITLE")
+	_tutorial_complete_dialog.dialog_text = tr(
+		"TUTORIAL_SKIP_CAPTAIN_MESSAGE" if skipped else "TUTORIAL_COMPLETE_MESSAGE"
+	)
+	_tutorial_complete_dialog.get_ok_button().text = tr("TUTORIAL_COMPLETE_OK")
+	_tutorial_complete_dialog.popup_centered(Vector2i(430, 200))
+
+
+func _on_tutorial_complete_confirmed() -> void:
+	if not _tutorial_completion_skipped \
+			and GameManager.tutorial_step != GameManager.TutorialStep.WELCOME_CAPTAIN:
+		return
+	GameManager.set_tutorial_step(GameManager.TutorialStep.COMPLETED)
+	_instruction_label.text = tr(
+		"INSTRUCTION_TUTORIAL_SKIPPED" \
+		if _tutorial_completion_skipped else "INSTRUCTION_TUTORIAL_COMPLETE"
+	)
+	_tutorial_completion_skipped = false
+	_update_tutorial_focus()
+	_update_next_goal()
+
+
+func _refresh_skip_tutorial_ui() -> void:
+	_skip_tutorial_button.visible = not GameManager.is_tutorial_completed() \
+		and GameManager.tutorial_step != GameManager.TutorialStep.WELCOME_CAPTAIN
+	_skip_tutorial_button.text = tr("TUTORIAL_SKIP")
+	_tutorial_complete_dialog.title = tr("TUTORIAL_COMPLETE_TITLE")
+	_tutorial_complete_dialog.dialog_text = tr(
+		"TUTORIAL_SKIP_CAPTAIN_MESSAGE" \
+		if _tutorial_completion_skipped else "TUTORIAL_COMPLETE_MESSAGE"
+	)
+	_tutorial_complete_dialog.get_ok_button().text = tr("TUTORIAL_COMPLETE_OK")
 
 
 func _show_company_progress_panel() -> void:
@@ -754,8 +881,17 @@ func _update_mission_markers() -> void:
 
 
 func _update_tutorial_focus() -> void:
+	var tutorial_completed := GameManager.is_tutorial_completed()
+	var shop_step := GameManager.tutorial_step == GameManager.TutorialStep.OPEN_SHIP_SHOP \
+		or GameManager.tutorial_step == GameManager.TutorialStep.PURCHASE_SHIP
+	_ship_shop_panel.set_interaction_enabled(tutorial_completed or shop_step)
+	_fleet_status_panel.set_interaction_enabled(tutorial_completed)
+	_company_progress_label.disabled = not tutorial_completed \
+		and GameManager.tutorial_step != GameManager.TutorialStep.OPEN_COMPANY_PROGRESS \
+		and GameManager.tutorial_step != GameManager.TutorialStep.READ_COMPANY_VALUE_INFO
+	_update_debug_level_button()
 	_ship_shop_panel.set_tutorial_focus(
-		GameManager.tutorial_step == GameManager.TutorialStep.PURCHASE_SHIP
+		shop_step
 	)
 	var focus_ships := GameManager.tutorial_step == GameManager.TutorialStep.SELECT_SHIP
 	for ship_id in FleetManager.get_all_ship_ids():
@@ -769,6 +905,26 @@ func _update_tutorial_focus() -> void:
 	_mission_offer_panel.set_tutorial_focus(
 		GameManager.tutorial_step == GameManager.TutorialStep.ACCEPT_MISSION \
 		and _mission_offer_panel.visible
+	)
+	_company_progress_panel.set_info_tutorial_focus(
+		GameManager.tutorial_step == GameManager.TutorialStep.READ_COMPANY_VALUE_INFO \
+		and _company_progress_panel.is_open()
+	)
+
+
+func _update_company_progress_tutorial_visual(delta: float) -> void:
+	if GameManager.tutorial_step != GameManager.TutorialStep.OPEN_COMPANY_PROGRESS:
+		_company_progress_tutorial_elapsed = 0.0
+		_company_progress_label.modulate = Color.WHITE
+		_company_progress_label.scale = Vector2.ONE
+		return
+	_company_progress_tutorial_elapsed += delta
+	var pulse := (sin(_company_progress_tutorial_elapsed * TUTORIAL_PULSE_SPEED) + 1.0) * 0.5
+	_company_progress_label.pivot_offset = _company_progress_label.size * 0.5
+	_company_progress_label.scale = Vector2.ONE * lerpf(1.0, 1.04, pulse)
+	_company_progress_label.modulate = Color.WHITE.lerp(
+		Color(1.0, 0.78, 0.28, 1.0),
+		lerpf(0.15, 0.45, pulse)
 	)
 
 

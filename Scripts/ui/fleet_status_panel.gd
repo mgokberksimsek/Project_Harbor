@@ -16,6 +16,7 @@ const EXPANDED_HEIGHT := 290.0
 
 var _cards: Dictionary = {}
 var _expanded := false
+var _interaction_enabled := true
 
 
 func _ready() -> void:
@@ -33,6 +34,17 @@ func set_expanded(expanded: bool) -> void:
 
 func is_expanded() -> bool:
 	return _expanded
+
+
+func set_interaction_enabled(enabled: bool) -> void:
+	_interaction_enabled = enabled
+	_toggle_button.disabled = not enabled
+	if not enabled:
+		set_expanded(false)
+	for card in _cards.values():
+		var button: Button = card["button"]
+		button.disabled = not enabled
+	_refresh_card_interactions()
 
 
 func set_fleet_data(entries: Array, selected_ship_id: StringName) -> void:
@@ -108,6 +120,7 @@ func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
 		tr("REMAINING") % _format_duration(float(entry.get("remaining_sec", 0.0))),
 	]
 	button.modulate = Color("#BDE3FF") if selected else Color.WHITE
+	button.disabled = not _interaction_enabled
 	progress.value = clampf(float(entry.get("progress", 0.0)) * 100.0, 0.0, 100.0)
 	progress.visible = bool(entry.get("has_mission", false))
 	var upgrade_cost := int(entry.get("speed_upgrade_cost", -1))
@@ -123,7 +136,8 @@ func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
 			float(entry.get("effective_speed", 0.0)),
 			upgrade_cost,
 		]
-		upgrade_button.disabled = not bool(entry.get("can_afford_speed_upgrade", false))
+		upgrade_button.disabled = not _interaction_enabled \
+			or not bool(entry.get("can_afford_speed_upgrade", false))
 
 	var capacity_cost := int(entry.get("capacity_upgrade_cost", -1))
 	if capacity_cost < 0:
@@ -138,7 +152,8 @@ func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
 			int(entry.get("effective_capacity", 0)),
 			capacity_cost,
 		]
-		capacity_button.disabled = not bool(entry.get("can_afford_capacity_upgrade", false))
+		capacity_button.disabled = not _interaction_enabled \
+			or not bool(entry.get("can_afford_capacity_upgrade", false))
 
 
 func _on_card_pressed(ship_id: StringName) -> void:
@@ -159,6 +174,17 @@ func _on_speed_upgrade_pressed(ship_id: StringName) -> void:
 
 func _on_capacity_upgrade_pressed(ship_id: StringName) -> void:
 	capacity_upgrade_requested.emit(ship_id)
+
+
+func _refresh_card_interactions() -> void:
+	for card in _cards.values():
+		var button: Button = card["button"]
+		var upgrade_button: Button = card["upgrade_button"]
+		var capacity_button: Button = card["capacity_button"]
+		button.disabled = not _interaction_enabled
+		if not _interaction_enabled:
+			upgrade_button.disabled = true
+			capacity_button.disabled = true
 
 
 func _format_duration(duration_sec: float) -> String:

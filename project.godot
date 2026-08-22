@@ -17,14 +17,14 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-EventBus="*uid://mh1mcycjvtf7"
+EventBus="*res://Scripts/autoload/event_bus.gd"
 SettingsManager="*res://Scripts/autoload/settings_manager.gd"
-PortManager="*uid://b448xwv3q8ywn"
-FleetManager="*uid://badlafy4w3a6n"
+PortManager="*res://Scripts/autoload/port_manager.gd"
+FleetManager="*res://Scripts/autoload/fleet_manager.gd"
 EconomyManager="*res://Scripts/autoload/economy_manager.gd"
 MissionManager="*res://Scripts/autoload/mission_manager.gd"
 CompanyManager="*res://Scripts/autoload/company_manager.gd"
-GameManager="*uid://bwf60iskcrcne"
+GameManager="*res://Scripts/GameManager.gd"
 SaveManager="*res://Scripts/autoload/save_manager.gd"
 
 [display]

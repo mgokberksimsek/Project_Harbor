@@ -2,8 +2,12 @@ class_name CompanyProgressPanel
 extends PanelContainer
 
 signal closed()
+signal company_value_info_confirmed()
 
-@onready var _title: Label = $Margin/VBox/Title
+const TUTORIAL_PULSE_SPEED := 4.0
+
+@onready var _title: Label = $Margin/VBox/Header/Title
+@onready var _info_button: Button = $Margin/VBox/Header/InfoButton
 @onready var _level_label: Label = $Margin/VBox/Level
 @onready var _total_label: Label = $Margin/VBox/TotalValue
 @onready var _fleet_label: Label = $Margin/VBox/Breakdown/FleetValue
@@ -12,6 +16,7 @@ signal closed()
 @onready var _progress_label: Label = $Margin/VBox/ProgressText
 @onready var _next_unlocks_label: Label = $Margin/VBox/NextUnlocks
 @onready var _close_button: Button = $Margin/VBox/CloseButton
+@onready var _info_dialog: AcceptDialog = $InfoDialog
 
 var _level := 1
 var _value := 0
@@ -20,12 +25,32 @@ var _next_threshold := -1
 var _fleet_value := 0
 var _port_value := 0
 var _next_unlocks: Array[String] = []
+var _info_tutorial_focused := false
+var _info_tutorial_elapsed := 0.0
 
 
 func _ready() -> void:
 	_close_button.pressed.connect(close_panel)
+	_info_button.pressed.connect(_show_company_value_info)
+	_info_dialog.confirmed.connect(_on_company_value_info_confirmed)
 	get_node("/root/EventBus").language_changed.connect(_on_language_changed)
 	hide()
+
+
+func _process(delta: float) -> void:
+	if not _info_tutorial_focused or not visible:
+		_info_tutorial_elapsed = 0.0
+		_info_button.modulate = Color.WHITE
+		_info_button.scale = Vector2.ONE
+		return
+	_info_tutorial_elapsed += delta
+	var pulse := (sin(_info_tutorial_elapsed * TUTORIAL_PULSE_SPEED) + 1.0) * 0.5
+	_info_button.pivot_offset = _info_button.size * 0.5
+	_info_button.scale = Vector2.ONE * lerpf(1.0, 1.08, pulse)
+	_info_button.modulate = Color.WHITE.lerp(
+		Color(1.0, 0.78, 0.28, 1.0),
+		lerpf(0.15, 0.5, pulse)
+	)
 
 
 func show_progress(
@@ -51,12 +76,25 @@ func show_progress(
 func close_panel() -> void:
 	if not visible:
 		return
+	_info_dialog.hide()
 	hide()
 	closed.emit()
 
 
 func is_open() -> bool:
 	return visible
+
+
+func set_info_tutorial_focus(enabled: bool) -> void:
+	_info_tutorial_focused = enabled
+	if not enabled:
+		_info_tutorial_elapsed = 0.0
+		_info_button.modulate = Color.WHITE
+		_info_button.scale = Vector2.ONE
+
+
+func is_info_tutorial_focused() -> bool:
+	return _info_tutorial_focused
 
 
 func _on_language_changed(_locale: String) -> void:
@@ -71,6 +109,9 @@ func _refresh() -> void:
 	_fleet_label.text = tr("COMPANY_PANEL_FLEET") % _fleet_value
 	_ports_label.text = tr("COMPANY_PANEL_PORTS") % _port_value
 	_close_button.text = tr("COMPANY_PANEL_CLOSE")
+	_info_dialog.title = tr("COMPANY_VALUE_INFO_TITLE")
+	_info_dialog.dialog_text = tr("COMPANY_PANEL_CV_EXPLANATION")
+	_info_dialog.get_ok_button().text = tr("COMPANY_VALUE_INFO_OK")
 
 	if _next_threshold < 0:
 		_progress_bar.min_value = 0
@@ -95,3 +136,12 @@ func _refresh() -> void:
 			_level + 1,
 			", ".join(_next_unlocks),
 		]
+
+
+func _show_company_value_info() -> void:
+	_refresh()
+	_info_dialog.popup_centered(Vector2i(390, 180))
+
+
+func _on_company_value_info_confirmed() -> void:
+	company_value_info_confirmed.emit()

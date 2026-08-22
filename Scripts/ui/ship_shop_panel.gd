@@ -1,5 +1,7 @@
 extends PanelContainer
 
+signal expanded_changed(expanded: bool)
+
 @export var model_id: StringName = &"refrigerated_freighter"
 @export var home_port_id: StringName = &"mersin"
 @export var start_expanded := false
@@ -23,6 +25,7 @@ var _expanded := false
 var _tutorial_focused := false
 var _tutorial_pulse_elapsed := 0.0
 var _default_model_id: StringName
+var _interaction_enabled := true
 
 
 func _ready() -> void:
@@ -49,7 +52,13 @@ func _process(delta: float) -> void:
 		return
 	_tutorial_pulse_elapsed += delta
 	var pulse := (sin(_tutorial_pulse_elapsed * TUTORIAL_PULSE_SPEED) + 1.0) * 0.5
-	_buy_button.modulate = Color(1.0, 0.78 + pulse * 0.22, 0.5, 0.8 + pulse * 0.2)
+	var focused_button := _buy_button if _expanded else _toggle_button
+	var idle_button := _toggle_button if _expanded else _buy_button
+	idle_button.modulate = Color.WHITE
+	idle_button.scale = Vector2.ONE
+	focused_button.pivot_offset = focused_button.size * 0.5
+	focused_button.scale = Vector2.ONE * lerpf(1.0, 1.05, pulse)
+	focused_button.modulate = Color(1.0, 0.78 + pulse * 0.22, 0.5, 0.8 + pulse * 0.2)
 
 
 func set_expanded(expanded: bool) -> void:
@@ -61,6 +70,14 @@ func set_expanded(expanded: bool) -> void:
 
 func is_expanded() -> bool:
 	return _expanded
+
+
+func set_interaction_enabled(enabled: bool) -> void:
+	_interaction_enabled = enabled
+	_toggle_button.disabled = not enabled
+	if not enabled:
+		set_expanded(false)
+	_refresh()
 
 
 func _refresh() -> void:
@@ -94,7 +111,7 @@ func _refresh() -> void:
 		]
 	else:
 		_buy_button.text = tr("SHOP_BUY") % current_price
-		_buy_button.disabled = GameManager.money < current_price
+		_buy_button.disabled = not _interaction_enabled or GameManager.money < current_price
 		_status.text = tr("SHOP_OWNED") % owned_count
 	_refresh_model_selector()
 
@@ -110,6 +127,7 @@ func _on_buy_pressed() -> void:
 
 func _on_toggle_pressed() -> void:
 	set_expanded(not _expanded)
+	expanded_changed.emit(_expanded)
 
 
 func _on_previous_model_pressed() -> void:
@@ -174,11 +192,14 @@ func _translated_ship_name(ship_data: ShipData) -> String:
 func set_tutorial_focus(enabled: bool) -> void:
 	var was_focused := _tutorial_focused
 	_tutorial_focused = enabled
-	if enabled:
-		set_expanded(true)
-	elif was_focused:
+	if enabled and not was_focused:
+		set_expanded(false)
+	elif was_focused and not enabled:
 		_tutorial_pulse_elapsed = 0.0
 		_buy_button.modulate = Color.WHITE
+		_buy_button.scale = Vector2.ONE
+		_toggle_button.modulate = Color.WHITE
+		_toggle_button.scale = Vector2.ONE
 		set_expanded(false)
 
 
@@ -219,7 +240,7 @@ func _refresh_model_selector() -> void:
 		model_index + 1 if model_index >= 0 else 0,
 		models.size(),
 	]
-	var navigation_disabled := models.size() <= 1
+	var navigation_disabled := not _interaction_enabled or models.size() <= 1
 	_previous_button.disabled = navigation_disabled
 	_next_button.disabled = navigation_disabled
 

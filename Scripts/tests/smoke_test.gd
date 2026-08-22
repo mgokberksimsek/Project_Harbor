@@ -146,24 +146,26 @@ func _run() -> void:
 	settings_menu.close_menu()
 	assert(not settings_menu.is_open())
 	assert(not paused)
+	var company_panel := world.get_node("UI/CompanyProgressPanel")
+	assert(company_panel != null)
+	var company_info_button := company_panel.get_node("Margin/VBox/Header/InfoButton") as Button
+	var company_info_dialog := company_panel.get_node("InfoDialog") as AcceptDialog
 	company_label.pressed.emit()
 	await process_frame
-	var company_panel := world.get_node("UI/CompanyProgressPanel")
-	assert(company_panel.visible)
-	assert(company_panel.get_node("Margin/VBox/TotalValue").text.contains("400 CV"))
-	assert(company_panel.get_node("Margin/VBox/Breakdown/FleetValue").text.contains("0 CV"))
-	assert(company_panel.get_node("Margin/VBox/Breakdown/PortValue").text.contains("400 CV"))
-	assert(company_panel.get_node("Margin/VBox/NextUnlocks").text.contains("Soğutmalı"))
-	company_panel.get_node("Margin/VBox/CloseButton").pressed.emit()
 	assert(not company_panel.visible)
 	var instruction_label := world.get_node("UI/InstructionLabel") as Label
 	assert(instruction_label != null)
-	assert(int(game_manager.get("tutorial_step")) == 4)
-	assert(instruction_label.text.contains("ÖĞRETİCİ 1/4"))
+	assert(int(game_manager.get("tutorial_step")) == 7)
+	assert(instruction_label.text.contains("ÖĞRETİCİ 1/8"))
+	var skip_tutorial_button := world.get_node("UI/SkipTutorialButton") as Button
+	var tutorial_complete_dialog := world.get_node("UI/TutorialCompleteDialog") as AcceptDialog
+	assert(skip_tutorial_button.visible)
 	var shop_panel := world.get_node("UI/ShipShopPanel")
 	assert(shop_panel != null)
 	assert(shop_panel.is_tutorial_focused())
-	assert(shop_panel.is_expanded())
+	assert(not shop_panel.is_expanded())
+	assert(company_label.disabled)
+	assert(debug_level_button.disabled)
 	assert(fleet_manager.get_all_ship_ids().is_empty())
 	assert(mission_manager.get_offers().is_empty())
 	var starter_model: ShipData = fleet_manager.get_initial_ship_model()
@@ -180,6 +182,13 @@ func _run() -> void:
 	var model_position_label := shop_panel.get_node(
 		"Margin/VBox/Body/ModelSelector/PositionLabel"
 	) as Label
+	var shop_toggle := shop_panel.get_node("Margin/VBox/ToggleButton") as Button
+	assert(not shop_toggle.disabled)
+	shop_toggle.pressed.emit()
+	await process_frame
+	assert(shop_panel.is_expanded())
+	assert(int(game_manager.get("tutorial_step")) == 4)
+	assert(instruction_label.text.contains("ÖĞRETİCİ 2/8"))
 	assert(previous_model_button.disabled)
 	assert(next_model_button.disabled)
 	assert(model_position_label.text == "1 / 1")
@@ -192,10 +201,50 @@ func _run() -> void:
 	assert(fleet_manager.get_all_ship_ids().size() == 1)
 	var starter_ship_id: StringName = fleet_manager.get_all_ship_ids()[0]
 	assert(fleet_manager.get_ship_data(starter_ship_id).id == starter_model.id)
-	assert(int(game_manager.get("tutorial_step")) == 0)
-	assert(instruction_label.text.contains("ÖĞRETİCİ 2/4"))
+	assert(int(game_manager.get("tutorial_step")) == 5)
+	assert(instruction_label.text.contains("ÖĞRETİCİ 3/8"))
 	assert(not shop_panel.is_tutorial_focused())
 	assert(not shop_panel.is_expanded())
+	assert(shop_toggle.disabled)
+	assert(not company_label.disabled)
+	event_bus.ship_tapped.emit(starter_ship_id)
+	event_bus.port_tapped.emit(&"mersin")
+	await process_frame
+	assert(world.get("_selected_ship_id") == &"")
+	assert(world.get("_open_mission_port_id") == &"")
+	assert(int(game_manager.get("tutorial_step")) == 5)
+	var tutorial_blocked_offers: Array = mission_manager.get_offers()
+	assert(tutorial_blocked_offers.size() == 3)
+	world.call("_on_offer_accepted", (tutorial_blocked_offers[0] as Mission).id)
+	assert(mission_manager.get_active_missions().is_empty())
+	company_label.pressed.emit()
+	await process_frame
+	assert(company_panel.visible)
+	assert(company_panel.get_node("Margin/VBox/TotalValue").text.contains("900 CV"))
+	assert(company_panel.get_node("Margin/VBox/Breakdown/FleetValue").text.contains("500 CV"))
+	assert(company_panel.get_node("Margin/VBox/Breakdown/PortValue").text.contains("400 CV"))
+	assert(company_panel.get_node("Margin/VBox/NextUnlocks").text.contains("Soğutmalı"))
+	assert(int(game_manager.get("tutorial_step")) == 6)
+	assert(instruction_label.text.contains("ÖĞRETİCİ 4/8"))
+	assert(company_panel.is_info_tutorial_focused())
+	event_bus.ship_tapped.emit(starter_ship_id)
+	event_bus.port_tapped.emit(&"mersin")
+	await process_frame
+	assert(world.get("_selected_ship_id") == &"")
+	assert(world.get("_open_mission_port_id") == &"")
+	assert(company_panel.visible)
+	assert(int(game_manager.get("tutorial_step")) == 6)
+	company_info_button.pressed.emit()
+	await process_frame
+	assert(company_info_dialog.visible)
+	assert(company_info_dialog.dialog_text.contains("harcanabilen para değildir"))
+	company_info_dialog.confirmed.emit()
+	company_info_dialog.hide()
+	assert(int(game_manager.get("tutorial_step")) == 0)
+	assert(instruction_label.text.contains("ÖĞRETİCİ 5/8"))
+	assert(not company_panel.visible)
+	game_manager.set_tutorial_step(GameManager.TutorialStep.COMPLETED)
+	await process_frame
 	assert(not previous_model_button.disabled)
 	assert(not next_model_button.disabled)
 	assert(model_position_label.text == "2 / 3")
@@ -228,7 +277,6 @@ func _run() -> void:
 	assert(fleet_panel.get_node("Margin/VBox/Body").visible)
 	fleet_toggle.pressed.emit()
 	assert(not fleet_panel.is_expanded())
-	var shop_toggle := shop_panel.get_node("Margin/VBox/ToggleButton") as Button
 	assert(not shop_panel.is_expanded())
 	assert(is_equal_approx(shop_panel.offset_bottom - shop_panel.offset_top, 56.0))
 	shop_toggle.pressed.emit()
@@ -297,6 +345,9 @@ func _run() -> void:
 	world_camera.call("_unhandled_input", map_tap_release)
 	assert(not fleet_panel.is_expanded())
 	assert(not shop_panel.is_expanded())
+	game_manager.set_tutorial_step(GameManager.TutorialStep.SELECT_SHIP)
+	await process_frame
+	assert(skip_tutorial_button.visible)
 	var initial_company_value: int = company_manager.company_value
 	game_manager.add_money(800)
 	assert(company_manager.company_value == initial_company_value)
@@ -439,7 +490,7 @@ func _run() -> void:
 	event_bus.ship_tapped.emit(starter_ship_id)
 	await process_frame
 	assert(int(game_manager.get("tutorial_step")) == 1)
-	assert(instruction_label.text.contains("ÖĞRETİCİ 3/4"))
+	assert(instruction_label.text.contains("ÖĞRETİCİ 6/8"))
 	var first_offer: Mission = null
 	for offer in offers:
 		if offer.pickup_port_id != &"mersin":
@@ -458,7 +509,7 @@ func _run() -> void:
 	event_bus.port_tapped.emit(first_offer.pickup_port_id)
 	await process_frame
 	assert(int(game_manager.get("tutorial_step")) == 2)
-	assert(instruction_label.text.contains("ÖĞRETİCİ 4/4"))
+	assert(instruction_label.text.contains("ÖĞRETİCİ 7/8"))
 	var pickup_icon := pickup_node.get_node("Icon") as Sprite2D
 	var pickup_highlight := pickup_icon.get_node("SelectionOutline") as Sprite2D
 	assert(pickup_highlight != null)
@@ -468,6 +519,14 @@ func _run() -> void:
 
 	world.call("_on_offer_accepted", first_offer.id)
 	await process_frame
+	assert(int(game_manager.get("tutorial_step")) == 8)
+	assert(not game_manager.is_tutorial_completed())
+	assert(instruction_label.text.contains("ÖĞRETİCİ 8/8"))
+	assert(tutorial_complete_dialog.visible)
+	assert(tutorial_complete_dialog.dialog_text.contains("İyi eğlenceler"))
+	assert(not next_goal_label.visible)
+	tutorial_complete_dialog.confirmed.emit()
+	tutorial_complete_dialog.hide()
 	assert(game_manager.is_tutorial_completed())
 	assert(instruction_label.text.contains("ÖĞRETİCİ TAMAMLANDI"))
 	assert(next_goal_label.visible)
@@ -869,8 +928,21 @@ func _run() -> void:
 	game_manager.apply_save_state({"money": 0})
 	assert(game_manager.is_tutorial_completed())
 	game_manager.reset_state()
-	assert(int(game_manager.get("tutorial_step")) == 4)
+	assert(int(game_manager.get("tutorial_step")) == 7)
 	assert(game_manager.money == starter_model.purchase_cost)
+	assert(skip_tutorial_button.visible)
+	assert(debug_level_button.disabled)
+	skip_tutorial_button.pressed.emit()
+	assert(tutorial_complete_dialog.visible)
+	assert(tutorial_complete_dialog.title.contains("Hazırsın Kaptan"))
+	assert(tutorial_complete_dialog.dialog_text.contains("İyi eğlenceler Kaptan"))
+	assert(int(game_manager.get("tutorial_step")) == 7)
+	tutorial_complete_dialog.confirmed.emit()
+	tutorial_complete_dialog.hide()
+	assert(game_manager.is_tutorial_completed())
+	assert(not skip_tutorial_button.visible)
+	assert(instruction_label.text.contains("ÖĞRETİCİ ATLANDI"))
+	assert(not debug_level_button.disabled)
 	var level_before_debug: int = company_manager.company_level
 	debug_level_button.emit_signal("pressed")
 	assert(company_manager.company_level == level_before_debug + 1)

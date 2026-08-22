@@ -148,6 +148,25 @@ theme_override_font_sizes/font_size = 20
 text = "Açık bir hedef limana dokun."
 horizontal_alignment = 2
 
+[node name="SkipTutorialButton" type="Button" parent="UI"]
+z_index = 90
+anchors_preset = 10
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -105.0
+offset_top = 64.0
+offset_right = 105.0
+offset_bottom = 104.0
+grow_horizontal = 2
+focus_mode = 0
+theme_override_font_sizes/font_size = 16
+text = "Öğreticiyi Atla"
+
+[node name="TutorialCompleteDialog" type="AcceptDialog" parent="UI"]
+title = "Hazırsın Kaptan!"
+dialog_text = "İlk görevin yola çıktı. Filonu büyüt, yeni limanlar aç ve denizlerde kendi şirketini kur. İyi eğlenceler!"
+ok_button_text = "Denizlere Açıl!"
+
 [node name="ShipShopPanel" parent="UI" unique_id=1255476120 instance=ExtResource("9_ship_shop")]
 anchors_preset = 2
 offset_top = -86.0

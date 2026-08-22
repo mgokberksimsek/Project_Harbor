@@ -411,16 +411,31 @@ eklenebilir.
 
 ### 12.4 Başlangıç öğreticisi
 
-Öğretici ayrı bir modal ekran açmadan mevcut üst yönlendirme alanını kullanır.
-Oyuncudan sırasıyla başlangıç yük gemisini satın alması, şirket merkezine teslim
-edilen gemiyi seçmesi, görev işaretli bir limana dokunması ve bir görev teklifini
-kabul etmesi istenir. İlgili satın alma düğmesi, gemi silueti, uygun liman görev
-rozetleri ve görev kartları kendi adımlarında hafif bir nabız/parlama hareketiyle
-vurgulanır. Gemi mağazası ilk adımda otomatik açılır ve satın alma tamamlanınca
-kapanır. Bu yönlendirme normal seçim vurgularından ayrılır ve öğretici
-tamamlandığında tamamen kapanır. İlk görev başladığında öğretici tamamlanır ve
-bu durum kayıt verisinde saklanır. Eski kayıtlar öğreticiyi tamamlamış kabul
-edilir.
+Öğreticinin ana yönlendirmesi mevcut üst bilgi alanını kullanır ve sekiz zorunlu
+adımdan oluşur: gemi mağazası sekmesini açma, başlangıç gemisini satın alma, CV
+göstergesinden Şirket İlerlemesi panelini açma, paneldeki `?` düğmesiyle CV
+açıklamasını onaylama, şirket merkezindeki gemiyi seçme, görev işaretli limanı
+seçme, ilk görevi kabul etme ve kapanış mesajını onaylama. Her adımda yalnızca
+o adımın gerektirdiği ilerleme kontrolü etkin kalır; diğer yönetim panelleri,
+harita seçimleri ve görev işlemleri bir önceki adım tamamlanmadan kullanılamaz.
+
+Gemi mağazası başlangıçta kapalıdır ve ilk adımda sekmesi nabız hareketiyle
+vurgulanır. Sekme açılınca vurgu satın alma düğmesine geçer. CV açıklaması normal
+panel görünümünü kalabalıklaştırmaz; `?` düğmesine dokununca açılan kısa bilgi
+penceresinde CV'nin harcanabilir Cash olmadığı, gemi ve liman yatırımlarıyla
+artarak şirket seviyelerini ve yeni içerikleri açtığı anlatılır. Oyuncu bu bilgi
+penceresini onaylamadan gemi seçme adımına geçemez. Gemi silueti, uygun liman
+görev rozetleri ve görev kartları da kendi adımlarında aynı hafif vurgu dilini
+kullanır.
+
+İlk görev başladığında “Hazırsın Kaptan!” başlıklı kısa bir kutlama penceresi
+açılır. Oyuncu “Denizlere Açıl!” eylemini onayladığında öğretici tamamlanır ve
+serbest oyun başlar. Öğretici boyunca görünen “Öğreticiyi Atla” seçeneği de aynı
+olumlu “Hazırsın Kaptan!” kapanışını açar; mesaj bu kez oyuncunun başlangıç
+parası ve açık limanlarıyla kendi rotasını çizebileceğini belirtir. Oyuncu yine
+“Denizlere Açıl!” eylemiyle onay verdikten sonra serbest oyuna geçer. Tamamlanma
+veya atlama durumu kayıt verisinde saklanır. Eski kayıtlar öğreticiyi tamamlamış
+kabul edilir.
 
 Öğretici tamamlandıktan sonra sol üstte tek satırlık bir “Sonraki Hedef” alanı
 ilk oturum ilerlemesini sürdürür. Önce başlangıç seviyesinde açılabilen en ucuz
