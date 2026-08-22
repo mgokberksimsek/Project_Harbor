@@ -1,13 +1,23 @@
 class_name WorldCamera
 extends Camera2D
 
+signal map_tapped(screen_position: Vector2)
+
 const WORLD_SIZE := Vector2(6000.0, 3500.0)
 const MIN_ZOOM := 0.45
 const MAX_ZOOM := 1.30
 const ZOOM_STEP := 0.10
+const TAP_DRAG_THRESHOLD_PX := 32.0
 
 var _mouse_dragging := false
+var _mouse_pointer_active := false
+var _mouse_press_position := Vector2.ZERO
+var _mouse_dragged := false
+var _mouse_tap_consumed := false
 var _touches: Dictionary = {}
+var _touch_starts: Dictionary = {}
+var _touch_dragged: Dictionary = {}
+var _touch_consumed: Dictionary = {}
 
 
 func _ready() -> void:
@@ -22,9 +32,8 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		_handle_mouse_button(event)
-	elif event is InputEventMouseMotion and _mouse_dragging:
-		pan_by_screen_delta(event.relative)
-		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion:
+		_handle_mouse_motion(event)
 	elif event is InputEventScreenTouch:
 		_handle_screen_touch(event)
 	elif event is InputEventScreenDrag:
@@ -50,11 +59,26 @@ func zoom_at_screen_position(target_zoom: float, screen_position: Vector2) -> vo
 
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
 	if event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed and try_select_ship_at_screen_position(event.position):
-			_mouse_dragging = false
-			get_viewport().set_input_as_handled()
+		if event.pressed:
+			_mouse_pointer_active = true
+			_mouse_press_position = event.position
+			_mouse_dragged = false
+			_mouse_tap_consumed = try_select_ship_at_screen_position(event.position)
+			_mouse_dragging = not _mouse_tap_consumed
+			if _mouse_tap_consumed:
+				get_viewport().set_input_as_handled()
 			return
-		_mouse_dragging = event.pressed
+		if not _mouse_pointer_active:
+			return
+		var is_map_tap := not _mouse_tap_consumed \
+				and not _mouse_dragged \
+				and _mouse_press_position.distance_to(event.position) <= TAP_DRAG_THRESHOLD_PX
+		_mouse_pointer_active = false
+		_mouse_dragging = false
+		_mouse_tap_consumed = false
+		if is_map_tap:
+			map_tapped.emit(event.position)
+			get_viewport().set_input_as_handled()
 	elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 		zoom_at_screen_position(zoom.x + ZOOM_STEP, event.position)
 		get_viewport().set_input_as_handled()
@@ -63,13 +87,42 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
 		get_viewport().set_input_as_handled()
 
 
+func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
+	if not _mouse_dragging:
+		return
+	if _mouse_press_position.distance_to(event.position) > TAP_DRAG_THRESHOLD_PX:
+		_mouse_dragged = true
+	if not _mouse_dragged:
+		return
+	pan_by_screen_delta(event.relative)
+	get_viewport().set_input_as_handled()
+
+
 func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
 		_touches[event.index] = event.position
-		if try_select_ship_at_screen_position(event.position):
+		_touch_starts[event.index] = event.position
+		_touch_dragged[event.index] = false
+		_touch_consumed[event.index] = try_select_ship_at_screen_position(event.position)
+		if _touches.size() > 1:
+			for active_index in _touches.keys():
+				_touch_dragged[active_index] = true
+		if bool(_touch_consumed[event.index]):
 			get_viewport().set_input_as_handled()
 	else:
+		if not _touch_starts.has(event.index):
+			return
+		var start_position: Vector2 = _touch_starts[event.index]
+		var is_map_tap := not bool(_touch_consumed.get(event.index, false)) \
+				and not bool(_touch_dragged.get(event.index, false)) \
+				and start_position.distance_to(event.position) <= TAP_DRAG_THRESHOLD_PX
 		_touches.erase(event.index)
+		_touch_starts.erase(event.index)
+		_touch_dragged.erase(event.index)
+		_touch_consumed.erase(event.index)
+		if is_map_tap:
+			map_tapped.emit(event.position)
+			get_viewport().set_input_as_handled()
 
 
 func try_select_ship_at_screen_position(screen_position: Vector2) -> bool:
@@ -89,17 +142,21 @@ func try_select_ship_at_screen_position(screen_position: Vector2) -> bool:
 			selected_ship = collider
 	if selected_ship == null:
 		return false
-	EventBus.ship_tapped.emit(selected_ship.ship_id)
+	get_node("/root/EventBus").ship_tapped.emit(selected_ship.ship_id)
 	return true
 
 
 func _handle_screen_drag(event: InputEventScreenDrag) -> void:
 	if not _touches.has(event.index):
 		return
+	var start_position: Vector2 = _touch_starts[event.index]
+	if start_position.distance_to(event.position) > TAP_DRAG_THRESHOLD_PX:
+		_touch_dragged[event.index] = true
 
 	if _touches.size() == 1:
 		_touches[event.index] = event.position
-		pan_by_screen_delta(event.relative)
+		if bool(_touch_dragged[event.index]):
+			pan_by_screen_delta(event.relative)
 	else:
 		var indices := _touches.keys()
 		if indices.size() < 2:

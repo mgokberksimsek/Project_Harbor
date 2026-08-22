@@ -239,13 +239,56 @@ func _run() -> void:
 	shop_toggle.pressed.emit()
 	assert(fleet_panel.is_expanded())
 	assert(shop_panel.is_expanded())
-	var map_tap := InputEventMouseButton.new()
-	map_tap.button_index = MOUSE_BUTTON_LEFT
-	map_tap.pressed = true
-	map_tap.position = Vector2(640, 400)
-	map_tap.global_position = map_tap.position
-	assert(not world.call("_is_ui_at_screen_position", map_tap.position))
-	world.call("_input", map_tap)
+	var world_camera := world.get_node("Camera2D")
+	assert(world_camera != null)
+	world.set("_selected_ship_id", &"selection_probe")
+	var mersin_node := port_manager.get_port_node(&"mersin") as Node2D
+	assert(mersin_node != null)
+	var mersin_screen_position: Vector2 = get_root().get_viewport().get_canvas_transform() \
+			* mersin_node.global_position
+	world.call("_handle_map_tap", mersin_screen_position)
+	assert(fleet_panel.is_expanded())
+	assert(not shop_panel.is_expanded())
+	assert(world.get("_selected_ship_id") == &"selection_probe")
+	world.set("_selected_ship_id", &"")
+	shop_toggle.pressed.emit()
+	assert(shop_panel.is_expanded())
+	var map_drag_press := InputEventMouseButton.new()
+	map_drag_press.button_index = MOUSE_BUTTON_LEFT
+	map_drag_press.pressed = true
+	map_drag_press.position = Vector2(640, 400)
+	map_drag_press.global_position = map_drag_press.position
+	world_camera.call("_unhandled_input", map_drag_press)
+	var map_drag_motion := InputEventMouseMotion.new()
+	map_drag_motion.position = Vector2(700, 400)
+	map_drag_motion.relative = Vector2(60, 0)
+	world_camera.call("_unhandled_input", map_drag_motion)
+	var map_drag_release := InputEventMouseButton.new()
+	map_drag_release.button_index = MOUSE_BUTTON_LEFT
+	map_drag_release.pressed = false
+	map_drag_release.position = map_drag_motion.position
+	map_drag_release.global_position = map_drag_release.position
+	world_camera.call("_unhandled_input", map_drag_release)
+	assert(fleet_panel.is_expanded())
+	assert(shop_panel.is_expanded())
+	var map_tap_press := InputEventMouseButton.new()
+	map_tap_press.button_index = MOUSE_BUTTON_LEFT
+	map_tap_press.pressed = true
+	map_tap_press.position = Vector2(640, 400)
+	map_tap_press.global_position = map_tap_press.position
+	world_camera.call("_unhandled_input", map_tap_press)
+	assert(fleet_panel.is_expanded())
+	assert(shop_panel.is_expanded())
+	var map_tap_jitter := InputEventMouseMotion.new()
+	map_tap_jitter.position = Vector2(658, 400)
+	map_tap_jitter.relative = Vector2(18, 0)
+	world_camera.call("_unhandled_input", map_tap_jitter)
+	var map_tap_release := InputEventMouseButton.new()
+	map_tap_release.button_index = MOUSE_BUTTON_LEFT
+	map_tap_release.pressed = false
+	map_tap_release.position = map_tap_jitter.position
+	map_tap_release.global_position = map_tap_release.position
+	world_camera.call("_unhandled_input", map_tap_release)
 	assert(not fleet_panel.is_expanded())
 	assert(not shop_panel.is_expanded())
 	var initial_company_value: int = company_manager.company_value

@@ -23,22 +23,13 @@ const MAP_SHIP_TAP_RADIUS_PX := 48.0
 const MAP_PORT_TAP_RADIUS_PX := 48.0
 
 
-func _input(event: InputEvent) -> void:
-	var screen_position := Vector2.ZERO
-	var is_pointer_press := false
-	if event is InputEventMouseButton:
-		is_pointer_press = event.pressed and event.button_index == MOUSE_BUTTON_LEFT
-		screen_position = event.position
-	elif event is InputEventScreenTouch:
-		is_pointer_press = event.pressed
-		screen_position = event.position
-	if not is_pointer_press or _is_ui_at_screen_position(screen_position):
-		return
-	_collapse_management_panels()
+func _handle_map_tap(screen_position: Vector2) -> void:
 	if try_select_ship_at_screen_position(screen_position):
+		_collapse_management_panels()
 		get_viewport().set_input_as_handled()
 		return
 	if _is_port_at_screen_position(screen_position):
+		_ship_shop_panel.set_expanded(false)
 		return
 	clear_map_selection()
 
@@ -96,22 +87,13 @@ func _collapse_management_panels() -> void:
 	_ship_shop_panel.set_expanded(false)
 
 
-func _is_ui_at_screen_position(screen_position: Vector2) -> bool:
-	for candidate in $UI.find_children("*", "Control", true, false):
-		var control := candidate as Control
-		if control != null and control.is_visible_in_tree() \
-				and control.mouse_filter != Control.MOUSE_FILTER_IGNORE \
-				and control.get_global_rect().has_point(screen_position):
-			return true
-	return false
-
-
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color("#256BB8"))
 	# Ships and ports can occupy the same dock position. Sorted, first-only
 	# picking guarantees that the higher-z ship receives the tap.
 	get_viewport().physics_object_picking_sort = true
 	get_viewport().physics_object_picking_first_only = true
+	_world_camera.map_tapped.connect(_handle_map_tap)
 
 	EventBus.money_changed.connect(_on_money_changed)
 	EventBus.company_value_changed.connect(_on_company_value_changed)
