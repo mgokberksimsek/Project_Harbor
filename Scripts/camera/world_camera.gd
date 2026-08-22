@@ -8,6 +8,9 @@ const MIN_ZOOM := 0.45
 const MAX_ZOOM := 1.30
 const ZOOM_STEP := 0.10
 const TAP_DRAG_THRESHOLD_PX := 32.0
+const PAN_INERTIA_DAMPING := 6.5
+const PAN_INERTIA_MAX_SPEED_PX := 2200.0
+const PAN_INERTIA_STOP_SPEED_PX := 25.0
 
 var _mouse_dragging := false
 var _mouse_pointer_active := false
@@ -18,6 +21,7 @@ var _touches: Dictionary = {}
 var _touch_starts: Dictionary = {}
 var _touch_dragged: Dictionary = {}
 var _touch_consumed: Dictionary = {}
+var _pan_velocity_screen := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -27,6 +31,20 @@ func _ready() -> void:
 	limit_bottom = int(WORLD_SIZE.y)
 	limit_smoothed = false
 	position = _clamp_camera_position(position)
+
+
+func _process(delta: float) -> void:
+	if _mouse_pointer_active or not _touches.is_empty():
+		return
+	if _pan_velocity_screen.length() < PAN_INERTIA_STOP_SPEED_PX:
+		_pan_velocity_screen = Vector2.ZERO
+		return
+	var previous_position := position
+	pan_by_screen_delta(_pan_velocity_screen * delta)
+	if position.is_equal_approx(previous_position):
+		_pan_velocity_screen = Vector2.ZERO
+		return
+	_pan_velocity_screen *= exp(-PAN_INERTIA_DAMPING * delta)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -60,6 +78,7 @@ func zoom_at_screen_position(target_zoom: float, screen_position: Vector2) -> vo
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
 	if event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
+			_stop_pan_inertia()
 			_mouse_pointer_active = true
 			_mouse_press_position = event.position
 			_mouse_dragged = false
@@ -80,9 +99,11 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
 			map_tapped.emit(event.position)
 			get_viewport().set_input_as_handled()
 	elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		_stop_pan_inertia()
 		zoom_at_screen_position(zoom.x + ZOOM_STEP, event.position)
 		get_viewport().set_input_as_handled()
 	elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		_stop_pan_inertia()
 		zoom_at_screen_position(zoom.x - ZOOM_STEP, event.position)
 		get_viewport().set_input_as_handled()
 
@@ -95,11 +116,13 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 	if not _mouse_dragged:
 		return
 	pan_by_screen_delta(event.relative)
+	_capture_pan_velocity(event.velocity, event.relative)
 	get_viewport().set_input_as_handled()
 
 
 func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
+		_stop_pan_inertia()
 		_touches[event.index] = event.position
 		_touch_starts[event.index] = event.position
 		_touch_dragged[event.index] = false
@@ -157,7 +180,9 @@ func _handle_screen_drag(event: InputEventScreenDrag) -> void:
 		_touches[event.index] = event.position
 		if bool(_touch_dragged[event.index]):
 			pan_by_screen_delta(event.relative)
+			_capture_pan_velocity(event.velocity, event.relative)
 	else:
+		_stop_pan_inertia()
 		var indices := _touches.keys()
 		if indices.size() < 2:
 			return
@@ -174,6 +199,17 @@ func _handle_screen_drag(event: InputEventScreenDrag) -> void:
 			var midpoint := (current_first + current_second) * 0.5
 			zoom_at_screen_position(zoom.x * current_distance / previous_distance, midpoint)
 	get_viewport().set_input_as_handled()
+
+
+func _capture_pan_velocity(event_velocity: Vector2, relative: Vector2) -> void:
+	var candidate := event_velocity
+	if candidate.is_zero_approx() and not relative.is_zero_approx():
+		candidate = relative * 60.0
+	_pan_velocity_screen = candidate.limit_length(PAN_INERTIA_MAX_SPEED_PX)
+
+
+func _stop_pan_inertia() -> void:
+	_pan_velocity_screen = Vector2.ZERO
 
 
 func _clamp_camera_position(candidate: Vector2) -> Vector2:
