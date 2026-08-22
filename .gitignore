@@ -3,6 +3,7 @@
 .import/
 .export/
 /android/
+/build/
 
 # Local handoff/test archives
 /ProjectHarbor-Claude-files.zip

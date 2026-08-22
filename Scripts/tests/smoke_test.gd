@@ -70,7 +70,14 @@ func _run() -> void:
 	var antalya_status := world.get_node("Ports/Antalya/StatusLabel") as Label
 	assert(antalya_status.text.contains("Sv. 3"))
 	assert(antalya_status.text.contains("1500"))
-	assert(company_manager.company_value == 400)
+	assert(
+		company_manager.company_value == 400,
+		"Expected 400 CV, got %d (ports=%s, port assets=%d)" % [
+			company_manager.company_value,
+			port_manager.get_unlocked_port_ids(),
+			company_manager.get_port_asset_value(),
+		]
+	)
 	assert(company_manager.company_level == 1)
 	assert(company_manager.get_next_level_threshold() == 1000)
 	var headquarters := world.get_node("CompanyHeadquarters")

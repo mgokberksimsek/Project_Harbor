@@ -278,16 +278,16 @@ func _pick_cargo_type(cargo_types: Array[CargoTypeData]) -> CargoTypeData:
 
 func _load_cargo_types() -> void:
 	_cargo_types.clear()
-	var directory := DirAccess.open(CARGO_RESOURCE_DIR)
-	if directory == null:
-		push_warning("Cargo resource directory could not be opened: %s" % CARGO_RESOURCE_DIR)
-		return
-	for file_name in directory.get_files():
+	for file_name in ResourceLoader.list_directory(CARGO_RESOURCE_DIR):
 		if not file_name.ends_with(".tres"):
 			continue
-		var resource := load("%s/%s" % [CARGO_RESOURCE_DIR, file_name])
+		var resource_path := file_name if file_name.begins_with("res://") \
+				else "%s/%s" % [CARGO_RESOURCE_DIR, file_name]
+		var resource := load(resource_path)
 		if resource is CargoTypeData:
 			_cargo_types.append(resource)
+	if _cargo_types.is_empty():
+		push_warning("No cargo resources found in: %s" % CARGO_RESOURCE_DIR)
 
 
 func _on_mission_completed(mission: Mission) -> void:

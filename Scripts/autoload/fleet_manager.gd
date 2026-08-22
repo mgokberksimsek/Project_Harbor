@@ -703,13 +703,13 @@ func reset_state() -> void:
 
 func _load_ship_catalog() -> void:
 	_catalog.clear()
-	var directory := DirAccess.open(SHIP_RESOURCE_DIR)
-	if directory == null:
-		push_warning("Ship resource directory could not be opened: %s" % SHIP_RESOURCE_DIR)
-		return
-	for file_name in directory.get_files():
+	for file_name in ResourceLoader.list_directory(SHIP_RESOURCE_DIR):
 		if not file_name.ends_with(".tres"):
 			continue
-		var resource := load("%s/%s" % [SHIP_RESOURCE_DIR, file_name])
+		var resource_path := file_name if file_name.begins_with("res://") \
+				else "%s/%s" % [SHIP_RESOURCE_DIR, file_name]
+		var resource := load(resource_path)
 		if resource is ShipData and resource.id != &"":
 			_catalog[resource.id] = resource
+	if _catalog.is_empty():
+		push_warning("No ship resources found in: %s" % SHIP_RESOURCE_DIR)
