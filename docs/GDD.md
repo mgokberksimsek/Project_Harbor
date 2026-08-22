@@ -389,7 +389,9 @@ dahildir. Oyuncu ayarlar içinden kaydı silip temiz bir oyuna başlayabilir.
   panelini kapatır.
 - Sürükleme ve yakınlaştırma: Büyük dünya haritasında gezinmeyi sağlar.
 - Filo durumu ve gemi satın alma panelleri haritayı kapatmamak için başlangıçta
-  kapalı sekmeler halinde durur ve başlıklarına dokunularak açılıp kapanır.
+  kompakt, kapalı sekmeler halinde durur ve başlıklarına dokunularak açılıp
+  kapanır. UI dışındaki herhangi bir harita dokunuşu iki paneli de kapatır;
+  dokunulan gemi veya limanın normal seçimi devam eder.
 - Üstteki Company Level göstergesine dokunmak değer dağılımını ve sonraki
   seviye hedefini gösteren şirket ilerleme panelini açar.
 

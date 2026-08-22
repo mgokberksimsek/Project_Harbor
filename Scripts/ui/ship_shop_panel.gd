@@ -14,8 +14,8 @@ extends PanelContainer
 @onready var _buy_button: Button = $Margin/VBox/Body/BuyButton
 @onready var _status: Label = $Margin/VBox/Body/Status
 
-const COLLAPSED_HEIGHT := 64.0
-const EXPANDED_HEIGHT := 258.0
+const COLLAPSED_HEIGHT := 56.0
+const EXPANDED_HEIGHT := 230.0
 const TUTORIAL_PULSE_SPEED := 4.0
 
 var _ship_data: ShipData

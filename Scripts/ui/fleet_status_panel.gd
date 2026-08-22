@@ -11,8 +11,8 @@ signal capacity_upgrade_requested(ship_id: StringName)
 @onready var _body: VBoxContainer = $Margin/VBox/Body
 @onready var _list: VBoxContainer = $Margin/VBox/Body/Scroll/List
 
-const COLLAPSED_HEIGHT := 64.0
-const EXPANDED_HEIGHT := 330.0
+const COLLAPSED_HEIGHT := 56.0
+const EXPANDED_HEIGHT := 290.0
 
 var _cards: Dictionary = {}
 var _expanded := false
@@ -62,11 +62,11 @@ func select_ship(ship_id: StringName) -> void:
 
 func _create_card(ship_id: StringName) -> Dictionary:
 	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 3)
+	root.add_theme_constant_override("separation", 2)
 	_list.add_child(root)
 
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 76)
+	button.custom_minimum_size = Vector2(0, 68)
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.pressed.connect(_on_card_pressed.bind(ship_id))
 	root.add_child(button)
@@ -77,12 +77,12 @@ func _create_card(ship_id: StringName) -> Dictionary:
 	root.add_child(progress)
 
 	var upgrade_button := Button.new()
-	upgrade_button.custom_minimum_size = Vector2(0, 34)
+	upgrade_button.custom_minimum_size = Vector2(0, 30)
 	upgrade_button.pressed.connect(_on_speed_upgrade_pressed.bind(ship_id))
 	root.add_child(upgrade_button)
 
 	var capacity_button := Button.new()
-	capacity_button.custom_minimum_size = Vector2(0, 34)
+	capacity_button.custom_minimum_size = Vector2(0, 30)
 	capacity_button.pressed.connect(_on_capacity_upgrade_pressed.bind(ship_id))
 	root.add_child(capacity_button)
 

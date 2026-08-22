@@ -34,6 +34,7 @@ func _input(event: InputEvent) -> void:
 		screen_position = event.position
 	if not is_pointer_press or _is_ui_at_screen_position(screen_position):
 		return
+	_collapse_management_panels()
 	if try_select_ship_at_screen_position(screen_position):
 		get_viewport().set_input_as_handled()
 		return
@@ -75,6 +76,7 @@ func _is_port_at_screen_position(screen_position: Vector2) -> bool:
 
 
 func clear_map_selection() -> void:
+	_collapse_management_panels()
 	_selected_ship_id = &""
 	_open_mission_port_id = &""
 	EventBus.ship_selection_changed.emit(&"")
@@ -87,6 +89,11 @@ func clear_map_selection() -> void:
 	_update_mission_markers()
 	if not _update_tutorial_instruction():
 		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP")
+
+
+func _collapse_management_panels() -> void:
+	_fleet_status_panel.set_expanded(false)
+	_ship_shop_panel.set_expanded(false)
 
 
 func _is_ui_at_screen_position(screen_position: Vector2) -> bool:
