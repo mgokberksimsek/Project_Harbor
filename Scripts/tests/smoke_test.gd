@@ -83,6 +83,8 @@ func _run() -> void:
 	var headquarters := world.get_node("CompanyHeadquarters")
 	assert(headquarters != null)
 	assert(headquarters.get_delivery_position() != Vector2.ZERO)
+	var tier_one_delivery_position: Vector2 = headquarters.get_delivery_position()
+	var tier_one_pier_width: float = (headquarters.get_node("Pier") as Line2D).width
 	assert(headquarters.get_visual_tier() == 1)
 	assert((headquarters.get_node("Label") as Label).text.contains("Sv. 1"))
 	var company_label := world.get_node("UI/CompanyProgressLabel") as Button
@@ -621,6 +623,13 @@ func _run() -> void:
 	assert(company_manager.company_value == 2600)
 	assert(company_manager.company_level == 3)
 	assert(headquarters.get_visual_tier() == 2)
+	var tier_two_delivery_position: Vector2 = headquarters.get_delivery_position()
+	assert(tier_two_delivery_position.is_equal_approx(tier_one_delivery_position))
+	var headquarters_pier := headquarters.get_node("Pier") as Line2D
+	assert(headquarters_pier.width > tier_one_pier_width)
+	assert(headquarters_pier.points[headquarters_pier.points.size() - 1].is_equal_approx(
+		(headquarters.get_node("DeliveryBerth") as Marker2D).position
+	))
 	var shop_buy_button := world.get_node(
 		"UI/ShipShopPanel/Margin/VBox/Body/BuyButton"
 	) as Button

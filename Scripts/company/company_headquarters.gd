@@ -8,6 +8,10 @@ const TIER_WINDOW_ROWS: Array[int] = [1, 2, 4, 6]
 const BUILDING_BOTTOM := 62.0
 const WINDOW_SIZE := Vector2(34.0, 28.0)
 const WINDOW_COLOR := Color(0.38, 0.72, 0.86, 1.0)
+const PIER_WIDTHS: Array[float] = [28.0, 32.0, 36.0, 40.0]
+const PIER_CONNECTION_Y := 25.0
+const PIER_MIDDLE_OFFSET := Vector2(55.0, -70.0)
+const PIER_DELIVERY_POSITION := Vector2(155.0, -180.0)
 
 @onready var _delivery_berth: Marker2D = $DeliveryBerth
 @onready var _label: Label = $Label
@@ -16,6 +20,8 @@ const WINDOW_COLOR := Color(0.38, 0.72, 0.86, 1.0)
 @onready var _roof: Polygon2D = $Roof
 @onready var _door: Polygon2D = $Door
 @onready var _window_layer: Node2D = $WindowLayer
+@onready var _pier: Line2D = $Pier
+@onready var _pier_edge: Line2D = $PierEdge
 
 var _visual_tier := 1
 
@@ -77,6 +83,7 @@ func _apply_company_level(company_level: int) -> void:
 	])
 	_door.position = Vector2(0.0, 25.0)
 	_rebuild_windows(width, TIER_WINDOW_ROWS[tier_index])
+	_update_delivery_pier(width, tier_index)
 
 
 func _get_tier_for_level(company_level: int) -> int:
@@ -96,6 +103,24 @@ func _rebuild_windows(building_width: float, row_count: int) -> void:
 		var window_y := 4.0 - float(row_index) * 43.0
 		_add_window(Vector2(-horizontal_offset, window_y))
 		_add_window(Vector2(horizontal_offset, window_y))
+
+
+func _update_delivery_pier(building_width: float, tier_index: int) -> void:
+	var half_width := building_width * 0.5
+	var pier_start := Vector2(
+		half_width - 10.0,
+		PIER_CONNECTION_Y
+	)
+	var pier_points := PackedVector2Array([
+		pier_start,
+		pier_start + PIER_MIDDLE_OFFSET,
+		PIER_DELIVERY_POSITION,
+	])
+	_pier.points = pier_points
+	_pier_edge.points = pier_points
+	_pier.width = PIER_WIDTHS[tier_index]
+	_pier_edge.width = maxf(4.0, _pier.width * 0.14)
+	_delivery_berth.position = pier_points[pier_points.size() - 1]
 
 
 func _add_window(window_position: Vector2) -> void:
