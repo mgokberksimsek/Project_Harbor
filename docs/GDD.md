@@ -466,10 +466,12 @@ dönüşmez.
 
 ### 12.5 Ayarlar ve dil
 
-Sağ üstteki ayarlar düğmesi tam ekran bir menü açar ve arka plandaki oyunu
-duraklatır. Oyuncu buradan oyuna devam edebilir, ses efektlerini ve arka plan
-müziğini birbirinden bağımsız açıp kapatabilir, Türkçe veya İngilizce arayüzü
-seçebilir ve onay adımından sonra temiz bir oyuna başlayabilir.
+Sağ üstteki ayarlar düğmesi tam ekran bir menü açar ve arka plandaki oyun
+etkileşimlerini engeller; gemiler ile görev süreleri akmaya devam eder. Çıkış
+onayı açıkken de aynı zaman akışı korunur. Oyuncu ayarlardan oyuna devam
+edebilir, ses efektlerini ve arka plan müziğini birbirinden bağımsız açıp
+kapatabilir, Türkçe veya İngilizce arayüzü seçebilir ve onay adımından sonra
+temiz bir oyuna başlayabilir.
 
 Dil ve ses tercihleri oyun ilerlemesinden ayrı saklanır. Yeni oyuna başlamak
 para, filo, liman, görev ve şirket ilerlemesini sıfırlar; seçili dil ile ses

@@ -146,7 +146,7 @@ func _run() -> void:
 	assert(music_bus >= 0)
 	settings_menu.open_menu()
 	assert(settings_menu.is_open())
-	assert(paused)
+	assert(not paused)
 	var sfx_button := settings_menu.get_node(
 		"Overlay/Center/Panel/Margin/VBox/SoundEffectsButton"
 	) as Button
@@ -182,11 +182,10 @@ func _run() -> void:
 	assert(not exit_dialog.visible)
 	world.request_exit_confirmation()
 	assert(exit_dialog.visible)
-	assert(paused)
+	assert(not paused)
 	assert(exit_dialog.title.contains("Kaptan"))
 	assert(exit_dialog.dialog_text.contains("limanın ışıklarını"))
 	exit_dialog.hide()
-	exit_dialog.canceled.emit()
 	assert(not paused)
 	var company_panel := world.get_node("UI/CompanyProgressPanel")
 	assert(company_panel != null)

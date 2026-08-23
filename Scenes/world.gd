@@ -23,7 +23,6 @@ var _open_mission_port_id: StringName = &""
 var _mission_offers: Array[Mission] = []
 var _fleet_refresh_elapsed := 0.0
 var _tutorial_completion_skipped := false
-var _paused_before_exit_confirmation := false
 
 const MAP_SHIP_TAP_RADIUS_PX := 48.0
 const MAP_PORT_TAP_RADIUS_PX := 48.0
@@ -148,9 +147,6 @@ func _ready() -> void:
 	_skip_tutorial_button.pressed.connect(_on_skip_tutorial_pressed)
 	_tutorial_complete_dialog.confirmed.connect(_on_tutorial_complete_confirmed)
 	_exit_confirmation_dialog.confirmed.connect(_on_exit_confirmed)
-	_exit_confirmation_dialog.canceled.connect(_on_exit_confirmation_canceled)
-	_settings_menu.menu_opened.connect(_on_settings_opened)
-	_settings_menu.resumed.connect(_on_settings_resumed)
 	_settings_menu.sound_effects_toggled.connect(SettingsManager.set_sound_effects_enabled)
 	_settings_menu.music_toggled.connect(SettingsManager.set_music_enabled)
 	_settings_menu.locale_selected.connect(SettingsManager.set_locale)
@@ -196,13 +192,7 @@ func request_exit_confirmation() -> void:
 	if not is_instance_valid(_exit_confirmation_dialog) \
 			or _exit_confirmation_dialog.visible:
 		return
-	_paused_before_exit_confirmation = get_tree().paused
-	get_tree().paused = true
 	_exit_confirmation_dialog.popup_centered(Vector2i(430, 185))
-
-
-func _on_exit_confirmation_canceled() -> void:
-	get_tree().paused = _paused_before_exit_confirmation
 
 
 func _on_exit_confirmed() -> void:
@@ -256,16 +246,7 @@ func _on_language_changed(_locale: String) -> void:
 		_refresh_context_instruction()
 
 
-func _on_settings_opened() -> void:
-	get_tree().paused = true
-
-
-func _on_settings_resumed() -> void:
-	get_tree().paused = false
-
-
 func _on_new_game_confirmed() -> void:
-	get_tree().paused = false
 	SaveManager.reset_game()
 
 
