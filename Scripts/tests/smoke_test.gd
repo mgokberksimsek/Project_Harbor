@@ -867,9 +867,56 @@ func _run() -> void:
 			offered_ship_ids.append(offer.offered_ship_id)
 	assert(offered_ship_ids.size() == fleet_manager.get_all_ship_ids().size())
 
-	var first_multi_offer: Mission = multi_ship_offers[0]
+	var first_multi_offer: Mission = null
+	for candidate_offer in multi_ship_offers:
+		if candidate_offer.origin_port_id != candidate_offer.pickup_port_id:
+			first_multi_offer = candidate_offer
+			break
+	assert(first_multi_offer != null)
 	assert(mission_manager.accept_offer(first_multi_offer.id))
 	await process_frame
+	var resumed_ship_id := first_multi_offer.assigned_ship_id
+	var resumed_mission: Mission = fleet_manager.get_ship_mission(resumed_ship_id)
+	assert(resumed_mission != null)
+	assert(fleet_manager.get_ship_state(resumed_ship_id) \
+		== ShipRuntimeState.State.SAILING_TO_PICKUP)
+	resumed_mission.leg_start_unix = Time.get_unix_time_from_system() \
+		- resumed_mission.leg_duration_sec * 0.4
+	var replaced_ship := fleet_manager.get_ship_node(resumed_ship_id) as Node2D
+	assert(replaced_ship != null)
+	replaced_ship.queue_free()
+	await process_frame
+	var resumed_ship_data: ShipData = fleet_manager.get_ship_data(resumed_ship_id)
+	var resumed_ship := resumed_ship_data.scene.instantiate() as Area2D
+	assert(resumed_ship != null)
+	resumed_ship.name = String(resumed_ship_id)
+	resumed_ship.set("ship_id", resumed_ship_id)
+	resumed_ship.set("ship_data", resumed_ship_data)
+	resumed_ship.set(
+		"home_port_id",
+		fleet_manager.get_ship_current_port(resumed_ship_id)
+	)
+	world.add_child(resumed_ship)
+	var resumed_progress: float = resumed_mission.get_leg_progress()
+	var expected_resume_position: Vector2 = port_manager.get_route_position(
+		fleet_manager.get_ship_current_port(resumed_ship_id),
+		resumed_mission.pickup_port_id,
+		resumed_progress
+	)
+	assert(resumed_ship.global_position.distance_to(expected_resume_position) < 2.0)
+	assert(resumed_ship.global_position.distance_to(Vector2.ZERO) > 100.0)
+	var resumed_route: PackedVector2Array = resumed_ship.get("_sailing_route_points")
+	assert(resumed_route.size() >= 2)
+	var resumed_tangent: Vector2 = port_manager.get_route_position(
+		fleet_manager.get_ship_current_port(resumed_ship_id),
+		resumed_mission.pickup_port_id,
+		minf(resumed_progress + 0.01, 1.0)
+	) - resumed_ship.global_position
+	var resumed_icon := resumed_ship.get_node("Icon") as Sprite2D
+	var resumed_forward := Vector2.RIGHT.rotated(
+		resumed_icon.rotation + resumed_ship_data.sprite_forward_angle_rad
+	)
+	assert(resumed_forward.dot(resumed_tangent.normalized()) > 0.98)
 	var remaining_offers: Array = mission_manager.get_offers()
 	var second_multi_offer: Mission = null
 	for offer in remaining_offers:

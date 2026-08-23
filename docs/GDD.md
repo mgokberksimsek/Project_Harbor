@@ -392,6 +392,11 @@ Oyun verisi sürümlü JSON olarak otomatik kaydedilir. Para, liman durumları,
 gemi sahipliği ve geliştirmeleri, aktif görevler ve öğretici ilerlemesi kayda
 dahildir. Oyuncu ayarlar içinden kaydı silip temiz bir oyuna başlayabilir.
 
+İleride uzun bir çevrimdışı sürenin ardından kısa bir “Sen yokken...” özeti,
+tamamlanan görevleri ve kazanılan parayı tek yerde gösterebilir. Bu özet temel
+offline ilerlemenin parçası değildir; mevcut akış dengelendikten sonra görsel
+geri bildirim olarak ele alınacaktır.
+
 ## 12. Kontroller ve kullanıcı arayüzü
 
 ### 12.1 Temel kontroller

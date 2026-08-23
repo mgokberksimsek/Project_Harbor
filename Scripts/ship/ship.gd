@@ -66,7 +66,8 @@ func _ready() -> void:
 	EventBus.ship_selection_changed.connect(_on_ship_selection_changed)
 	input_event.connect(_on_input_event)
 
-	call_deferred("_snap_to_home_port")
+	if not _restore_runtime_visual_state():
+		call_deferred("_snap_to_home_port")
 	_refresh_visuals()
 
 
@@ -104,6 +105,55 @@ func clear_initial_world_position_override() -> void:
 	if FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.IDLE:
 		_dock_transition_active = false
 		_snap_to_home_port()
+
+
+func _restore_runtime_visual_state() -> bool:
+	var state := FleetManager.get_ship_state(ship_id)
+	var mission := FleetManager.get_ship_mission(ship_id)
+	if mission == null:
+		return false
+
+	match state:
+		ShipRuntimeState.State.SAILING_TO_PICKUP, \
+				ShipRuntimeState.State.SAILING_TO_DELIVERY:
+			var origin_id := FleetManager.get_ship_current_port(ship_id)
+			var destination_id := mission.pickup_port_id \
+					if state == ShipRuntimeState.State.SAILING_TO_PICKUP \
+					else mission.delivery_port_id
+			_sailing_route_points = PortManager.get_smoothed_route_points(
+				origin_id,
+				destination_id
+			)
+			if _sailing_route_points.size() < 2:
+				return false
+			var progress := mission.get_leg_progress()
+			global_position = _get_position_along_points(
+				_sailing_route_points,
+				progress
+			)
+			_snap_heading_to_route(progress)
+			if state == ShipRuntimeState.State.SAILING_TO_PICKUP:
+				_build_remote_mission_preview(mission)
+			_update_route_visual(state)
+			return true
+		ShipRuntimeState.State.LOADING:
+			var pickup_port := PortManager.get_port_node(mission.pickup_port_id)
+			if pickup_port == null:
+				return false
+			global_position = pickup_port.global_position
+			_sailing_route_points = _build_delivery_route(mission)
+			_snap_heading_to_route(0.0)
+			_departure_start_rotation = _icon.rotation
+			_preparing_departure_heading = true
+			_update_route_visual(state)
+			return true
+		ShipRuntimeState.State.UNLOADING:
+			var delivery_port := PortManager.get_port_node(mission.delivery_port_id)
+			if delivery_port == null:
+				return false
+			global_position = delivery_port.global_position
+			return true
+	return false
 
 
 func _snap_to_home_port() -> void:
@@ -179,6 +229,17 @@ func _update_heading(previous_position: Vector2, delta: float) -> void:
 		MAX_TURN_SPEED_RAD_PER_SEC
 	)
 	_icon.rotation = wrapf(_icon.rotation + _turn_velocity * delta, -PI, PI)
+
+
+func _snap_heading_to_route(progress: float) -> void:
+	var tangent := _get_direction_along_points(_sailing_route_points, progress)
+	if tangent.is_zero_approx():
+		return
+	_icon.rotation = calculate_visual_rotation(
+		tangent,
+		ship_data.sprite_forward_angle_rad
+	)
+	_turn_velocity = 0.0
 
 
 func _update_pre_departure_heading() -> bool:
