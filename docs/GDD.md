@@ -68,6 +68,19 @@ ayrılmış liman yuvasına kısa bir tanıtım hareketiyle geçer. Oyuncu ilk g
 teslimat akışını izler. Bu yalnızca görsel bir teslimat akışıdır; oyuncuya ek
 işlem veya bekleme yüklemez.
 
+### 2.6 Şirket büyütme hissi
+
+Project Harbor'ın temel fantezisi “gemimi sürüyorum” değil, “şirketimi
+büyütüyorum” olmalıdır. Oyuncu tek gemi ve iki limanla başlayan küçük
+işletmesinin zamanla çok gemili, çok bölgeli bir lojistik ağına dönüştüğünü
+açıkça görmelidir. Yeni bir sistem; filo, liman ağı veya anlamlı şirket
+kararlarından en az birini güçlendirmiyorsa gerekli olup olmadığı sorgulanır.
+
+Oyun birbirini güçlendiren az sayıda kaliteli sistemle büyütülür. Aynı oyuncu
+değerini sağlayan iki seçenek arasında daha küçük ve daha kolay açıklanan
+özellik tercih edilir; yalnızca gelecekte yararlı olabileceği için yeni bir
+mekanik eklenmez.
+
 ## 3. Hedef oyuncu ve deneyim
 
 - Kısa oturumlarla ilerlemek isteyen mobil oyuncular.
@@ -524,8 +537,8 @@ veri dosyaları üzerinden tanımlanmalıdır.
 - Sürüm kontrollü JSON kayıt, otomatik kayıt ve kayıt sıfırlama.
 - Uygulama kapalıyken görev ilerlemesi.
 - Mobil öncelikli yatay kamera ve dokunma etkileşimleri.
-- Dört adım boyunca gemi satın alma düğmesi, hedef gemi, liman rozeti ve görev
-  kartını vurgulayan öğretici.
+- Gemi satın alma, Company Value açıklaması, gemi ve liman seçimi ile görev
+  kabulünü sırayla kilitleyip vurgulayan sekiz adımlı öğretici.
 - Oyunu duraklatan ayarlar menüsü; bağımsız efekt/müzik kontrolleri.
 - Oyun sırasında değiştirilebilen Türkçe ve İngilizce arayüz.
 

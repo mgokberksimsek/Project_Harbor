@@ -22,7 +22,7 @@ Purchase your first cargo ship, transport goods between ports, earn money, upgra
 - Stable harbor berths with smooth docking movement
 - JSON save data and offline mission progress
 - Mobile-first landscape camera controls
-- Four-step first-mission tutorial covering ship purchase, selection, mission discovery, and acceptance
+- Guided eight-step onboarding covering ship purchase, Company Value, selection, mission discovery, and acceptance
 - Data-driven progression goals leading through the first regional port expansion
 - Pause/settings menu with separate sound-effects and music controls
 - Runtime Turkish and English interface support
