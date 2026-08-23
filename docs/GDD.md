@@ -187,6 +187,8 @@ içinden geçemez; tanımlı deniz koridorlarını ve kıvrımlı rotaları izle
 
 Harita ilk bölgedeki limanları yakın ve anlaşılır tutmalı, yeni bölgeler
 açıldıkça mesafeleri ve rota karmaşıklığını kademeli artırmalıdır.
+İlk bölgesel ağ Türkiye kıyılarındaki limanlarla büyür; daha sonraki uzak bölge
+genişlemelerinde yabancı limanlar kullanılarak yeni bir ölçek duygusu yaratılır.
 
 İlk prototip genişlemesinde Antalya `1.500 ₺` karşılığında `800 CV`, Samsun
 ise `2.600 ₺` karşılığında `1.200 CV` şirket varlığı kazandırır. Bu değerler
@@ -544,7 +546,7 @@ veri dosyaları üzerinden tanımlanmalıdır.
 
 Prototipte bulunan içerik:
 
-- Limanlar: Mersin, İzmir, İstanbul, Antalya ve Samsun.
+- Limanlar: Mersin, İzmir, İstanbul, Antalya, Samsun, Çanakkale ve Trabzon.
 - Kargolar: Konteyner, Metal, Makine Parçaları, Gıda ve Tahıl.
 - Ana gemiler: Başlangıç yük gemisi, soğutmalı yük gemisi ve dökme yük gemisi.
 

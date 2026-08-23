@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PortData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/data/port_data.gd" id="1_port_data"]
+[ext_resource type="Texture2D" path="res://Assets/Sprites/Ports/tile_23.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_port_data")
+id = &"canakkale"
+display_name = "Çanakkale"
+description = "Ege ile Marmara arasındaki bölgesel geçiş limanı."
+icon = ExtResource("2_icon")
+base_unlock_cost = 4200
+base_company_value = 2000
+required_company_level = 5
+dock_slot_offsets = PackedVector2Array(75, 65, 135, 45, 155, 105, 80, 135, 150, 165, 215, 115)

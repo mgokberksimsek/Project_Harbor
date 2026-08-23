@@ -37,35 +37,54 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	assert(port_manager.get_all_port_ids().size() == 5)
+	assert(port_manager.get_all_port_ids().size() == 7)
 	assert(port_manager.is_unlocked(&"mersin"))
 	assert(port_manager.is_unlocked(&"izmir"))
 	assert(not port_manager.is_unlocked(&"istanbul"))
 	assert(not port_manager.is_unlocked(&"antalya"))
 	assert(not port_manager.is_unlocked(&"samsun"))
+	assert(not port_manager.is_unlocked(&"canakkale"))
+	assert(not port_manager.is_unlocked(&"trabzon"))
 	assert(port_manager.has_sea_route(&"mersin", &"izmir"))
 	assert(port_manager.has_sea_route(&"izmir", &"antalya"))
 	assert(port_manager.has_sea_route(&"istanbul", &"antalya"))
 	assert(port_manager.has_sea_route(&"antalya", &"samsun"))
 	assert(port_manager.has_sea_route(&"mersin", &"samsun"))
+	assert(port_manager.has_sea_route(&"izmir", &"canakkale"))
+	assert(port_manager.has_sea_route(&"canakkale", &"istanbul"))
+	assert(port_manager.has_sea_route(&"samsun", &"trabzon"))
+	assert(port_manager.has_sea_route(&"antalya", &"trabzon"))
+	_assert_port_centers_are_spaced(port_manager, 320.0)
 	var antalya_data: PortData = port_manager.get_port_data(&"antalya")
 	var samsun_data: PortData = port_manager.get_port_data(&"samsun")
+	var canakkale_data: PortData = port_manager.get_port_data(&"canakkale")
+	var trabzon_data: PortData = port_manager.get_port_data(&"trabzon")
 	assert(antalya_data.required_company_level == 3)
 	assert(antalya_data.base_unlock_cost == 1500)
 	assert(antalya_data.base_company_value == 800)
 	assert(samsun_data.required_company_level == 4)
 	assert(samsun_data.base_unlock_cost == 2600)
 	assert(samsun_data.base_company_value == 1200)
+	assert(canakkale_data.required_company_level == 5)
+	assert(canakkale_data.base_unlock_cost == 4200)
+	assert(canakkale_data.base_company_value == 2000)
+	assert(trabzon_data.required_company_level == 6)
+	assert(trabzon_data.base_unlock_cost == 6500)
+	assert(trabzon_data.base_company_value == 3000)
 	port_manager.apply_save_state({
 		"mersin": {"port_id": "mersin", "unlocked": true, "level": 1},
 		"izmir": {"port_id": "izmir", "unlocked": true, "level": 1},
 		"istanbul": {"port_id": "istanbul", "unlocked": false, "level": 1},
 	})
-	assert(port_manager.get_all_port_ids().size() == 5)
+	assert(port_manager.get_all_port_ids().size() == 7)
 	assert(port_manager.is_registered(&"antalya"))
 	assert(port_manager.is_registered(&"samsun"))
+	assert(port_manager.is_registered(&"canakkale"))
+	assert(port_manager.is_registered(&"trabzon"))
 	assert(not port_manager.is_unlocked(&"antalya"))
 	assert(not port_manager.is_unlocked(&"samsun"))
+	assert(not port_manager.is_unlocked(&"canakkale"))
+	assert(not port_manager.is_unlocked(&"trabzon"))
 	world.call("_update_tutorial_instruction")
 	var antalya_status := world.get_node("Ports/Antalya/StatusLabel") as Label
 	assert(antalya_status.text.contains("Sv. 3"))
@@ -93,6 +112,12 @@ func _run() -> void:
 	var debug_level_button := world.get_node("UI/DebugLevelUpButton") as Button
 	assert(debug_level_button != null)
 	assert(debug_level_button.text.contains("Sv. 1"))
+	var debug_money_button := world.get_node("UI/DebugMoneyButton") as Button
+	assert(debug_money_button != null)
+	assert(debug_money_button.text.contains("10.000"))
+	assert(not debug_level_button.get_global_rect().intersects(
+		debug_money_button.get_global_rect()
+	))
 	var next_goal_label := world.get_node("UI/NextGoalLabel") as Label
 	assert(next_goal_label != null)
 	assert(not next_goal_label.visible)
@@ -781,6 +806,14 @@ func _run() -> void:
 			or candidate["pickup_id"] == &"antalya" \
 			or candidate["destination_id"] == &"antalya"
 	assert(has_antalya_candidate)
+	game_manager.add_money(samsun_data.base_unlock_cost)
+	assert(game_manager.try_unlock_port(&"samsun"))
+	await process_frame
+	assert(company_manager.company_value == 6000)
+	assert(company_manager.company_level == 4)
+	assert(next_goal_label.text.contains("Çanakkale"))
+	assert(next_goal_label.text.contains("Sv. 5"))
+	assert(next_goal_label.text.contains("6000 / 8000 CV"))
 
 	var starter_speed_before: float = fleet_manager.get_ship_effective_speed(starter_ship_id)
 	var company_value_before_speed_upgrade: int = company_manager.company_value
@@ -932,6 +965,7 @@ func _run() -> void:
 	assert(game_manager.money == starter_model.purchase_cost)
 	assert(skip_tutorial_button.visible)
 	assert(debug_level_button.disabled)
+	assert(debug_money_button.disabled)
 	skip_tutorial_button.pressed.emit()
 	assert(tutorial_complete_dialog.visible)
 	assert(tutorial_complete_dialog.title.contains("Hazırsın Kaptan"))
@@ -943,12 +977,36 @@ func _run() -> void:
 	assert(not skip_tutorial_button.visible)
 	assert(instruction_label.text.contains("ÖĞRETİCİ ATLANDI"))
 	assert(not debug_level_button.disabled)
+	assert(not debug_money_button.disabled)
+	var money_before_debug: int = game_manager.money
+	debug_money_button.emit_signal("pressed")
+	assert(game_manager.money == money_before_debug + 10000)
 	var level_before_debug: int = company_manager.company_level
 	debug_level_button.emit_signal("pressed")
 	assert(company_manager.company_level == level_before_debug + 1)
 	assert(debug_level_button.text.contains("Sv. %d" % company_manager.company_level))
 	print("SMOKE_TEST_OK reward=%d" % mission.reward)
 	quit(0)
+
+
+func _assert_port_centers_are_spaced(port_manager: Node, minimum_distance: float) -> void:
+	var port_ids: Array[StringName] = port_manager.get_all_port_ids()
+	for first_index in range(port_ids.size()):
+		var first_id := port_ids[first_index]
+		var first_node := port_manager.get_port_node(first_id) as Node2D
+		assert(first_node != null)
+		for second_index in range(first_index + 1, port_ids.size()):
+			var second_id := port_ids[second_index]
+			var second_node := port_manager.get_port_node(second_id) as Node2D
+			assert(second_node != null)
+			assert(
+				first_node.global_position.distance_to(second_node.global_position) \
+					>= minimum_distance,
+				"Ports '%s' and '%s' are too close for mobile labels and berths." % [
+					first_id,
+					second_id,
+				]
+			)
 
 
 func _assert_all_sea_routes_avoid_land(port_manager: Node, world: Node2D) -> void:

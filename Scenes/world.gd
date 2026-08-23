@@ -3,6 +3,7 @@ extends Node2D
 @onready var _money_label: Label = $UI/MoneyLabel
 @onready var _company_progress_label: Button = $UI/CompanyProgressLabel
 @onready var _debug_level_up_button: Button = $UI/DebugLevelUpButton
+@onready var _debug_money_button: Button = $UI/DebugMoneyButton
 @onready var _next_goal_label: Label = $UI/NextGoalLabel
 @onready var _instruction_label: Label = $UI/InstructionLabel
 @onready var _skip_tutorial_button: Button = $UI/SkipTutorialButton
@@ -25,6 +26,7 @@ var _tutorial_completion_skipped := false
 const MAP_SHIP_TAP_RADIUS_PX := 48.0
 const MAP_PORT_TAP_RADIUS_PX := 48.0
 const TUTORIAL_PULSE_SPEED := 4.0
+const DEBUG_MONEY_AMOUNT := 10000
 
 var _company_progress_tutorial_elapsed := 0.0
 
@@ -139,6 +141,7 @@ func _ready() -> void:
 	_ship_shop_panel.expanded_changed.connect(_on_ship_shop_expanded_changed)
 	_company_progress_label.pressed.connect(_on_company_progress_pressed)
 	_debug_level_up_button.pressed.connect(_on_debug_level_up_pressed)
+	_debug_money_button.pressed.connect(_on_debug_money_pressed)
 	_skip_tutorial_button.pressed.connect(_on_skip_tutorial_pressed)
 	_tutorial_complete_dialog.confirmed.connect(_on_tutorial_complete_confirmed)
 	_settings_menu.menu_opened.connect(_on_settings_opened)
@@ -156,7 +159,7 @@ func _ready() -> void:
 
 	_update_money(GameManager.money)
 	_update_company_progress()
-	_update_debug_level_button()
+	_update_debug_buttons()
 	_update_next_goal()
 	if not _update_tutorial_instruction():
 		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP_LONG")
@@ -195,7 +198,7 @@ func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
 
 func _on_language_changed(_locale: String) -> void:
 	_update_company_progress()
-	_update_debug_level_button()
+	_update_debug_buttons()
 	_update_next_goal()
 	_refresh_fleet_panel()
 	_refresh_skip_tutorial_ui()
@@ -222,7 +225,7 @@ func _on_new_game_confirmed() -> void:
 
 func _on_company_level_changed(new_level: int, previous_level: int) -> void:
 	_update_company_progress()
-	_update_debug_level_button()
+	_update_debug_buttons()
 	_update_next_goal()
 	_port_unlock_panel.update_status(GameManager.money, new_level)
 	if _company_progress_panel.is_open():
@@ -233,14 +236,22 @@ func _on_company_level_changed(new_level: int, previous_level: int) -> void:
 
 func _on_debug_level_up_pressed() -> void:
 	CompanyManager.debug_advance_level()
-	_update_debug_level_button()
+	_update_debug_buttons()
 
 
-func _update_debug_level_button() -> void:
+func _on_debug_money_pressed() -> void:
+	if not GameManager.is_tutorial_completed():
+		return
+	GameManager.add_money(DEBUG_MONEY_AMOUNT)
+
+
+func _update_debug_buttons() -> void:
 	_debug_level_up_button.text = tr("DEBUG_LEVEL_UP") % CompanyManager.company_level
+	_debug_money_button.text = tr("DEBUG_ADD_MONEY")
 	_debug_level_up_button.disabled = not GameManager.is_tutorial_completed() or (
 		CompanyManager.company_level >= CompanyManager.get_max_level()
 	)
+	_debug_money_button.disabled = not GameManager.is_tutorial_completed()
 
 
 func _on_company_level_requirement_failed(
@@ -893,7 +904,7 @@ func _update_tutorial_focus() -> void:
 	_company_progress_label.disabled = not tutorial_completed \
 		and GameManager.tutorial_step != GameManager.TutorialStep.OPEN_COMPANY_PROGRESS \
 		and GameManager.tutorial_step != GameManager.TutorialStep.READ_COMPANY_VALUE_INFO
-	_update_debug_level_button()
+	_update_debug_buttons()
 	_ship_shop_panel.set_tutorial_focus(
 		shop_step
 	)
