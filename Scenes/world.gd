@@ -8,6 +8,7 @@ extends Node2D
 @onready var _instruction_label: Label = $UI/InstructionLabel
 @onready var _skip_tutorial_button: Button = $UI/SkipTutorialButton
 @onready var _tutorial_complete_dialog: AcceptDialog = $UI/TutorialCompleteDialog
+@onready var _exit_confirmation_dialog: ConfirmationDialog = $UI/ExitConfirmationDialog
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
 @onready var _ship_shop_panel = $UI/ShipShopPanel
@@ -22,6 +23,7 @@ var _open_mission_port_id: StringName = &""
 var _mission_offers: Array[Mission] = []
 var _fleet_refresh_elapsed := 0.0
 var _tutorial_completion_skipped := false
+var _paused_before_exit_confirmation := false
 
 const MAP_SHIP_TAP_RADIUS_PX := 48.0
 const MAP_PORT_TAP_RADIUS_PX := 48.0
@@ -100,6 +102,7 @@ func _collapse_management_panels() -> void:
 
 
 func _ready() -> void:
+	get_tree().set_auto_accept_quit(false)
 	RenderingServer.set_default_clear_color(Color("#256BB8"))
 	# Ships and ports can occupy the same dock position. Sorted, first-only
 	# picking guarantees that the higher-z ship receives the tap.
@@ -144,6 +147,8 @@ func _ready() -> void:
 	_debug_money_button.pressed.connect(_on_debug_money_pressed)
 	_skip_tutorial_button.pressed.connect(_on_skip_tutorial_pressed)
 	_tutorial_complete_dialog.confirmed.connect(_on_tutorial_complete_confirmed)
+	_exit_confirmation_dialog.confirmed.connect(_on_exit_confirmed)
+	_exit_confirmation_dialog.canceled.connect(_on_exit_confirmation_canceled)
 	_settings_menu.menu_opened.connect(_on_settings_opened)
 	_settings_menu.resumed.connect(_on_settings_resumed)
 	_settings_menu.sound_effects_toggled.connect(SettingsManager.set_sound_effects_enabled)
@@ -155,6 +160,7 @@ func _ready() -> void:
 		SettingsManager.music_enabled,
 		SettingsManager.locale
 	)
+	_configure_exit_confirmation_dialog()
 	_refresh_skip_tutorial_ui()
 
 	_update_money(GameManager.money)
@@ -174,6 +180,45 @@ func _process(delta: float) -> void:
 		return
 	_fleet_refresh_elapsed = 0.0
 	_refresh_fleet_panel()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		if is_instance_valid(_settings_menu) and _settings_menu.is_open():
+			_settings_menu.close_menu()
+			return
+		request_exit_confirmation()
+	elif what == NOTIFICATION_WM_CLOSE_REQUEST:
+		request_exit_confirmation()
+
+
+func request_exit_confirmation() -> void:
+	if not is_instance_valid(_exit_confirmation_dialog) \
+			or _exit_confirmation_dialog.visible:
+		return
+	_paused_before_exit_confirmation = get_tree().paused
+	get_tree().paused = true
+	_exit_confirmation_dialog.popup_centered(Vector2i(430, 185))
+
+
+func _on_exit_confirmation_canceled() -> void:
+	get_tree().paused = _paused_before_exit_confirmation
+
+
+func _on_exit_confirmed() -> void:
+	SaveManager.save_game()
+	get_tree().quit()
+
+
+func _configure_exit_confirmation_dialog() -> void:
+	_exit_confirmation_dialog.title = tr("EXIT_CONFIRM_TITLE")
+	_exit_confirmation_dialog.dialog_text = tr("EXIT_CONFIRM_MESSAGE")
+	_exit_confirmation_dialog.ok_button_text = tr("EXIT_CONFIRM_OK")
+	_exit_confirmation_dialog.cancel_button_text = tr("EXIT_CONFIRM_CANCEL")
+	var message_label := _exit_confirmation_dialog.get_label()
+	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	message_label.custom_minimum_size = Vector2(350, 0)
+	message_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 
 func _on_money_changed(new_amount: int, _delta: int) -> void:
@@ -197,6 +242,7 @@ func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
 
 
 func _on_language_changed(_locale: String) -> void:
+	_configure_exit_confirmation_dialog()
 	_update_company_progress()
 	_update_debug_buttons()
 	_update_next_goal()

@@ -195,6 +195,13 @@ title = "Hazırsın Kaptan!"
 dialog_text = "İlk görevin yola çıktı. Filonu büyüt, yeni limanlar aç ve denizlerde kendi şirketini kur. İyi eğlenceler!"
 ok_button_text = "Denizlere Açıl!"
 
+[node name="ExitConfirmationDialog" type="ConfirmationDialog" parent="UI"]
+process_mode = 3
+title = "Vardiya bitti mi, Kaptan?"
+dialog_text = "Filo güvenli ellerde, ama limanın ışıklarını kapatmak üzeresin.\nOyundan çıkmak istediğine emin misin?"
+ok_button_text = "Evet, limanı kapat"
+cancel_button_text = "Bir sefer daha!"
+
 [node name="ShipShopPanel" parent="UI" unique_id=1255476120 instance=ExtResource("9_ship_shop")]
 anchors_preset = 2
 offset_top = -86.0
