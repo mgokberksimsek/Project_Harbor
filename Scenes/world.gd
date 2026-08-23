@@ -805,8 +805,12 @@ func _show_tutorial_complete_dialog(skipped: bool) -> void:
 	_tutorial_complete_dialog.dialog_text = tr(
 		"TUTORIAL_SKIP_CAPTAIN_MESSAGE" if skipped else "TUTORIAL_COMPLETE_MESSAGE"
 	)
+	var message_label := _tutorial_complete_dialog.get_label()
+	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	message_label.custom_minimum_size = Vector2(320, 0)
+	message_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_tutorial_complete_dialog.get_ok_button().text = tr("TUTORIAL_COMPLETE_OK")
-	_tutorial_complete_dialog.popup_centered(Vector2i(430, 200))
+	_tutorial_complete_dialog.popup_centered(Vector2i(370, 170))
 
 
 func _on_tutorial_complete_confirmed() -> void:

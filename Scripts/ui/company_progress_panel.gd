@@ -140,7 +140,11 @@ func _refresh() -> void:
 
 func _show_company_value_info() -> void:
 	_refresh()
-	_info_dialog.popup_centered(Vector2i(390, 180))
+	var message_label := _info_dialog.get_label()
+	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	message_label.custom_minimum_size = Vector2(300, 0)
+	message_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_info_dialog.popup_centered(Vector2i(340, 145))
 
 
 func _on_company_value_info_confirmed() -> void:
