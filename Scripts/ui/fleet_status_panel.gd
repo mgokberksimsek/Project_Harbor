@@ -80,6 +80,8 @@ func _create_card(ship_id: StringName) -> Dictionary:
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, 68)
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	button.pressed.connect(_on_card_pressed.bind(ship_id))
 	root.add_child(button)
 
@@ -90,11 +92,15 @@ func _create_card(ship_id: StringName) -> Dictionary:
 
 	var upgrade_button := Button.new()
 	upgrade_button.custom_minimum_size = Vector2(0, 30)
+	upgrade_button.focus_mode = Control.FOCUS_NONE
+	upgrade_button.mouse_filter = Control.MOUSE_FILTER_PASS
 	upgrade_button.pressed.connect(_on_speed_upgrade_pressed.bind(ship_id))
 	root.add_child(upgrade_button)
 
 	var capacity_button := Button.new()
 	capacity_button.custom_minimum_size = Vector2(0, 30)
+	capacity_button.focus_mode = Control.FOCUS_NONE
+	capacity_button.mouse_filter = Control.MOUSE_FILTER_PASS
 	capacity_button.pressed.connect(_on_capacity_upgrade_pressed.bind(ship_id))
 	root.add_child(capacity_button)
 

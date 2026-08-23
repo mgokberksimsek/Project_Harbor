@@ -290,6 +290,9 @@ func _run() -> void:
 	assert(first_port_pacing.y <= 4)
 	var fleet_panel := world.get_node("UI/FleetStatusPanel")
 	assert(fleet_panel != null)
+	var fleet_scroll := fleet_panel.get_node("Margin/VBox/Body/Scroll") as ScrollContainer
+	assert(fleet_scroll != null)
+	assert(fleet_scroll.scroll_deadzone == 18)
 	var settings_button := settings_menu.get_node("SettingsButton") as Button
 	assert(not fleet_panel.get_global_rect().intersects(settings_button.get_global_rect()))
 	var fleet_toggle := fleet_panel.get_node("Margin/VBox/ToggleButton") as Button
@@ -912,6 +915,17 @@ func _run() -> void:
 			assert(fleet_manager.get_ship_dock_slot_index(existing_ship_id) \
 				== stable_mersin_slots[existing_ship_id_string])
 	assert(fleet_manager.get_all_ship_ids().size() == fleet_capacity)
+	world.call("_refresh_fleet_panel")
+	fleet_panel.set_expanded(true)
+	await process_frame
+	var fleet_scroll_bar := fleet_scroll.get_v_scroll_bar()
+	assert(fleet_scroll_bar.max_value > fleet_scroll_bar.page)
+	var fleet_cards: Dictionary = fleet_panel.get("_cards")
+	for fleet_card in fleet_cards.values():
+		for button_key in ["button", "upgrade_button", "capacity_button"]:
+			var card_button: Button = fleet_card[button_key]
+			assert(card_button.focus_mode == Control.FOCUS_NONE)
+			assert(card_button.mouse_filter == Control.MOUSE_FILTER_PASS)
 	var occupied_mersin_slots: Array[int] = []
 	for docked_ship_id in fleet_manager.get_all_ship_ids():
 		if fleet_manager.get_ship_current_port(docked_ship_id) != &"mersin":
