@@ -108,9 +108,20 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	var now := Time.get_unix_time_from_system()
 	var saved_at := float(parsed.get("saved_at_unix", now))
 	var elapsed := maxf(now - saved_at, 0.0)
+	var active_missions_before := MissionManager.get_active_missions().size()
+	var money_before := GameManager.money
 	FleetManager.apply_offline_progress(now)
+	var completed_missions := maxi(
+		active_missions_before - MissionManager.get_active_missions().size(),
+		0
+	)
+	var earned_cash := maxi(GameManager.money - money_before, 0)
 	MissionManager.refresh_offers()
-	EventBus.offline_progress_applied.emit(float(elapsed))
+	EventBus.offline_progress_applied.emit(
+		float(elapsed),
+		completed_missions,
+		earned_cash
+	)
 	EventBus.game_loaded.emit()
 	return true
 

@@ -139,6 +139,9 @@ func _run() -> void:
 	var exit_dialog := world.get_node("UI/ExitConfirmationDialog") as ConfirmationDialog
 	assert(exit_dialog != null)
 	assert(not exit_dialog.visible)
+	var offline_summary_dialog := world.get_node("UI/OfflineSummaryDialog") as AcceptDialog
+	assert(offline_summary_dialog != null)
+	assert(not offline_summary_dialog.visible)
 	var port_unlock_panel := world.get_node("UI/PortUnlockPanel")
 	assert(port_unlock_panel != null)
 	assert(not port_unlock_panel.visible)
@@ -1038,6 +1041,12 @@ func _run() -> void:
 	await process_frame
 	assert(save_manager.loaded_existing_save)
 	assert(game_manager.money == expected_offline_reward)
+	assert(offline_summary_dialog.visible)
+	assert(offline_summary_dialog.title.contains("Sen yokken"))
+	assert(offline_summary_dialog.dialog_text.contains("2 sefer"))
+	assert(offline_summary_dialog.dialog_text.contains("+%d ₺" % expected_offline_reward))
+	assert(not paused)
+	offline_summary_dialog.hide()
 	assert(mission_manager.get_active_missions().is_empty())
 	assert(fleet_manager.get_idle_ship_ids().size() == fleet_manager.get_all_ship_ids().size())
 	assert(fleet_manager.get_ship_speed_level(starter_ship_id) == 1)
@@ -1134,6 +1143,7 @@ func _run() -> void:
 	assert(fleet_manager.is_ship_automation_unlocked(starter_ship_id))
 	assert(not fleet_manager.is_ship_automation_enabled(starter_ship_id))
 	assert(fleet_manager.get_ship_mission(starter_ship_id) == null)
+	assert(not offline_summary_dialog.visible)
 	assert(game_manager.spend_money(game_manager.money))
 
 	var starter_max_speed_level := starter_ship_data.max_speed_level

@@ -408,10 +408,11 @@ Oyun verisi sürümlü JSON olarak otomatik kaydedilir. Para, liman durumları,
 gemi sahipliği ve geliştirmeleri, aktif görevler ve öğretici ilerlemesi kayda
 dahildir. Oyuncu ayarlar içinden kaydı silip temiz bir oyuna başlayabilir.
 
-İleride uzun bir çevrimdışı sürenin ardından kısa bir “Sen yokken...” özeti,
-tamamlanan görevleri ve kazanılan parayı tek yerde gösterebilir. Bu özet temel
-offline ilerlemenin parçası değildir; mevcut akış dengelendikten sonra görsel
-geri bildirim olarak ele alınacaktır.
+Çevrimdışıyken en az bir görev tamamlandıysa oyun açıldığında kompakt bir
+“Sen yokken...” özeti gösterilir. Bu pencere tamamlanan sefer sayısını ve bu
+seferlerden kazanılan toplam parayı tek yerde gösterir. Hiç görev tamamlanmadıysa
+pencere açılmaz; böylece kısa uygulama geçişlerinde oyuncu gereksiz bir onay
+adımıyla karşılaşmaz.
 
 ## 12. Kontroller ve kullanıcı arayüzü
 
@@ -605,6 +606,8 @@ Aşağıdaki konular sonraki test ve tasarım oturumlarında kesinleştirilecekt
   çalışır gemisiz bırakmayacak ve sonradan reklam izlemeye zorlayan yapay bir
   cezaya dönüştürülmeyecektir.
 - 6'dan fazla gemi hedeflenirse büyük filo arayüzü.
+- Mobil UX turunda filo paneli başlığına, panelin amacını kısa ve kompakt bir
+  açıklamayla anlatan isteğe bağlı `?` yardım düğmesi değerlendirilmelidir.
 - Haritanın kesin ölçeği, kamera sınırları ve bölge açılma sırası.
 - Nihai görsel stil, ikon dili, animasyon süresi ve ses yönü.
 - Project Harbor'ın ticari gelir üretmesi hedeflenir. Oyuncunun isteyerek

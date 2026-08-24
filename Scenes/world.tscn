@@ -195,6 +195,11 @@ title = "Hazırsın Kaptan!"
 dialog_text = "İlk görevin yola çıktı. Filonu büyüt, yeni limanlar aç ve denizlerde kendi şirketini kur. İyi eğlenceler!"
 ok_button_text = "Denizlere Açıl!"
 
+[node name="OfflineSummaryDialog" type="AcceptDialog" parent="UI"]
+title = "Sen yokken..."
+dialog_text = "Filo çalışmaya devam etti."
+ok_button_text = "Haritaya Dön"
+
 [node name="ExitConfirmationDialog" type="ConfirmationDialog" parent="UI"]
 process_mode = 3
 title = "Vardiya bitti mi, Kaptan?"

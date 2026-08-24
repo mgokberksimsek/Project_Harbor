@@ -8,6 +8,7 @@ extends Node2D
 @onready var _instruction_label: Label = $UI/InstructionLabel
 @onready var _skip_tutorial_button: Button = $UI/SkipTutorialButton
 @onready var _tutorial_complete_dialog: AcceptDialog = $UI/TutorialCompleteDialog
+@onready var _offline_summary_dialog: AcceptDialog = $UI/OfflineSummaryDialog
 @onready var _exit_confirmation_dialog: ConfirmationDialog = $UI/ExitConfirmationDialog
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
@@ -23,6 +24,8 @@ var _open_mission_port_id: StringName = &""
 var _mission_offers: Array[Mission] = []
 var _fleet_refresh_elapsed := 0.0
 var _tutorial_completion_skipped := false
+var _offline_completed_missions := 0
+var _offline_earned_cash := 0
 
 const MAP_SHIP_TAP_RADIUS_PX := 48.0
 const MAP_PORT_TAP_RADIUS_PX := 48.0
@@ -240,6 +243,8 @@ func _on_language_changed(_locale: String) -> void:
 	_update_next_goal()
 	_refresh_fleet_panel()
 	_refresh_skip_tutorial_ui()
+	if _offline_summary_dialog.visible:
+		_show_offline_summary()
 	if _company_progress_panel.is_open():
 		_show_company_progress_panel()
 	if _open_mission_port_id != &"":
@@ -700,9 +705,32 @@ func _on_game_loaded() -> void:
 	_update_tutorial_instruction()
 
 
-func _on_offline_progress_applied(elapsed_sec: float) -> void:
+func _on_offline_progress_applied(
+		elapsed_sec: float,
+		completed_missions: int,
+		earned_cash: int
+) -> void:
 	if elapsed_sec >= 60.0:
 		_instruction_label.text = tr("INSTRUCTION_OFFLINE") % floori(elapsed_sec / 60.0)
+	if completed_missions <= 0:
+		return
+	_offline_completed_missions = completed_missions
+	_offline_earned_cash = maxi(earned_cash, 0)
+	_show_offline_summary()
+
+
+func _show_offline_summary() -> void:
+	_offline_summary_dialog.title = tr("OFFLINE_SUMMARY_TITLE")
+	_offline_summary_dialog.dialog_text = tr("OFFLINE_SUMMARY_MESSAGE") % [
+		_offline_completed_missions,
+		_offline_earned_cash,
+	]
+	var message_label := _offline_summary_dialog.get_label()
+	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	message_label.custom_minimum_size = Vector2(300, 0)
+	message_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_offline_summary_dialog.get_ok_button().text = tr("OFFLINE_SUMMARY_OK")
+	_offline_summary_dialog.popup_centered(Vector2i(350, 150))
 
 
 func _spawn_ship(

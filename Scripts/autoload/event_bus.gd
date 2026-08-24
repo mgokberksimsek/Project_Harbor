@@ -65,4 +65,8 @@ signal music_setting_changed(enabled: bool)
 signal tutorial_step_changed(new_step: int, previous_step: int)
 signal game_loaded()
 signal game_saved()
-signal offline_progress_applied(elapsed_sec: float)
+signal offline_progress_applied(
+	elapsed_sec: float,
+	completed_missions: int,
+	earned_cash: int
+)
