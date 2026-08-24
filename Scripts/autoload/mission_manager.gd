@@ -149,6 +149,12 @@ func _create_offer(
 		cargo_type,
 		mission.cargo_amount
 	)
+	mission.operating_cost = EconomyManager.calculate_mission_operating_cost(
+		ship_port_id,
+		pickup_port_id,
+		delivery_port_id,
+		FleetManager.get_ship_data(ship_id)
+	)
 	mission.loading_duration_sec = FleetManager.get_mission_loading_duration(
 		ship_port_id,
 		pickup_port_id

@@ -33,8 +33,9 @@ extends Resource
 ## classes can be added without changing game code.
 @export var cargo_capabilities: Array[StringName] = [&"general"]
 
-## Reserved for the future fuel system. 0 = unlimited/not yet in use, so
-## existing ship data stays valid the day fuel is switched on.
+## Tank capacity is reserved for a later refueling system. A value of 0 means
+## there is currently no tank limit. Consumption already determines the
+## distance-based operating cost shown on mission offers.
 @export var fuel_capacity: float = 0.0
 @export var fuel_consumption_per_distance: float = 0.0
 

@@ -6,7 +6,8 @@ const SHIP_PRICE_GROWTH := 1.6
 const SHIP_SPEED_PER_LEVEL := 0.15
 const SHIP_SPEED_UPGRADE_COST_GROWTH := 1.7
 const SHIP_CAPACITY_UPGRADE_COST_GROWTH := 1.8
-const EXTRA_CARGO_REWARD_BONUS := 0.10
+const EXTRA_CARGO_REWARD_BONUS := 0.25
+const FUEL_UNIT_PRICE := 1.0
 
 
 func calculate_mission_reward(
@@ -34,6 +35,21 @@ func _get_port_multiplier(port_id: StringName) -> float:
 	if port_data == null:
 		return 1.0
 	return port_data.get_reward_multiplier(PortManager.get_level(port_id))
+
+
+func calculate_mission_operating_cost(
+		origin_port_id: StringName,
+		pickup_port_id: StringName,
+		delivery_port_id: StringName,
+		ship_data: ShipData
+) -> int:
+	if ship_data == null:
+		return 0
+	var total_distance := PortManager.get_distance(pickup_port_id, delivery_port_id)
+	if origin_port_id != &"" and origin_port_id != pickup_port_id:
+		total_distance += PortManager.get_distance(origin_port_id, pickup_port_id)
+	var fuel_used := total_distance * maxf(ship_data.fuel_consumption_per_distance, 0.0)
+	return maxi(roundi(fuel_used * FUEL_UNIT_PRICE), 0)
 
 
 func calculate_ship_purchase_price(base_cost: int, owned_model_count: int) -> int:

@@ -231,7 +231,8 @@ Her gemi modeli veri odaklı olarak aşağıdaki özelliklere sahiptir:
 - Hız ve kapasite geliştirme maliyetleri.
 - Azami hız ve kapasite seviyeleri.
 - Görsel ve sahne bilgisi.
-- Gelecekte kullanılmak üzere yakıt kapasitesi ve tüketimi.
+- Sefer masrafında kullanılan yakıt tüketimi ve ileride değerlendirilebilecek
+  yakıt kapasitesi.
 
 ### 7.2 Gemi durumları
 
@@ -267,6 +268,9 @@ kararlaştırılacaktır.
 - Her hız seviyesi temel hıza mevcut prototipte `%15` ekler.
 - Hız geliştirmesi en fazla 5 seviyedir.
 - Kapasite geliştirmesi en fazla 3 seviyedir.
+- Görevde rastgele kullanılan her ilave kapasite birimi brüt ödülü `%25`
+  artırır; böylece kapasite yatırımı anlamlıdır ancak yeni geminin sağladığı
+  paralel çalışma gücünün yerini almaz.
 - Geliştirme maliyetleri her seviyede katlanarak artar.
 - Hiçbir gemi sonsuza kadar hızlandırılamaz veya kapasite kazanamaz.
 - Gemi geliştirmeleri, gemi nerede olursa olsun satın alındığı anda uygulanır.
@@ -344,9 +348,10 @@ Görev ödülü şu girdilerden oluşur:
 - Kargo miktarı.
 - Yükleme ve teslimat limanlarının seviye çarpanları.
 
-Mevcut prototip ödülleri hızlı test için yüksektir. Özellikle 800 para
-seviyesine çok çabuk ulaşılması nihai tasarım değildir ve ayrı bir dengeleme
-geçişinde azaltılacaktır.
+Mevcut erken oyun ödülleri, 750 TL'lik ilk limana 3–4 görevde ve ardından 800
+TL'lik ikinci gemiye sonraki 3–4 görevde ulaşılacak şekilde korunur. Nihai görev
+süreleri ve sefer masrafı oranları mobil oynanış testlerinde birlikte yeniden
+değerlendirilir.
 
 ### 10.2 Giderler
 
@@ -356,15 +361,14 @@ Mevcut çalışan giderler:
 - Yeni gemi satın alma.
 - Gemi hızını geliştirme.
 - Gemi kapasitesini geliştirme.
+- Görevin yükleme ve teslimat ayaklarının toplam mesafesiyle geminin tüketim
+  oranına bağlı sefer masrafı.
 
-Planlanan gider:
-
-- Mesafeye ve geminin tüketimine bağlı görev yakıt maliyeti.
-
-Yakıt sisteminde oyuncuya görev kabul edilmeden önce masraf ve net kazanç açıkça
-gösterilmelidir. Yakıtın görevi kabul ederken mi yoksa yol boyunca mı tahsil
-edileceği henüz kesinleşmemiştir. Sistem, ilk oyunda oyuncuyu parasız bırakıp
-ilerlemeyi kilitlememelidir.
+Görev kartında brüt ödül, sefer masrafı ve net kazanç kabulden önce gösterilir.
+Başka limana yük almaya giden geminin boş seyir mesafesi de masrafa dahildir.
+İlk sürümde ayrı yakıt tankı veya yakıt satın alma akışı yoktur; masraf görev
+teslim edildiğinde brüt ödülden düşülür. Böylece oyuncu başlangıçta yakıt parası
+kalmadığı için ilerleyemez duruma gelmez.
 
 ### 10.3 Denge ilkeleri
 
@@ -580,7 +584,7 @@ Aşağıdaki konular sonraki test ve tasarım oturumlarında kesinleştirilecekt
 - Nihai görev süreleri ve görev sınıfı eşikleri.
 - Nihai ödül eğrisi ve ikinci gemiye ulaşma süresi.
 - Nihai Company Value varlık değerleri ve 15 Company Level eşiği.
-- Yakıt maliyetinin tahsil zamanı ve iflas koruması.
+- İleride ayrı yakıt tankı ve yakıt satın alma akışına ihtiyaç olup olmadığı.
 - Nihai filo sınırı ve sınırı artırma yöntemi.
 - Liman seviyelerinin görev, yükleme hızı ve gelir üzerindeki etkileri.
 - Oyuncu birden fazla gemiye ulaştıktan sonra bakım veya küçük arıza nedeniyle

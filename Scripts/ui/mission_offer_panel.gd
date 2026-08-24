@@ -98,13 +98,17 @@ func _format_offer(mission: Mission) -> String:
 	var pickup_data := PortManager.get_port_data(mission.pickup_port_id)
 	var delivery_data := PortManager.get_port_data(mission.delivery_port_id)
 	var cargo_data := MissionManager.get_cargo_type(mission.cargo_type_id)
-	return "%s → %s    %d ₺\n%s ×%d · %s" % [
+	return "%s → %s\n%s ×%d · %s\n%s" % [
 		_translate_entity("PORT", mission.pickup_port_id, pickup_data.display_name),
 		_translate_entity("PORT", mission.delivery_port_id, delivery_data.display_name),
-		mission.reward,
 		_translate_entity("CARGO", mission.cargo_type_id, cargo_data.display_name),
 		mission.cargo_amount,
 		_format_duration(mission.estimated_duration_sec),
+		tr("MISSION_FINANCIALS") % [
+			mission.reward,
+			mission.operating_cost,
+			mission.get_net_reward(),
+		],
 	]
 
 

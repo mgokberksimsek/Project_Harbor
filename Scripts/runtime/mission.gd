@@ -35,7 +35,9 @@ var pickup_port_id: StringName
 var delivery_port_id: StringName
 var cargo_type_id: StringName
 var cargo_amount: int = 1
+## Gross payment before the mission's operating cost is deducted.
 var reward: int
+var operating_cost: int = 0
 var estimated_duration_sec: float = 0.0
 ## Time spent handling cargo at the pickup port center before departure.
 var loading_duration_sec: float = 1.7
@@ -86,6 +88,10 @@ func is_leg_complete_at(unix_time: float) -> bool:
 	return get_leg_progress_at(unix_time) >= 1.0
 
 
+func get_net_reward() -> int:
+	return reward - operating_cost
+
+
 func to_dict() -> Dictionary:
 	return {
 		"id": id,
@@ -95,6 +101,7 @@ func to_dict() -> Dictionary:
 		"cargo_type_id": String(cargo_type_id),
 		"cargo_amount": cargo_amount,
 		"reward": reward,
+		"operating_cost": operating_cost,
 		"estimated_duration_sec": estimated_duration_sec,
 		"loading_duration_sec": loading_duration_sec,
 		"duration_class": duration_class,
@@ -114,7 +121,8 @@ static func from_dict(data: Dictionary) -> Mission:
 	mission.delivery_port_id = StringName(data.get("delivery_port_id", ""))
 	mission.cargo_type_id = StringName(data.get("cargo_type_id", ""))
 	mission.cargo_amount = maxi(int(data.get("cargo_amount", 1)), 1)
-	mission.reward = data.get("reward", 0)
+	mission.reward = maxi(int(data.get("reward", 0)), 0)
+	mission.operating_cost = maxi(int(data.get("operating_cost", 0)), 0)
 	mission.estimated_duration_sec = data.get("estimated_duration_sec", 0.0)
 	mission.loading_duration_sec = maxf(float(data.get("loading_duration_sec", 1.7)), 0.0)
 	mission.duration_class = data.get("duration_class", DurationClass.SHORT) as DurationClass

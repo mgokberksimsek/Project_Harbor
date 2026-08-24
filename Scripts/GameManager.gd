@@ -128,7 +128,7 @@ func try_upgrade_ship_capacity(ship_id: StringName) -> bool:
 
 
 func _on_mission_completed(mission: Mission) -> void:
-	add_money(mission.reward)
+	add_money(mission.get_net_reward())
 
 
 func _on_ship_purchased(

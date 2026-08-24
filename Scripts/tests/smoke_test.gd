@@ -10,6 +10,9 @@ func _run() -> void:
 	var timing_probe := Mission.new()
 	timing_probe.start_leg(10.0, 1000.25)
 	assert(is_equal_approx(timing_probe.get_leg_progress_at(1000.75), 0.05))
+	var legacy_mission := Mission.from_dict({"reward": 100})
+	assert(legacy_mission.operating_cost == 0)
+	assert(legacy_mission.get_net_reward() == 100)
 	var legacy_ship_state := ShipRuntimeState.from_dict({
 		"ship_id": "legacy_ship",
 		"current_port_id": "mersin",
@@ -295,15 +298,14 @@ func _run() -> void:
 	assert(tutorial_buy_button.disabled)
 	previous_model_button.pressed.emit()
 	assert((shop_panel.get_node("Margin/VBox/Body/Title") as Label).text.contains("Soğutmalı"))
-	var first_port_pacing := _get_mission_count_range_for_cost(
+	var first_port_balance := _get_mission_balance_for_cost(
 		mission_manager,
 		fleet_manager,
 		economy_manager,
 		starter_ship_id,
 		750
 	)
-	assert(first_port_pacing.x >= 3)
-	assert(first_port_pacing.y <= 4)
+	assert(first_port_balance["mission_range"] == Vector2i(3, 4))
 	var fleet_panel := world.get_node("UI/FleetStatusPanel")
 	assert(fleet_panel != null)
 	var fleet_scroll := fleet_panel.get_node("Margin/VBox/Body/Scroll") as ScrollContainer
@@ -527,11 +529,21 @@ func _run() -> void:
 	var offers: Array = mission_manager.get_offers()
 	assert(offers.size() == 3)
 	var starter_ship_data: ShipData = fleet_manager.get_ship_data(starter_ship_id)
+	var container_cargo: CargoTypeData = mission_manager.get_cargo_type(&"containers")
 	var food_cargo: CargoTypeData = mission_manager.get_cargo_type(&"food")
 	var grain_cargo: CargoTypeData = mission_manager.get_cargo_type(&"grain")
 	assert(starter_ship_data != null)
+	assert(container_cargo != null)
 	assert(food_cargo != null)
 	assert(grain_cargo != null)
+	var one_unit_reward: int = economy_manager.calculate_mission_reward(
+		&"mersin", &"izmir", container_cargo, 1
+	)
+	var two_unit_reward: int = economy_manager.calculate_mission_reward(
+		&"mersin", &"izmir", container_cargo, 2
+	)
+	var extra_unit_reward_ratio := float(two_unit_reward) / float(one_unit_reward)
+	assert(extra_unit_reward_ratio >= 1.24 and extra_unit_reward_ratio <= 1.26)
 	assert(not starter_ship_data.can_carry(food_cargo))
 	assert(not starter_ship_data.can_carry(grain_cargo))
 	var has_local_pickup_offer := false
@@ -552,6 +564,8 @@ func _run() -> void:
 		assert(offer.estimated_duration_sec > 0.0)
 		assert(offer.duration_class == Mission.DurationClass.SHORT)
 		assert(offer.reward > 0)
+		assert(offer.operating_cost > 0)
+		assert(offer.get_net_reward() > 0)
 		assert(offer.cargo_amount == 1)
 		var offered_cargo: CargoTypeData = mission_manager.get_cargo_type(offer.cargo_type_id)
 		assert(starter_ship_data.can_carry(offered_cargo))
@@ -587,6 +601,7 @@ func _run() -> void:
 			first_offer = offer
 			break
 	assert(first_offer != null)
+	assert(first_offer.operating_cost > local_offer.operating_cost)
 	var pickup_node: Node = port_manager.get_port_node(first_offer.pickup_port_id)
 	var mission_badge := pickup_node.get_node("MissionBadge") as Button
 	var pickup_offer_count := 0
@@ -606,6 +621,16 @@ func _run() -> void:
 	assert(pickup_highlight.visible)
 	assert(world.get_node("UI/MissionOfferPanel").visible)
 	assert(world.get_node("UI/MissionOfferPanel").is_tutorial_focused())
+	var first_offer_button := world.get_node(
+		"UI/MissionOfferPanel/Margin/VBox/Cards/Offer1"
+	) as Button
+	assert(first_offer_button.text.contains("Brüt"))
+	assert(first_offer_button.text.contains("Masraf"))
+	assert(first_offer_button.text.contains("Net"))
+	settings_manager.set_locale("en")
+	assert(first_offer_button.text.contains("Gross"))
+	assert(first_offer_button.text.contains("Cost"))
+	settings_manager.set_locale("tr")
 
 	world.call("_on_offer_accepted", first_offer.id)
 	await process_frame
@@ -636,6 +661,8 @@ func _run() -> void:
 	assert(mission.pickup_port_id == first_offer.pickup_port_id)
 	assert(mission.delivery_port_id == first_offer.delivery_port_id)
 	assert(mission.reward > 0)
+	assert(mission.operating_cost > 0)
+	assert(mission.get_net_reward() == mission.reward - mission.operating_cost)
 	assert(fleet_manager.get_ship_mission_remaining_sec(starter_ship_id) > 0.0)
 	await process_frame
 	var complete_preview_route: PackedVector2Array = starter_map_ship.get(
@@ -705,9 +732,9 @@ func _run() -> void:
 		await process_frame
 
 	assert(mission.stage == Mission.Stage.COMPLETED)
-	assert(game_manager.money == mission.reward)
+	assert(game_manager.money == mission.get_net_reward())
 	await process_frame
-	assert(next_goal_label.text.contains("%d / 750" % mission.reward))
+	assert(next_goal_label.text.contains("%d / 750" % mission.get_net_reward()))
 	assert(mission_manager.get_offers().size() == 3)
 	assert(not game_manager.try_unlock_port(&"istanbul"))
 	assert(not port_manager.is_unlocked(&"istanbul"))
@@ -736,20 +763,42 @@ func _run() -> void:
 	assert(next_goal_label.visible)
 	assert(next_goal_label.text.contains("Soğutmalı"))
 	assert(next_goal_label.text.contains("0 / 800"))
-	var second_ship_pacing := _get_mission_count_range_for_cost(
+	var second_ship_balance := _get_mission_balance_for_cost(
 		mission_manager,
 		fleet_manager,
 		economy_manager,
 		starter_ship_id,
 		800
 	)
-	assert(second_ship_pacing.x >= 3)
-	assert(second_ship_pacing.y <= 4)
-	print("EARLY_GAME_BALANCE first_port=%d-%d second_ship=%d-%d missions" % [
-		first_port_pacing.x,
-		first_port_pacing.y,
-		second_ship_pacing.x,
-		second_ship_pacing.y,
+	assert(second_ship_balance["mission_range"] == Vector2i(3, 4))
+	var first_port_missions: Vector2i = first_port_balance["mission_range"]
+	var first_port_gross: Vector2i = first_port_balance["gross_reward_range"]
+	var first_port_costs: Vector2i = first_port_balance["operating_cost_range"]
+	var first_port_net: Vector2i = first_port_balance["net_reward_range"]
+	var second_ship_missions: Vector2i = second_ship_balance["mission_range"]
+	var second_ship_gross: Vector2i = second_ship_balance["gross_reward_range"]
+	var second_ship_costs: Vector2i = second_ship_balance["operating_cost_range"]
+	var second_ship_net: Vector2i = second_ship_balance["net_reward_range"]
+	var balance_log_format := "EARLY_GAME_BALANCE first_port=%d-%d missions " \
+			+ "gross=%d-%d cost=%d-%d net=%d-%d second_ship=%d-%d missions " \
+			+ "gross=%d-%d cost=%d-%d net=%d-%d"
+	print(balance_log_format % [
+		first_port_missions.x,
+		first_port_missions.y,
+		first_port_gross.x,
+		first_port_gross.y,
+		first_port_costs.x,
+		first_port_costs.y,
+		first_port_net.x,
+		first_port_net.y,
+		second_ship_missions.x,
+		second_ship_missions.y,
+		second_ship_gross.x,
+		second_ship_gross.y,
+		second_ship_costs.x,
+		second_ship_costs.y,
+		second_ship_net.x,
+		second_ship_net.y,
 	])
 
 	var refrigerated_model: ShipData = fleet_manager.get_ship_model(&"refrigerated_freighter")
@@ -976,7 +1025,7 @@ func _run() -> void:
 
 	var expected_offline_reward := 0
 	for active_mission in mission_manager.get_active_missions():
-		expected_offline_reward += active_mission.reward
+		expected_offline_reward += active_mission.get_net_reward()
 		var fleet_mission: Mission = fleet_manager.get_ship_mission(active_mission.assigned_ship_id)
 		fleet_mission.leg_start_unix = Time.get_unix_time_from_system() - 100
 	var saved_company_value: int = company_manager.company_value
@@ -1108,7 +1157,11 @@ func _run() -> void:
 	debug_level_button.emit_signal("pressed")
 	assert(company_manager.company_level == level_before_debug + 1)
 	assert(debug_level_button.text.contains("Sv. %d" % company_manager.company_level))
-	print("SMOKE_TEST_OK reward=%d" % mission.reward)
+	print("SMOKE_TEST_OK gross=%d cost=%d net=%d" % [
+		mission.reward,
+		mission.operating_cost,
+		mission.get_net_reward(),
+	])
 	quit(0)
 
 
@@ -1187,13 +1240,13 @@ func _assert_all_sea_routes_avoid_land(port_manager: Node, world: Node2D) -> voi
 					])
 
 
-func _get_mission_count_range_for_cost(
+func _get_mission_balance_for_cost(
 		mission_manager: Node,
 		fleet_manager: Node,
 		economy_manager: Node,
 		ship_id: StringName,
 		target_cost: int
-) -> Vector2i:
+) -> Dictionary:
 	var origin_port_id: StringName = fleet_manager.get_ship_current_port(ship_id)
 	var candidates: Array = mission_manager.call(
 		"_build_offer_candidates",
@@ -1201,18 +1254,41 @@ func _get_mission_count_range_for_cost(
 		ship_id
 	)
 	assert(not candidates.is_empty())
-	var minimum_reward := 2147483647
-	var maximum_reward := 0
+	var ship_data: ShipData = fleet_manager.get_ship_data(ship_id)
+	assert(ship_data != null)
+	var minimum_gross_reward := 2147483647
+	var maximum_gross_reward := 0
+	var minimum_operating_cost := 2147483647
+	var maximum_operating_cost := 0
+	var minimum_net_reward := 2147483647
+	var maximum_net_reward := 0
 	for candidate in candidates:
-		var reward: int = economy_manager.calculate_mission_reward(
+		var gross_reward: int = economy_manager.calculate_mission_reward(
 			candidate["pickup_id"],
 			candidate["destination_id"],
 			candidate["cargo_type"],
 			1
 		)
-		minimum_reward = mini(minimum_reward, reward)
-		maximum_reward = maxi(maximum_reward, reward)
-	assert(minimum_reward > 0)
-	var best_case_count := ceili(float(target_cost) / float(maximum_reward))
-	var worst_case_count := ceili(float(target_cost) / float(minimum_reward))
-	return Vector2i(best_case_count, worst_case_count)
+		var operating_cost: int = economy_manager.calculate_mission_operating_cost(
+			origin_port_id,
+			candidate["pickup_id"],
+			candidate["destination_id"],
+			ship_data
+		)
+		var net_reward := gross_reward - operating_cost
+		assert(net_reward > 0)
+		minimum_gross_reward = mini(minimum_gross_reward, gross_reward)
+		maximum_gross_reward = maxi(maximum_gross_reward, gross_reward)
+		minimum_operating_cost = mini(minimum_operating_cost, operating_cost)
+		maximum_operating_cost = maxi(maximum_operating_cost, operating_cost)
+		minimum_net_reward = mini(minimum_net_reward, net_reward)
+		maximum_net_reward = maxi(maximum_net_reward, net_reward)
+	assert(minimum_net_reward > 0)
+	var best_case_count := ceili(float(target_cost) / float(maximum_net_reward))
+	var worst_case_count := ceili(float(target_cost) / float(minimum_net_reward))
+	return {
+		"mission_range": Vector2i(best_case_count, worst_case_count),
+		"gross_reward_range": Vector2i(minimum_gross_reward, maximum_gross_reward),
+		"operating_cost_range": Vector2i(minimum_operating_cost, maximum_operating_cost),
+		"net_reward_range": Vector2i(minimum_net_reward, maximum_net_reward),
+	}

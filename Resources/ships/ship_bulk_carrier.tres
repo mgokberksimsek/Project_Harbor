@@ -17,6 +17,7 @@ cargo_capacity = 3
 capacity_upgrade_base_cost = 700
 max_capacity_level = 3
 cargo_capabilities = Array[StringName]([&"bulk"])
+fuel_consumption_per_distance = 0.06
 purchase_cost = 1500
 unlocked_by_default = false
 base_company_value = 1400
