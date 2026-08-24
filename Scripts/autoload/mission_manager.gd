@@ -26,6 +26,8 @@ func _ready() -> void:
 	EventBus.ship_registered.connect(_on_ship_registered)
 	EventBus.ship_speed_upgraded.connect(_on_ship_speed_upgraded)
 	EventBus.ship_capacity_upgraded.connect(_on_ship_capacity_upgraded)
+	EventBus.ship_automation_changed.connect(_on_ship_automation_changed)
+	EventBus.game_loaded.connect(_on_game_loaded)
 	call_deferred("refresh_offers")
 
 
@@ -257,6 +259,29 @@ func _find_offer(offer_id: String) -> Mission:
 	return null
 
 
+func _dispatch_automated_ship(ship_id: StringName) -> bool:
+	if not FleetManager.is_ship_automation_enabled(ship_id) \
+			or FleetManager.get_ship_state(ship_id) != ShipRuntimeState.State.IDLE:
+		return false
+	var best_offer: Mission = null
+	var best_profit_rate := -1.0
+	for offer in _offers:
+		if offer.offered_ship_id != ship_id or offer.get_net_reward() <= 0:
+			continue
+		var profit_rate := float(offer.get_net_reward()) \
+				/ maxf(offer.estimated_duration_sec, 0.001)
+		if profit_rate > best_profit_rate:
+			best_offer = offer
+			best_profit_rate = profit_rate
+	return best_offer != null and accept_offer(best_offer.id)
+
+
+func _refresh_offers_and_dispatch_automated_ships() -> void:
+	refresh_offers()
+	for ship_id in FleetManager.get_idle_ship_ids():
+		_dispatch_automated_ship(ship_id)
+
+
 func _get_compatible_cargo_types(ship_data: ShipData) -> Array[CargoTypeData]:
 	var compatible: Array[CargoTypeData] = []
 	if ship_data == null:
@@ -298,7 +323,7 @@ func _load_cargo_types() -> void:
 
 func _on_mission_completed(mission: Mission) -> void:
 	_active_missions.erase(mission.id)
-	call_deferred("refresh_offers")
+	call_deferred("_refresh_offers_and_dispatch_automated_ships")
 
 
 func _on_port_unlocked(_port_id: StringName) -> void:
@@ -326,6 +351,19 @@ func _on_ship_speed_upgraded(ship_id: StringName, _new_level: int, _new_speed: f
 func _on_ship_capacity_upgraded(ship_id: StringName, _new_level: int, _new_capacity: int) -> void:
 	if FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.IDLE:
 		call_deferred("refresh_offers")
+
+
+func _on_ship_automation_changed(
+		ship_id: StringName,
+		_unlocked: bool,
+		enabled: bool
+) -> void:
+	if enabled:
+		call_deferred("_dispatch_automated_ship", ship_id)
+
+
+func _on_game_loaded() -> void:
+	call_deferred("_refresh_offers_and_dispatch_automated_ships")
 
 
 func get_save_state() -> Dictionary:

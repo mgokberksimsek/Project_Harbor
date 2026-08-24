@@ -19,6 +19,8 @@ func _run() -> void:
 	})
 	assert(legacy_ship_state.dock_port_id == &"mersin")
 	assert(legacy_ship_state.dock_slot_index == -1)
+	assert(not legacy_ship_state.automation_unlocked)
+	assert(not legacy_ship_state.automation_enabled)
 
 	var port_manager := root.get_node("/root/PortManager")
 	var fleet_manager := root.get_node("/root/FleetManager")
@@ -1045,6 +1047,95 @@ func _run() -> void:
 	assert(company_manager.peak_company_value >= company_manager.company_value)
 	assert(game_manager.is_tutorial_completed())
 
+	# Per-ship automation is a late-game, optional investment. It stays hidden
+	# until the preceding level and never assigns repeated missions offline.
+	world.call("_refresh_fleet_panel")
+	var starter_fleet_card: Dictionary = fleet_panel.get("_cards")[starter_ship_id]
+	var automation_button: Button = starter_fleet_card["automation_button"]
+	assert(not automation_button.visible)
+	assert(not fleet_manager.is_ship_automation_unlocked(starter_ship_id))
+	assert(not game_manager.try_toggle_ship_automation(starter_ship_id))
+	while company_manager.company_level < 6:
+		assert(company_manager.debug_advance_level())
+	world.call("_refresh_fleet_panel")
+	assert(automation_button.visible)
+	assert(automation_button.disabled)
+	assert(automation_button.text.contains("Şirket Sv.7"))
+	assert(company_manager.debug_advance_level())
+	world.call("_refresh_fleet_panel")
+	assert(automation_button.disabled)
+	assert(automation_button.text.contains("Geliştirme 2/4"))
+	assert(fleet_manager.upgrade_ship_speed(starter_ship_id))
+	assert(fleet_manager.upgrade_ship_speed(starter_ship_id))
+	assert(fleet_manager.get_ship_total_upgrade_levels(starter_ship_id) == 4)
+	await process_frame
+	await process_frame
+	mission_manager.refresh_offers()
+	var expected_auto_offer: Mission = null
+	var expected_profit_rate := -1.0
+	for candidate_offer in mission_manager.get_offers():
+		if candidate_offer.offered_ship_id != starter_ship_id \
+				or candidate_offer.get_net_reward() <= 0:
+			continue
+		var profit_rate: float = float(candidate_offer.get_net_reward()) \
+			/ maxf(candidate_offer.estimated_duration_sec, 0.001)
+		if profit_rate > expected_profit_rate:
+			expected_auto_offer = candidate_offer
+			expected_profit_rate = profit_rate
+	assert(expected_auto_offer != null)
+	game_manager.apply_save_state({"money": GameManager.AUTOMATION_UNLOCK_COST})
+	world.call("_refresh_fleet_panel")
+	assert(not automation_button.disabled)
+	assert(automation_button.text.contains("5000"))
+	automation_button.pressed.emit()
+	await process_frame
+	await process_frame
+	assert(game_manager.money == 0)
+	assert(fleet_manager.is_ship_automation_unlocked(starter_ship_id))
+	assert(fleet_manager.is_ship_automation_enabled(starter_ship_id))
+	var first_auto_mission: Mission = fleet_manager.get_ship_mission(starter_ship_id)
+	assert(first_auto_mission == expected_auto_offer)
+
+	for _step in range(8):
+		if fleet_manager.get_ship_mission(starter_ship_id) != first_auto_mission:
+			break
+		first_auto_mission.leg_duration_sec = 0.0
+		await process_frame
+		await process_frame
+	assert(first_auto_mission.stage == Mission.Stage.COMPLETED)
+	await process_frame
+	await process_frame
+	var second_auto_mission: Mission = fleet_manager.get_ship_mission(starter_ship_id)
+	assert(second_auto_mission != null)
+	assert(second_auto_mission != first_auto_mission)
+	automation_button.pressed.emit()
+	assert(not fleet_manager.is_ship_automation_enabled(starter_ship_id))
+	for _step in range(8):
+		if fleet_manager.get_ship_mission(starter_ship_id) != second_auto_mission:
+			break
+		second_auto_mission.leg_duration_sec = 0.0
+		await process_frame
+		await process_frame
+	assert(second_auto_mission.stage == Mission.Stage.COMPLETED)
+	await process_frame
+	await process_frame
+	assert(fleet_manager.get_ship_mission(starter_ship_id) == null)
+	assert(fleet_manager.get_ship_state(starter_ship_id) == ShipRuntimeState.State.IDLE)
+	var cash_after_automation: int = game_manager.money
+	assert(cash_after_automation \
+		== first_auto_mission.get_net_reward() + second_auto_mission.get_net_reward())
+	assert(save_manager.save_game(test_save_path))
+	assert(fleet_manager.set_ship_automation_enabled(starter_ship_id, true))
+	game_manager.add_money(999)
+	assert(save_manager.load_game(test_save_path))
+	await process_frame
+	await process_frame
+	assert(game_manager.money == cash_after_automation)
+	assert(fleet_manager.is_ship_automation_unlocked(starter_ship_id))
+	assert(not fleet_manager.is_ship_automation_enabled(starter_ship_id))
+	assert(fleet_manager.get_ship_mission(starter_ship_id) == null)
+	assert(game_manager.spend_money(game_manager.money))
+
 	var starter_max_speed_level := starter_ship_data.max_speed_level
 	while fleet_manager.get_ship_speed_level(starter_ship_id) < starter_max_speed_level:
 		assert(fleet_manager.upgrade_ship_speed(starter_ship_id))
@@ -1080,7 +1171,12 @@ func _run() -> void:
 	assert(fleet_scroll_bar.max_value > fleet_scroll_bar.page)
 	var fleet_cards: Dictionary = fleet_panel.get("_cards")
 	for fleet_card in fleet_cards.values():
-		for button_key in ["button", "upgrade_button", "capacity_button"]:
+		for button_key in [
+			"button",
+			"upgrade_button",
+			"capacity_button",
+			"automation_button",
+		]:
 			var card_button: Button = fleet_card[button_key]
 			assert(card_button.focus_mode == Control.FOCUS_NONE)
 			assert(card_button.mouse_filter == Control.MOUSE_FILTER_PASS)

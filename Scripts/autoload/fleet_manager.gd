@@ -354,6 +354,41 @@ func upgrade_ship_capacity(ship_id: StringName) -> bool:
 	return true
 
 
+func get_ship_total_upgrade_levels(ship_id: StringName) -> int:
+	return get_ship_speed_level(ship_id) + get_ship_capacity_level(ship_id)
+
+
+func is_ship_automation_unlocked(ship_id: StringName) -> bool:
+	return _states.has(ship_id) and _states[ship_id].automation_unlocked
+
+
+func is_ship_automation_enabled(ship_id: StringName) -> bool:
+	return _states.has(ship_id) and _states[ship_id].automation_enabled
+
+
+func unlock_ship_automation(ship_id: StringName) -> bool:
+	if not _states.has(ship_id):
+		return false
+	var runtime: ShipRuntimeState = _states[ship_id]
+	if runtime.automation_unlocked:
+		return false
+	runtime.automation_unlocked = true
+	runtime.automation_enabled = true
+	EventBus.ship_automation_changed.emit(ship_id, true, true)
+	return true
+
+
+func set_ship_automation_enabled(ship_id: StringName, enabled: bool) -> bool:
+	if not _states.has(ship_id) or not _states[ship_id].automation_unlocked:
+		return false
+	var runtime: ShipRuntimeState = _states[ship_id]
+	if runtime.automation_enabled == enabled:
+		return true
+	runtime.automation_enabled = enabled
+	EventBus.ship_automation_changed.emit(ship_id, true, enabled)
+	return true
+
+
 func get_ship_model(model_id: StringName) -> ShipData:
 	return _catalog.get(model_id, null)
 

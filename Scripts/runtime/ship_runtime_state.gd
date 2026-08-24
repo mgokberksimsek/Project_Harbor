@@ -18,6 +18,8 @@ var ship_id: StringName
 var model_id: StringName
 var speed_level: int = 0
 var capacity_level: int = 0
+var automation_unlocked: bool = false
+var automation_enabled: bool = false
 var state: State = State.IDLE
 
 ## The port this ship is currently docked at (when IDLE/LOADING/UNLOADING)
@@ -43,6 +45,8 @@ func to_dict() -> Dictionary:
 		"model_id": String(model_id),
 		"speed_level": speed_level,
 		"capacity_level": capacity_level,
+		"automation_unlocked": automation_unlocked,
+		"automation_enabled": automation_enabled,
 		"state": state,
 		"current_port_id": String(current_port_id),
 		"dock_port_id": String(dock_port_id),
@@ -57,6 +61,9 @@ static func from_dict(data: Dictionary) -> ShipRuntimeState:
 	s.model_id = StringName(data.get("model_id", ""))
 	s.speed_level = maxi(int(data.get("speed_level", 0)), 0)
 	s.capacity_level = maxi(int(data.get("capacity_level", 0)), 0)
+	s.automation_unlocked = bool(data.get("automation_unlocked", false))
+	s.automation_enabled = s.automation_unlocked \
+		and bool(data.get("automation_enabled", false))
 	s.state = data.get("state", State.IDLE) as State
 	s.current_port_id = StringName(data.get("current_port_id", ""))
 	# Older saves have no berth fields. FleetManager assigns their first free

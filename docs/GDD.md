@@ -277,6 +277,18 @@ kararlaştırılacaktır.
 - Geliştirme için merkeze ya da tersaneye dönme, refit yolculuğu veya zorunlu
   bekleme bulunmaz.
 
+### 7.5 Otomatik görev
+
+- Otomatik görev gemi başına açılır; tüm filoyu tek seferde otomatikleştirmez.
+- İlk sürümde Şirket Seviyesi 7, gemide toplam 4 hız/kapasite geliştirmesi ve
+  tek seferlik 5.000 ₺ yatırım gerekir.
+- Açıldıktan sonra ücretsiz olarak açılıp kapatılabilir.
+- Oyun açıkken boşta kalan gemi, net kazancı pozitif teklifler arasından tahmini
+  süre başına en yüksek net kazancı sağlayanı seçer.
+- Oyuncu otomasyonu kapattığında mevcut görev tamamlanır, yeni görev alınmaz.
+- İlk sürüm çevrimdışıyken arka arkaya yeni görev üretmez; yalnızca önceden
+  başlamış görevin zaman bazlı ilerlemesi uygulanır.
+
 ## 8. Görev sistemi
 
 ### 8.1 Teklif üretimi
@@ -298,7 +310,7 @@ Her görev kartı en az şu bilgileri göstermelidir:
 - Kargo türü ve miktarı.
 - Tahmini toplam süre.
 - Brüt ödül.
-- Yakıt sistemi eklendiğinde tahmini masraf ve net kazanç.
+- Tahmini sefer masrafı ve net kazanç.
 
 ### 8.3 Görev seçme akışı
 

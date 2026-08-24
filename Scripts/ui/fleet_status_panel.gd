@@ -4,6 +4,7 @@ extends PanelContainer
 signal ship_selected(ship_id: StringName)
 signal speed_upgrade_requested(ship_id: StringName)
 signal capacity_upgrade_requested(ship_id: StringName)
+signal automation_requested(ship_id: StringName)
 
 @export var start_expanded := false
 
@@ -104,12 +105,20 @@ func _create_card(ship_id: StringName) -> Dictionary:
 	capacity_button.pressed.connect(_on_capacity_upgrade_pressed.bind(ship_id))
 	root.add_child(capacity_button)
 
+	var automation_button := Button.new()
+	automation_button.custom_minimum_size = Vector2(0, 30)
+	automation_button.focus_mode = Control.FOCUS_NONE
+	automation_button.mouse_filter = Control.MOUSE_FILTER_PASS
+	automation_button.pressed.connect(_on_automation_pressed.bind(ship_id))
+	root.add_child(automation_button)
+
 	return {
 		"root": root,
 		"button": button,
 		"progress": progress,
 		"upgrade_button": upgrade_button,
 		"capacity_button": capacity_button,
+		"automation_button": automation_button,
 	}
 
 
@@ -118,6 +127,7 @@ func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
 	var progress: ProgressBar = card["progress"]
 	var upgrade_button: Button = card["upgrade_button"]
 	var capacity_button: Button = card["capacity_button"]
+	var automation_button: Button = card["automation_button"]
 	button.text = "%s · %s\n%s\n%s · %s" % [
 		entry.get("display_name", entry.get("ship_id", tr("SHIP_DEFAULT"))),
 		entry.get("state_text", ""),
@@ -161,6 +171,35 @@ func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
 		capacity_button.disabled = not _interaction_enabled \
 			or not bool(entry.get("can_afford_capacity_upgrade", false))
 
+	automation_button.visible = bool(entry.get("automation_visible", false))
+	if not automation_button.visible:
+		automation_button.disabled = true
+	elif bool(entry.get("automation_unlocked", false)):
+		automation_button.text = tr(
+			"AUTOMATION_ON" if bool(entry.get("automation_enabled", false)) \
+			else "AUTOMATION_OFF"
+		)
+		automation_button.disabled = not _interaction_enabled
+	elif int(entry.get("company_level", 1)) \
+			< int(entry.get("automation_required_company_level", 1)):
+		automation_button.text = tr("AUTOMATION_LEVEL_REQUIRED") % int(
+			entry.get("automation_required_company_level", 1)
+		)
+		automation_button.disabled = true
+	elif int(entry.get("total_upgrade_levels", 0)) \
+			< int(entry.get("automation_required_upgrade_levels", 0)):
+		automation_button.text = tr("AUTOMATION_UPGRADES_REQUIRED") % [
+			int(entry.get("total_upgrade_levels", 0)),
+			int(entry.get("automation_required_upgrade_levels", 0)),
+		]
+		automation_button.disabled = true
+	else:
+		automation_button.text = tr("AUTOMATION_UNLOCK") % int(
+			entry.get("automation_unlock_cost", 0)
+		)
+		automation_button.disabled = not _interaction_enabled \
+			or not bool(entry.get("can_afford_automation", false))
+
 
 func _on_card_pressed(ship_id: StringName) -> void:
 	ship_selected.emit(ship_id)
@@ -182,15 +221,21 @@ func _on_capacity_upgrade_pressed(ship_id: StringName) -> void:
 	capacity_upgrade_requested.emit(ship_id)
 
 
+func _on_automation_pressed(ship_id: StringName) -> void:
+	automation_requested.emit(ship_id)
+
+
 func _refresh_card_interactions() -> void:
 	for card in _cards.values():
 		var button: Button = card["button"]
 		var upgrade_button: Button = card["upgrade_button"]
 		var capacity_button: Button = card["capacity_button"]
+		var automation_button: Button = card["automation_button"]
 		button.disabled = not _interaction_enabled
 		if not _interaction_enabled:
 			upgrade_button.disabled = true
 			capacity_button.disabled = true
+			automation_button.disabled = true
 
 
 func _format_duration(duration_sec: float) -> String:

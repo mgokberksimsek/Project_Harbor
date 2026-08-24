@@ -48,6 +48,7 @@ signal fleet_capacity_reached(current_count: int, maximum_count: int)
 signal ship_speed_upgraded(ship_id: StringName, new_level: int, new_speed: float)
 signal ship_upgrade_failed(ship_id: StringName, required_amount: int, current_amount: int)
 signal ship_capacity_upgraded(ship_id: StringName, new_level: int, new_capacity: int)
+signal ship_automation_changed(ship_id: StringName, unlocked: bool, enabled: bool)
 signal ship_arrived_at_port(ship_id: StringName, port_id: StringName)
 signal ship_state_changed(ship_id: StringName, previous_state: int, new_state: int)
 signal ship_dock_slot_changed(

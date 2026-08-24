@@ -15,6 +15,10 @@ enum TutorialStep {
 var money: int = 0
 var tutorial_step: TutorialStep = TutorialStep.OPEN_SHIP_SHOP
 
+const AUTOMATION_REQUIRED_COMPANY_LEVEL := 7
+const AUTOMATION_REQUIRED_TOTAL_UPGRADE_LEVELS := 4
+const AUTOMATION_UNLOCK_COST := 5000
+
 @onready var _event_bus: Node = get_node("/root/EventBus")
 @onready var _port_manager: Node = get_node("/root/PortManager")
 @onready var _fleet_manager: Node = get_node("/root/FleetManager")
@@ -124,6 +128,31 @@ func try_upgrade_ship_capacity(ship_id: StringName) -> bool:
 	if _fleet_manager.upgrade_ship_capacity(ship_id):
 		return true
 	add_money(cost)
+	return false
+
+
+func try_toggle_ship_automation(ship_id: StringName) -> bool:
+	if _fleet_manager.is_ship_automation_unlocked(ship_id):
+		return _fleet_manager.set_ship_automation_enabled(
+			ship_id,
+			not _fleet_manager.is_ship_automation_enabled(ship_id)
+		)
+	if _company_manager.company_level < AUTOMATION_REQUIRED_COMPANY_LEVEL:
+		_event_bus.company_level_requirement_failed.emit(
+			&"automation",
+			ship_id,
+			AUTOMATION_REQUIRED_COMPANY_LEVEL,
+			_company_manager.company_level
+		)
+		return false
+	if _fleet_manager.get_ship_total_upgrade_levels(ship_id) \
+			< AUTOMATION_REQUIRED_TOTAL_UPGRADE_LEVELS:
+		return false
+	if not spend_money(AUTOMATION_UNLOCK_COST):
+		return false
+	if _fleet_manager.unlock_ship_automation(ship_id):
+		return true
+	add_money(AUTOMATION_UNLOCK_COST)
 	return false
 
 

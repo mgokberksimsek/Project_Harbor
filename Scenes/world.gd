@@ -123,6 +123,7 @@ func _ready() -> void:
 	EventBus.ship_tapped.connect(_on_ship_tapped)
 	EventBus.ship_speed_upgraded.connect(_on_ship_speed_upgraded)
 	EventBus.ship_capacity_upgraded.connect(_on_ship_capacity_upgraded)
+	EventBus.ship_automation_changed.connect(_on_ship_automation_changed)
 	EventBus.ship_upgrade_failed.connect(_on_ship_upgrade_failed)
 	EventBus.fleet_capacity_reached.connect(_on_fleet_capacity_reached)
 	EventBus.language_changed.connect(_on_language_changed)
@@ -134,6 +135,7 @@ func _ready() -> void:
 	_fleet_status_panel.ship_selected.connect(_on_fleet_ship_selected)
 	_fleet_status_panel.speed_upgrade_requested.connect(_on_speed_upgrade_requested)
 	_fleet_status_panel.capacity_upgrade_requested.connect(_on_capacity_upgrade_requested)
+	_fleet_status_panel.automation_requested.connect(_on_automation_requested)
 	_port_unlock_panel.unlock_requested.connect(_on_port_unlock_requested)
 	_port_unlock_panel.closed.connect(_on_port_unlock_panel_closed)
 	_company_progress_panel.closed.connect(_on_company_progress_panel_closed)
@@ -347,6 +349,13 @@ func _on_capacity_upgrade_requested(ship_id: StringName) -> void:
 	GameManager.try_upgrade_ship_capacity(ship_id)
 
 
+func _on_automation_requested(ship_id: StringName) -> void:
+	if not GameManager.is_tutorial_completed():
+		return
+	GameManager.try_toggle_ship_automation(ship_id)
+	_refresh_fleet_panel()
+
+
 func _on_ship_speed_upgraded(ship_id: StringName, new_level: int, new_speed: float) -> void:
 	_instruction_label.text = tr("INSTRUCTION_SPEED_UPGRADED") % [
 		_translated_ship_name(ship_id), new_level, new_speed
@@ -360,6 +369,14 @@ func _on_ship_capacity_upgraded(ship_id: StringName, new_level: int, new_capacit
 		new_level,
 		new_capacity,
 	]
+	_refresh_fleet_panel()
+
+
+func _on_ship_automation_changed(
+		_ship_id: StringName,
+		_unlocked: bool,
+		_enabled: bool
+) -> void:
 	_refresh_fleet_panel()
 
 
@@ -752,6 +769,21 @@ func _refresh_fleet_panel() -> void:
 			"effective_capacity": FleetManager.get_ship_effective_capacity(ship_id),
 			"capacity_upgrade_cost": FleetManager.get_ship_capacity_upgrade_cost(ship_id),
 			"can_afford_capacity_upgrade": GameManager.money >= FleetManager.get_ship_capacity_upgrade_cost(ship_id),
+			"automation_visible": FleetManager.is_ship_automation_unlocked(ship_id) \
+				or CompanyManager.company_level \
+					>= GameManager.AUTOMATION_REQUIRED_COMPANY_LEVEL - 1,
+			"automation_unlocked": FleetManager.is_ship_automation_unlocked(ship_id),
+			"automation_enabled": FleetManager.is_ship_automation_enabled(ship_id),
+			"company_level": CompanyManager.company_level,
+			"automation_required_company_level": \
+				GameManager.AUTOMATION_REQUIRED_COMPANY_LEVEL,
+			"total_upgrade_levels": \
+				FleetManager.get_ship_total_upgrade_levels(ship_id),
+			"automation_required_upgrade_levels": \
+				GameManager.AUTOMATION_REQUIRED_TOTAL_UPGRADE_LEVELS,
+			"automation_unlock_cost": GameManager.AUTOMATION_UNLOCK_COST,
+			"can_afford_automation": \
+				GameManager.money >= GameManager.AUTOMATION_UNLOCK_COST,
 		})
 	_fleet_status_panel.set_fleet_data(entries, _selected_ship_id)
 
