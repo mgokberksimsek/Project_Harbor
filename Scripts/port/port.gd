@@ -21,6 +21,7 @@ var _tutorial_pulse_elapsed := 0.0
 
 
 func _ready() -> void:
+	add_to_group(&"ports")
 	if port_data == null:
 		push_error("Port instance '%s' has no PortData assigned in the Inspector." % name)
 		return

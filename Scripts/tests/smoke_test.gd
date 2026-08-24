@@ -389,6 +389,52 @@ func _run() -> void:
 	world_camera.call("_unhandled_input", map_tap_release)
 	assert(not fleet_panel.is_expanded())
 	assert(not shop_panel.is_expanded())
+	world_camera.zoom = Vector2.ONE * 0.65
+	world_camera.position = WorldCamera.WORLD_SIZE * 0.5
+	var double_tap_position := Vector2(760, 420)
+	var viewport_center: Vector2 = get_root().get_viewport().get_visible_rect().size * 0.5
+	var zoom_anchor_before: Vector2 = world_camera.position \
+			+ (double_tap_position - viewport_center) / world_camera.zoom.x
+	var double_tap_press := InputEventMouseButton.new()
+	double_tap_press.button_index = MOUSE_BUTTON_LEFT
+	double_tap_press.pressed = true
+	double_tap_press.double_click = true
+	double_tap_press.position = double_tap_position
+	double_tap_press.global_position = double_tap_position
+	world_camera.call("_unhandled_input", double_tap_press)
+	var double_tap_release := InputEventMouseButton.new()
+	double_tap_release.button_index = MOUSE_BUTTON_LEFT
+	double_tap_release.pressed = false
+	double_tap_release.position = double_tap_position
+	double_tap_release.global_position = double_tap_position
+	world_camera.call("_unhandled_input", double_tap_release)
+	await create_timer(0.35).timeout
+	assert(is_equal_approx(world_camera.zoom.x, 1.0))
+	var zoom_anchor_after: Vector2 = world_camera.position \
+			+ (double_tap_position - viewport_center) / world_camera.zoom.x
+	assert(zoom_anchor_after.distance_to(zoom_anchor_before) < 0.5)
+	var touch_double_tap_press := InputEventScreenTouch.new()
+	touch_double_tap_press.index = 0
+	touch_double_tap_press.pressed = true
+	touch_double_tap_press.double_tap = true
+	touch_double_tap_press.position = double_tap_position
+	world_camera.call("_unhandled_input", touch_double_tap_press)
+	var touch_double_tap_release := InputEventScreenTouch.new()
+	touch_double_tap_release.index = 0
+	touch_double_tap_release.pressed = false
+	touch_double_tap_release.position = double_tap_position
+	world_camera.call("_unhandled_input", touch_double_tap_release)
+	await create_timer(0.35).timeout
+	assert(is_equal_approx(world_camera.zoom.x, 0.65))
+	var emulated_mouse_double_tap := InputEventMouseButton.new()
+	emulated_mouse_double_tap.device = InputEvent.DEVICE_ID_EMULATION
+	emulated_mouse_double_tap.button_index = MOUSE_BUTTON_LEFT
+	emulated_mouse_double_tap.pressed = true
+	emulated_mouse_double_tap.double_click = true
+	emulated_mouse_double_tap.position = double_tap_position
+	world_camera.call("_unhandled_input", emulated_mouse_double_tap)
+	await create_timer(0.05).timeout
+	assert(is_equal_approx(world_camera.zoom.x, 0.65))
 	game_manager.set_tutorial_step(GameManager.TutorialStep.SELECT_SHIP)
 	await process_frame
 	assert(skip_tutorial_button.visible)

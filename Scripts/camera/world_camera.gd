@@ -7,6 +7,10 @@ const WORLD_SIZE := Vector2(6000.0, 3500.0)
 const MIN_ZOOM := 0.45
 const MAX_ZOOM := 1.30
 const ZOOM_STEP := 0.10
+const DOUBLE_TAP_OVERVIEW_ZOOM := 0.65
+const DOUBLE_TAP_NEAR_ZOOM := 1.00
+const DOUBLE_TAP_ZOOM_THRESHOLD := 0.90
+const DOUBLE_TAP_ZOOM_DURATION_SEC := 0.28
 const TAP_DRAG_THRESHOLD_PX := 32.0
 const PAN_DRAG_SENSITIVITY := 0.70
 const PAN_INERTIA_DAMPING := 3.5
@@ -23,6 +27,7 @@ var _touch_starts: Dictionary = {}
 var _touch_dragged: Dictionary = {}
 var _touch_consumed: Dictionary = {}
 var _pan_velocity_screen := Vector2.ZERO
+var _zoom_tween: Tween = null
 
 
 func _ready() -> void:
@@ -76,14 +81,40 @@ func zoom_at_screen_position(target_zoom: float, screen_position: Vector2) -> vo
 	position = _clamp_camera_position(position)
 
 
+func animate_double_tap_zoom(screen_position: Vector2) -> void:
+	_stop_pan_inertia()
+	_stop_zoom_animation()
+	var target_zoom := DOUBLE_TAP_NEAR_ZOOM \
+			if zoom.x < DOUBLE_TAP_ZOOM_THRESHOLD \
+			else DOUBLE_TAP_OVERVIEW_ZOOM
+	_zoom_tween = create_tween()
+	_zoom_tween.set_trans(Tween.TRANS_CUBIC)
+	_zoom_tween.set_ease(Tween.EASE_OUT)
+	_zoom_tween.tween_method(
+		_apply_animated_zoom.bind(screen_position),
+		zoom.x,
+		target_zoom,
+		DOUBLE_TAP_ZOOM_DURATION_SEC
+	)
+	_zoom_tween.tween_callback(_finish_zoom_animation)
+
+
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
+	if event.device == InputEvent.DEVICE_ID_EMULATION:
+		return
 	if event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_stop_pan_inertia()
+			_stop_zoom_animation()
 			_mouse_pointer_active = true
 			_mouse_press_position = event.position
 			_mouse_dragged = false
 			_mouse_tap_consumed = try_select_ship_at_screen_position(event.position)
+			if event.double_click \
+					and not _mouse_tap_consumed \
+					and not _is_port_at_screen_position(event.position):
+				animate_double_tap_zoom(event.position)
+				_mouse_tap_consumed = true
 			_mouse_dragging = not _mouse_tap_consumed
 			if _mouse_tap_consumed:
 				get_viewport().set_input_as_handled()
@@ -101,15 +132,19 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
 			get_viewport().set_input_as_handled()
 	elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 		_stop_pan_inertia()
+		_stop_zoom_animation()
 		zoom_at_screen_position(zoom.x + ZOOM_STEP, event.position)
 		get_viewport().set_input_as_handled()
 	elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 		_stop_pan_inertia()
+		_stop_zoom_animation()
 		zoom_at_screen_position(zoom.x - ZOOM_STEP, event.position)
 		get_viewport().set_input_as_handled()
 
 
 func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
+	if event.device == InputEvent.DEVICE_ID_EMULATION:
+		return
 	if not _mouse_dragging:
 		return
 	if _mouse_press_position.distance_to(event.position) > TAP_DRAG_THRESHOLD_PX:
@@ -124,10 +159,16 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
 		_stop_pan_inertia()
+		_stop_zoom_animation()
 		_touches[event.index] = event.position
 		_touch_starts[event.index] = event.position
 		_touch_dragged[event.index] = false
 		_touch_consumed[event.index] = try_select_ship_at_screen_position(event.position)
+		if event.double_tap \
+				and not bool(_touch_consumed[event.index]) \
+				and not _is_port_at_screen_position(event.position):
+			animate_double_tap_zoom(event.position)
+			_touch_consumed[event.index] = true
 		if _touches.size() > 1:
 			for active_index in _touches.keys():
 				_touch_dragged[active_index] = true
@@ -150,24 +191,35 @@ func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 
 
 func try_select_ship_at_screen_position(screen_position: Vector2) -> bool:
+	var selected_ship: Node2D = null
+	for hit in _get_area_hits_at_screen_position(screen_position):
+		var collider := hit.get("collider") as Node2D
+		if collider != null \
+				and collider.is_in_group(&"ships") \
+				and (selected_ship == null or collider.z_index > selected_ship.z_index):
+			selected_ship = collider
+	if selected_ship == null:
+		return false
+	get_node("/root/EventBus").ship_tapped.emit(StringName(selected_ship.get("ship_id")))
+	return true
+
+
+func _is_port_at_screen_position(screen_position: Vector2) -> bool:
+	for hit in _get_area_hits_at_screen_position(screen_position):
+		var collider := hit.get("collider") as Node
+		if collider != null and collider.is_in_group(&"ports"):
+			return true
+	return false
+
+
+func _get_area_hits_at_screen_position(screen_position: Vector2) -> Array[Dictionary]:
 	var world_position := get_viewport().get_canvas_transform().affine_inverse() \
-		* screen_position
+			* screen_position
 	var query := PhysicsPointQueryParameters2D.new()
 	query.position = world_position
 	query.collide_with_areas = true
 	query.collide_with_bodies = false
-	var hits: Array[Dictionary] = get_world_2d().direct_space_state.intersect_point(query, 32)
-	var selected_ship: Ship = null
-	for hit in hits:
-		var collider: Object = hit.get("collider") as Object
-		if collider is Ship and (
-			selected_ship == null or collider.z_index > selected_ship.z_index
-		):
-			selected_ship = collider
-	if selected_ship == null:
-		return false
-	get_node("/root/EventBus").ship_tapped.emit(selected_ship.ship_id)
-	return true
+	return get_world_2d().direct_space_state.intersect_point(query, 32)
 
 
 func _handle_screen_drag(event: InputEventScreenDrag) -> void:
@@ -212,6 +264,20 @@ func _capture_pan_velocity(event_velocity: Vector2, relative: Vector2) -> void:
 
 func _stop_pan_inertia() -> void:
 	_pan_velocity_screen = Vector2.ZERO
+
+
+func _apply_animated_zoom(value: float, screen_position: Vector2) -> void:
+	zoom_at_screen_position(value, screen_position)
+
+
+func _finish_zoom_animation() -> void:
+	_zoom_tween = null
+
+
+func _stop_zoom_animation() -> void:
+	if _zoom_tween != null and _zoom_tween.is_valid():
+		_zoom_tween.kill()
+	_zoom_tween = null
 
 
 func _clamp_camera_position(candidate: Vector2) -> Vector2:

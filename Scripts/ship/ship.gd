@@ -50,6 +50,7 @@ var _selection_scale_tween: Tween = null
 
 
 func _ready() -> void:
+	add_to_group(&"ships")
 	if ship_id == &"" or ship_data == null or home_port_id == &"":
 		push_error("Ship instance '%s' is missing ship_id, ShipData, or home_port_id." % name)
 		return

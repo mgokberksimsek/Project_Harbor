@@ -407,7 +407,9 @@ geri bildirim olarak ele alınacaktır.
 - Limana dokunma: Limanı seçer; kilitliyse açma işlemini gösterir/denenir.
 - Boş dünya alanına dokunma: Gemi ve liman vurgularını kaldırır, açık görev
   panelini kapatır.
-- Sürükleme ve yakınlaştırma: Büyük dünya haritasında gezinmeyi sağlar.
+- Sürükleme ve yakınlaştırma: Büyük dünya haritasında gezinmeyi sağlar. Boş
+  denize çift dokunmak, dokunulan noktayı koruyan yumuşak bir geçişle genel ve
+  yakın görünüm arasında geçiş yapar; gemi ve liman dokunuşlarını etkilemez.
 - Filo durumu ve gemi satın alma panelleri haritayı kapatmamak için başlangıçta
   kompakt, kapalı sekmeler halinde durur ve başlıklarına dokunularak açılıp
   kapanır. UI dışındaki herhangi bir harita dokunuşu iki paneli de kapatır;
