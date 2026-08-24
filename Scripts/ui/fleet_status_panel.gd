@@ -5,6 +5,7 @@ signal ship_selected(ship_id: StringName)
 signal speed_upgrade_requested(ship_id: StringName)
 signal capacity_upgrade_requested(ship_id: StringName)
 signal automation_requested(ship_id: StringName)
+signal rename_requested(ship_id: StringName)
 
 @export var start_expanded := false
 
@@ -78,13 +79,28 @@ func _create_card(ship_id: StringName) -> Dictionary:
 	root.add_theme_constant_override("separation", 2)
 	_list.add_child(root)
 
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 4)
+	root.add_child(header)
+
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, 68)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	button.pressed.connect(_on_card_pressed.bind(ship_id))
-	root.add_child(button)
+	header.add_child(button)
+
+	var rename_button := Button.new()
+	rename_button.custom_minimum_size = Vector2(44, 68)
+	rename_button.focus_mode = Control.FOCUS_NONE
+	rename_button.mouse_filter = Control.MOUSE_FILTER_PASS
+	rename_button.text = "✎"
+	rename_button.tooltip_text = tr("SHIP_RENAME_BUTTON")
+	rename_button.pressed.connect(_on_rename_pressed.bind(ship_id))
+	header.add_child(rename_button)
 
 	var progress := ProgressBar.new()
 	progress.custom_minimum_size = Vector2(0, 12)
@@ -115,6 +131,7 @@ func _create_card(ship_id: StringName) -> Dictionary:
 	return {
 		"root": root,
 		"button": button,
+		"rename_button": rename_button,
 		"progress": progress,
 		"upgrade_button": upgrade_button,
 		"capacity_button": capacity_button,
@@ -125,11 +142,13 @@ func _create_card(ship_id: StringName) -> Dictionary:
 func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
 	var button: Button = card["button"]
 	var progress: ProgressBar = card["progress"]
+	var rename_button: Button = card["rename_button"]
 	var upgrade_button: Button = card["upgrade_button"]
 	var capacity_button: Button = card["capacity_button"]
 	var automation_button: Button = card["automation_button"]
-	button.text = "%s · %s\n%s\n%s · %s" % [
-		entry.get("display_name", entry.get("ship_id", tr("SHIP_DEFAULT"))),
+	button.text = "%s · %s\n%s · %s\n%s · %s" % [
+		entry.get("ship_name", entry.get("ship_id", tr("SHIP_DEFAULT"))),
+		entry.get("model_name", tr("SHIP_DEFAULT")),
 		entry.get("state_text", ""),
 		entry.get("route_text", ""),
 		entry.get("cargo_text", tr("NO_CARGO")),
@@ -137,6 +156,8 @@ func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
 	]
 	button.modulate = Color("#BDE3FF") if selected else Color.WHITE
 	button.disabled = not _interaction_enabled
+	rename_button.disabled = not _interaction_enabled
+	rename_button.tooltip_text = tr("SHIP_RENAME_BUTTON")
 	progress.value = clampf(float(entry.get("progress", 0.0)) * 100.0, 0.0, 100.0)
 	progress.visible = bool(entry.get("has_mission", false))
 	var upgrade_cost := int(entry.get("speed_upgrade_cost", -1))
@@ -225,13 +246,19 @@ func _on_automation_pressed(ship_id: StringName) -> void:
 	automation_requested.emit(ship_id)
 
 
+func _on_rename_pressed(ship_id: StringName) -> void:
+	rename_requested.emit(ship_id)
+
+
 func _refresh_card_interactions() -> void:
 	for card in _cards.values():
 		var button: Button = card["button"]
 		var upgrade_button: Button = card["upgrade_button"]
 		var capacity_button: Button = card["capacity_button"]
 		var automation_button: Button = card["automation_button"]
+		var rename_button: Button = card["rename_button"]
 		button.disabled = not _interaction_enabled
+		rename_button.disabled = not _interaction_enabled
 		if not _interaction_enabled:
 			upgrade_button.disabled = true
 			capacity_button.disabled = true

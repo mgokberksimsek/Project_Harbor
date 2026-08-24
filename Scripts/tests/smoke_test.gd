@@ -19,6 +19,7 @@ func _run() -> void:
 	})
 	assert(legacy_ship_state.dock_port_id == &"mersin")
 	assert(legacy_ship_state.dock_slot_index == -1)
+	assert(legacy_ship_state.ship_name.is_empty())
 	assert(not legacy_ship_state.automation_unlocked)
 	assert(not legacy_ship_state.automation_enabled)
 
@@ -250,6 +251,16 @@ func _run() -> void:
 	assert(fleet_manager.get_all_ship_ids().size() == 1)
 	var starter_ship_id: StringName = fleet_manager.get_all_ship_ids()[0]
 	assert(fleet_manager.get_ship_data(starter_ship_id).id == starter_model.id)
+	assert(not fleet_manager.get_ship_name(starter_ship_id).is_empty())
+	var legacy_fleet_save: Dictionary = fleet_manager.get_save_state()
+	var legacy_starter_state: Dictionary = legacy_fleet_save[String(starter_ship_id)]
+	legacy_starter_state.erase("ship_name")
+	fleet_manager.apply_save_state(legacy_fleet_save)
+	var starter_generated_name: String = fleet_manager.get_ship_name(starter_ship_id)
+	assert(starter_generated_name.length() >= 2)
+	assert(starter_generated_name.length() <= 20)
+	fleet_manager.apply_save_state(legacy_fleet_save)
+	assert(fleet_manager.get_ship_name(starter_ship_id) == starter_generated_name)
 	assert(int(game_manager.get("tutorial_step")) == 5)
 	assert(instruction_label.text.contains("ÖĞRETİCİ 3/8"))
 	assert(not shop_panel.is_tutorial_focused())
@@ -313,6 +324,60 @@ func _run() -> void:
 	assert(first_port_balance["mission_range"] == Vector2i(3, 4))
 	var fleet_panel := world.get_node("UI/FleetStatusPanel")
 	assert(fleet_panel != null)
+	world.call("_refresh_fleet_panel")
+	var starter_name_card: Dictionary = fleet_panel.get("_cards")[starter_ship_id]
+	var starter_card_button: Button = starter_name_card["button"]
+	var starter_rename_button: Button = starter_name_card["rename_button"]
+	assert(starter_card_button.text.contains(starter_generated_name))
+	assert(starter_card_button.text.contains("Başlangıç Yük Gemisi"))
+	assert(starter_rename_button.text == "✎")
+	starter_rename_button.pressed.emit()
+	await process_frame
+	var ship_rename_dialog := world.get_node("UI/ShipRenameDialog") as PopupPanel
+	var ship_name_input := ship_rename_dialog.get_node(
+		"Content/Rows/NameRow/NameInput"
+	) as LineEdit
+	var random_name_button := ship_rename_dialog.get_node(
+		"Content/Rows/NameRow/RandomNameButton"
+	) as Button
+	var rename_cancel_button := ship_rename_dialog.get_node(
+		"Content/Rows/ActionRow/CancelButton"
+	) as Button
+	var rename_save_button := ship_rename_dialog.get_node(
+		"Content/Rows/ActionRow/SaveButton"
+	) as Button
+	assert(ship_rename_dialog.visible)
+	assert(
+		ship_rename_dialog.size == Vector2i(300, 114),
+		"Rename dialog is not compact: %s" % ship_rename_dialog.size
+	)
+	assert(ship_rename_dialog.position.y == 16)
+	assert(ship_name_input.size.y == random_name_button.size.y)
+	assert(rename_cancel_button.position.y == rename_save_button.position.y)
+	assert(rename_cancel_button.size.y == rename_save_button.size.y)
+	assert(rename_save_button.global_position.y > ship_name_input.global_position.y)
+	assert(ship_name_input.text == starter_generated_name)
+	random_name_button.pressed.emit()
+	assert(ship_name_input.text != starter_generated_name)
+	assert(fleet_manager.is_ship_name_available(ship_name_input.text, starter_ship_id))
+	ship_name_input.text = "Deniz Yıldızı"
+	rename_save_button.pressed.emit()
+	await process_frame
+	assert(not ship_rename_dialog.visible)
+	assert(fleet_manager.get_ship_name(starter_ship_id) == "Deniz Yıldızı")
+	assert(starter_card_button.text.contains("Deniz Yıldızı"))
+	assert(instruction_label.text.contains("Deniz Yıldızı"))
+	event_bus.ship_tapped.emit(starter_ship_id)
+	assert(instruction_label.text.contains("Deniz Yıldızı"))
+	assert(not instruction_label.text.contains(starter_generated_name))
+	starter_rename_button.pressed.emit()
+	ship_name_input.text = "A"
+	rename_save_button.pressed.emit()
+	await process_frame
+	assert(ship_rename_dialog.visible)
+	assert(instruction_label.text.contains("2–20"))
+	rename_cancel_button.pressed.emit()
+	assert(not ship_rename_dialog.visible)
 	var fleet_scroll := fleet_panel.get_node("Margin/VBox/Body/Scroll") as ScrollContainer
 	assert(fleet_scroll != null)
 	assert(fleet_scroll.scroll_deadzone == 18)
@@ -844,6 +909,7 @@ func _run() -> void:
 	assert(shop_buy_button.disabled == (game_manager.money < 1280))
 
 	var refrigerated_ship_found := false
+	var refrigerated_ship_id: StringName = &""
 	for ship_id in fleet_manager.get_all_ship_ids():
 		if ship_id == starter_ship_id:
 			continue
@@ -856,8 +922,12 @@ func _run() -> void:
 		assert(purchased_ship.global_position.distance_to(
 			headquarters.get_delivery_position()
 		) < 40.0)
+		refrigerated_ship_id = ship_id
 		refrigerated_ship_found = true
 	assert(refrigerated_ship_found)
+	assert(not fleet_manager.get_ship_name(refrigerated_ship_id).is_empty())
+	assert(fleet_manager.get_ship_name(refrigerated_ship_id) != "Deniz Yıldızı")
+	assert(not fleet_manager.rename_ship(refrigerated_ship_id, "deniz yıldızı"))
 	assert(not game_manager.try_unlock_port(&"samsun"))
 	assert(not port_manager.is_unlocked(&"samsun"))
 	event_bus.port_tapped.emit(&"samsun")
@@ -907,6 +977,8 @@ func _run() -> void:
 			bulk_ship_id = ship_id
 			break
 	assert(bulk_ship_id != &"")
+	assert(not fleet_manager.get_ship_name(bulk_ship_id).is_empty())
+	assert(fleet_manager.get_ship_name(bulk_ship_id) != "Deniz Yıldızı")
 	var bulk_offer_count := 0
 	for offer in mission_manager.get_offers():
 		if offer.offered_ship_id != bulk_ship_id:
@@ -1035,6 +1107,7 @@ func _run() -> void:
 		fleet_mission.leg_start_unix = Time.get_unix_time_from_system() - 100
 	var saved_company_value: int = company_manager.company_value
 	var saved_company_level: int = company_manager.company_level
+	var saved_starter_ship_name: String = fleet_manager.get_ship_name(starter_ship_id)
 	assert(save_manager.save_game(test_save_path))
 	game_manager.add_money(999)
 	assert(save_manager.load_game(test_save_path))
@@ -1051,6 +1124,7 @@ func _run() -> void:
 	assert(fleet_manager.get_idle_ship_ids().size() == fleet_manager.get_all_ship_ids().size())
 	assert(fleet_manager.get_ship_speed_level(starter_ship_id) == 1)
 	assert(fleet_manager.get_ship_capacity_level(starter_ship_id) == 1)
+	assert(fleet_manager.get_ship_name(starter_ship_id) == saved_starter_ship_name)
 	assert(company_manager.company_value == saved_company_value)
 	assert(company_manager.company_level == saved_company_level)
 	assert(company_manager.peak_company_value >= company_manager.company_value)
@@ -1183,6 +1257,7 @@ func _run() -> void:
 	for fleet_card in fleet_cards.values():
 		for button_key in [
 			"button",
+			"rename_button",
 			"upgrade_button",
 			"capacity_button",
 			"automation_button",
@@ -1190,6 +1265,12 @@ func _run() -> void:
 			var card_button: Button = fleet_card[button_key]
 			assert(card_button.focus_mode == Control.FOCUS_NONE)
 			assert(card_button.mouse_filter == Control.MOUSE_FILTER_PASS)
+	var fleet_ship_names: Array[String] = []
+	for named_ship_id in fleet_manager.get_all_ship_ids():
+		var fleet_ship_name: String = fleet_manager.get_ship_name(named_ship_id)
+		assert(not fleet_ship_name.is_empty())
+		assert(not fleet_ship_names.has(fleet_ship_name.to_lower()))
+		fleet_ship_names.append(fleet_ship_name.to_lower())
 	var occupied_mersin_slots: Array[int] = []
 	for docked_ship_id in fleet_manager.get_all_ship_ids():
 		if fleet_manager.get_ship_current_port(docked_ship_id) != &"mersin":

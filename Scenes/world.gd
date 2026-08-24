@@ -9,6 +9,11 @@ extends Node2D
 @onready var _skip_tutorial_button: Button = $UI/SkipTutorialButton
 @onready var _tutorial_complete_dialog: AcceptDialog = $UI/TutorialCompleteDialog
 @onready var _offline_summary_dialog: AcceptDialog = $UI/OfflineSummaryDialog
+@onready var _ship_rename_dialog: PopupPanel = $UI/ShipRenameDialog
+@onready var _ship_name_input: LineEdit = $UI/ShipRenameDialog/Content/Rows/NameRow/NameInput
+@onready var _random_ship_name_button: Button = $UI/ShipRenameDialog/Content/Rows/NameRow/RandomNameButton
+@onready var _ship_rename_cancel_button: Button = $UI/ShipRenameDialog/Content/Rows/ActionRow/CancelButton
+@onready var _ship_rename_save_button: Button = $UI/ShipRenameDialog/Content/Rows/ActionRow/SaveButton
 @onready var _exit_confirmation_dialog: ConfirmationDialog = $UI/ExitConfirmationDialog
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
 @onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
@@ -26,11 +31,15 @@ var _fleet_refresh_elapsed := 0.0
 var _tutorial_completion_skipped := false
 var _offline_completed_missions := 0
 var _offline_earned_cash := 0
+var _renaming_ship_id: StringName = &""
+var _ship_rename_error_key := ""
 
 const MAP_SHIP_TAP_RADIUS_PX := 48.0
 const MAP_PORT_TAP_RADIUS_PX := 48.0
 const TUTORIAL_PULSE_SPEED := 4.0
 const DEBUG_MONEY_AMOUNT := 10000
+const SHIP_RENAME_DIALOG_SIZE := Vector2i(300, 114)
+const SHIP_RENAME_DIALOG_TOP_MARGIN := 16
 
 var _company_progress_tutorial_elapsed := 0.0
 
@@ -139,6 +148,7 @@ func _ready() -> void:
 	_fleet_status_panel.speed_upgrade_requested.connect(_on_speed_upgrade_requested)
 	_fleet_status_panel.capacity_upgrade_requested.connect(_on_capacity_upgrade_requested)
 	_fleet_status_panel.automation_requested.connect(_on_automation_requested)
+	_fleet_status_panel.rename_requested.connect(_on_ship_rename_requested)
 	_port_unlock_panel.unlock_requested.connect(_on_port_unlock_requested)
 	_port_unlock_panel.closed.connect(_on_port_unlock_panel_closed)
 	_company_progress_panel.closed.connect(_on_company_progress_panel_closed)
@@ -151,6 +161,9 @@ func _ready() -> void:
 	_debug_money_button.pressed.connect(_on_debug_money_pressed)
 	_skip_tutorial_button.pressed.connect(_on_skip_tutorial_pressed)
 	_tutorial_complete_dialog.confirmed.connect(_on_tutorial_complete_confirmed)
+	_ship_rename_save_button.pressed.connect(_on_ship_rename_confirmed)
+	_ship_rename_cancel_button.pressed.connect(_on_ship_rename_canceled)
+	_random_ship_name_button.pressed.connect(_on_random_ship_name_pressed)
 	_exit_confirmation_dialog.confirmed.connect(_on_exit_confirmed)
 	_settings_menu.sound_effects_toggled.connect(SettingsManager.set_sound_effects_enabled)
 	_settings_menu.music_toggled.connect(SettingsManager.set_music_enabled)
@@ -245,6 +258,8 @@ func _on_language_changed(_locale: String) -> void:
 	_refresh_skip_tutorial_ui()
 	if _offline_summary_dialog.visible:
 		_show_offline_summary()
+	if _ship_rename_dialog.visible:
+		_configure_ship_rename_dialog()
 	if _company_progress_panel.is_open():
 		_show_company_progress_panel()
 	if _open_mission_port_id != &"":
@@ -359,6 +374,90 @@ func _on_automation_requested(ship_id: StringName) -> void:
 		return
 	GameManager.try_toggle_ship_automation(ship_id)
 	_refresh_fleet_panel()
+
+
+func _on_ship_rename_requested(ship_id: StringName) -> void:
+	if not GameManager.is_tutorial_completed() \
+			or FleetManager.get_ship_name(ship_id).is_empty():
+		return
+	_renaming_ship_id = ship_id
+	_ship_rename_error_key = ""
+	_ship_name_input.text = FleetManager.get_ship_name(ship_id)
+	_configure_ship_rename_dialog()
+	_popup_ship_rename_dialog()
+	call_deferred("_focus_ship_name_input")
+
+
+func _configure_ship_rename_dialog() -> void:
+	if _ship_rename_error_key == "SHIP_RENAME_LENGTH_ERROR":
+		_instruction_label.text = tr(_ship_rename_error_key) % [
+			FleetManager.MIN_SHIP_NAME_LENGTH,
+			FleetManager.MAX_SHIP_NAME_LENGTH,
+		]
+	elif not _ship_rename_error_key.is_empty():
+		_instruction_label.text = tr(_ship_rename_error_key)
+	_ship_rename_save_button.text = tr("SHIP_RENAME_OK")
+	_ship_rename_cancel_button.text = tr("SHIP_RENAME_CANCEL")
+	_ship_name_input.placeholder_text = tr("SHIP_RENAME_PLACEHOLDER")
+	_random_ship_name_button.tooltip_text = tr("SHIP_RENAME_RANDOM")
+
+
+func _focus_ship_name_input() -> void:
+	_ship_name_input.grab_focus()
+	_ship_name_input.select_all()
+
+
+func _popup_ship_rename_dialog() -> void:
+	var viewport_width := get_viewport().get_visible_rect().size.x
+	var popup_position := Vector2i(
+		maxi(roundi((viewport_width - SHIP_RENAME_DIALOG_SIZE.x) * 0.5), 0),
+		SHIP_RENAME_DIALOG_TOP_MARGIN
+	)
+	_ship_rename_dialog.size = SHIP_RENAME_DIALOG_SIZE
+	_ship_rename_dialog.position = popup_position
+	_ship_rename_dialog.popup()
+
+
+func _on_random_ship_name_pressed() -> void:
+	var previous_suggestion := _ship_name_input.text
+	var suggestion := FleetManager.get_random_available_ship_name()
+	for _attempt in range(4):
+		if suggestion != previous_suggestion:
+			break
+		suggestion = FleetManager.get_random_available_ship_name()
+	_ship_name_input.text = suggestion
+	_ship_name_input.select_all()
+
+
+func _on_ship_rename_confirmed() -> void:
+	if _renaming_ship_id == &"":
+		return
+	var requested_name := _ship_name_input.text.strip_edges()
+	if requested_name.length() < FleetManager.MIN_SHIP_NAME_LENGTH \
+			or requested_name.length() > FleetManager.MAX_SHIP_NAME_LENGTH:
+		_show_ship_rename_error("SHIP_RENAME_LENGTH_ERROR")
+		return
+	if not FleetManager.is_ship_name_available(requested_name, _renaming_ship_id):
+		_show_ship_rename_error("SHIP_RENAME_DUPLICATE_ERROR")
+		return
+	if FleetManager.rename_ship(_renaming_ship_id, requested_name):
+		_instruction_label.text = tr("INSTRUCTION_SHIP_RENAMED") % requested_name
+		_refresh_fleet_panel()
+		_ship_rename_dialog.hide()
+		_renaming_ship_id = &""
+		_ship_rename_error_key = ""
+
+
+func _show_ship_rename_error(message_key: String) -> void:
+	_ship_rename_error_key = message_key
+	_configure_ship_rename_dialog()
+	_focus_ship_name_input()
+
+
+func _on_ship_rename_canceled() -> void:
+	_ship_rename_dialog.hide()
+	_renaming_ship_id = &""
+	_ship_rename_error_key = ""
 
 
 func _on_ship_speed_upgraded(ship_id: StringName, new_level: int, new_speed: float) -> void:
@@ -677,7 +776,7 @@ func _on_ship_purchased(
 	)
 	if not _update_tutorial_instruction():
 		_instruction_label.text = tr("INSTRUCTION_SHIP_JOINED") % \
-			_translated_ship_model_name(ship_data)
+			_translated_ship_name(ship_id)
 	_refresh_fleet_panel()
 	_update_tutorial_focus()
 	_update_next_goal()
@@ -781,7 +880,8 @@ func _refresh_fleet_panel() -> void:
 			cargo_text = tr("CARGO_LABEL") % _translated_cargo_name(mission.cargo_type_id)
 		entries.append({
 			"ship_id": String(ship_id),
-			"display_name": _translated_ship_model_name(ship_data) \
+			"ship_name": FleetManager.get_ship_name(ship_id),
+			"model_name": _translated_ship_model_name(ship_data) \
 				if ship_data != null else String(ship_id),
 			"state_text": _get_ship_state_text(state),
 			"route_text": route_text,
@@ -1062,6 +1162,9 @@ func _translated_port_name(port_id: StringName) -> String:
 
 
 func _translated_ship_name(ship_id: StringName) -> String:
+	var custom_name := FleetManager.get_ship_name(ship_id)
+	if not custom_name.is_empty():
+		return custom_name
 	var ship_data := FleetManager.get_ship_data(ship_id)
 	return _translated_ship_model_name(ship_data) if ship_data != null else String(ship_id)
 

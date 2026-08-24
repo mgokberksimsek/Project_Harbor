@@ -289,6 +289,19 @@ kararlaştırılacaktır.
 - İlk sürüm çevrimdışıyken arka arkaya yeni görev üretmez; yalnızca önceden
   başlamış görevin zaman bazlı ilerlemesi uygulanır.
 
+### 7.6 Gemi kimliği ve isimlendirme
+
+- Satın alınan her gemiye filoda kullanılmayan, denizcilik veya keşif temalı
+  rastgele bir isim verilir.
+- Özel gemi adı ile gemi modeli filo kartında birlikte gösterilir.
+- Oyuncu filo kartındaki kalem düğmesiyle geminin adını ücretsiz değiştirebilir.
+- Yeniden adlandırma penceresindeki zar düğmesi kullanılmayan yeni bir isim
+  önerir; oyuncu öneriyi onaylayabilir veya düzenleyebilir.
+- Gemi adları 2–20 karakterdir ve aynı filoda büyük-küçük harf farkıyla
+  tekrarlanamaz. İsimler Cash, CV veya görev performansını etkilemez.
+- Gemi isimleri kayıt verisinde saklanır. İsim alanı bulunmayan eski kayıtlara
+  mevcut gemi kimliğine göre kararlı ve benzersiz isimler atanır.
+
 ## 8. Görev sistemi
 
 ### 8.1 Teklif üretimi

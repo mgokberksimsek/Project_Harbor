@@ -23,6 +23,13 @@ const UNLOADING_DURATION_SEC := 0.5
 const MIN_SAILING_DURATION_SEC := 2.0
 const SHIP_RESOURCE_DIR := "res://Resources/ships"
 const BASE_FLEET_CAPACITY := 6
+const MIN_SHIP_NAME_LENGTH := 2
+const MAX_SHIP_NAME_LENGTH := 20
+const SHIP_NAME_POOL: Array[String] = [
+	"Atlas", "Aurora", "Orion", "Marina", "Vega", "Luna",
+	"Nova", "Nautica", "Calypso", "Horizon", "Poyraz", "Mercan",
+	"Ufuk", "Yakamoz", "Mistral", "Argo", "Kuzey", "Rüzgâr",
+]
 
 var _states: Dictionary = {}  # ship_id -> ShipRuntimeState
 var _data: Dictionary = {}    # ship_id -> ShipData
@@ -50,6 +57,7 @@ func register_ship(ship_id: StringName, ship_data: ShipData, home_port_id: Strin
 		var state := ShipRuntimeState.new()
 		state.ship_id = ship_id
 		state.model_id = ship_data.id
+		state.ship_name = _generate_unique_ship_name()
 		state.current_port_id = home_port_id
 		state.state = ShipRuntimeState.State.IDLE
 		_states[ship_id] = state
@@ -269,6 +277,47 @@ func get_ship_data(ship_id: StringName) -> ShipData:
 	return _data.get(ship_id, null)
 
 
+func get_ship_name(ship_id: StringName) -> String:
+	if not _states.has(ship_id):
+		return ""
+	return _states[ship_id].ship_name
+
+
+func is_ship_name_available(
+		requested_name: String,
+		excluded_ship_id: StringName = &""
+) -> bool:
+	var normalized_name := requested_name.strip_edges()
+	if normalized_name.length() < MIN_SHIP_NAME_LENGTH \
+			or normalized_name.length() > MAX_SHIP_NAME_LENGTH:
+		return false
+	var comparison_name := normalized_name.to_lower()
+	for candidate_id in _states.keys():
+		if candidate_id == excluded_ship_id:
+			continue
+		var candidate_name: String = _states[candidate_id].ship_name
+		if candidate_name.to_lower() == comparison_name:
+			return false
+	return true
+
+
+func rename_ship(ship_id: StringName, requested_name: String) -> bool:
+	if not _states.has(ship_id):
+		return false
+	var normalized_name := requested_name.strip_edges()
+	if not is_ship_name_available(normalized_name, ship_id):
+		return false
+	var runtime: ShipRuntimeState = _states[ship_id]
+	if runtime.ship_name == normalized_name:
+		return true
+	runtime.ship_name = normalized_name
+	return true
+
+
+func get_random_available_ship_name() -> String:
+	return _generate_unique_ship_name()
+
+
 func get_ship_speed_level(ship_id: StringName) -> int:
 	if not _states.has(ship_id):
 		return 0
@@ -452,6 +501,7 @@ func purchase_ship(model_id: StringName, home_port_id: StringName) -> StringName
 	var state := ShipRuntimeState.new()
 	state.ship_id = ship_id
 	state.model_id = model_id
+	state.ship_name = _generate_unique_ship_name()
 	state.current_port_id = home_port_id
 	state.state = ShipRuntimeState.State.IDLE
 	_states[ship_id] = state
@@ -713,6 +763,7 @@ func apply_save_state(saved: Dictionary) -> void:
 				state.model_id = ship_data.id
 		if ship_data != null:
 			_data[ship_id] = ship_data
+	_assign_missing_ship_names()
 	_reconcile_dock_reservations()
 
 
@@ -734,6 +785,41 @@ func reset_state() -> void:
 	_data.clear()
 	_nodes.clear()
 	_ship_sequence = 0
+
+
+func _assign_missing_ship_names() -> void:
+	var sorted_ship_ids: Array[StringName] = []
+	for ship_id in _states.keys():
+		sorted_ship_ids.append(ship_id)
+	sorted_ship_ids.sort()
+	for ship_id in sorted_ship_ids:
+		var runtime: ShipRuntimeState = _states[ship_id]
+		if not runtime.ship_name.is_empty():
+			continue
+		var preferred_index := posmod(String(ship_id).hash(), SHIP_NAME_POOL.size())
+		runtime.ship_name = _generate_unique_ship_name(preferred_index)
+
+
+func _generate_unique_ship_name(preferred_index: int = -1) -> String:
+	var pool_size := SHIP_NAME_POOL.size()
+	if pool_size <= 0:
+		return "Ship %d" % (_states.size() + 1)
+	var start_index := preferred_index
+	if start_index < 0:
+		start_index = randi_range(0, pool_size - 1)
+	for offset in range(pool_size):
+		var candidate := SHIP_NAME_POOL[(start_index + offset) % pool_size]
+		if is_ship_name_available(candidate):
+			return candidate
+
+	var suffix := 2
+	while true:
+		for base_name in SHIP_NAME_POOL:
+			var candidate := "%s %d" % [base_name, suffix]
+			if is_ship_name_available(candidate):
+				return candidate
+		suffix += 1
+	return "Ship"
 
 
 func _load_ship_catalog() -> void:

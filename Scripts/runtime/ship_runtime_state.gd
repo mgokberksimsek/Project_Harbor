@@ -16,6 +16,7 @@ enum State {
 
 var ship_id: StringName
 var model_id: StringName
+var ship_name: String = ""
 var speed_level: int = 0
 var capacity_level: int = 0
 var automation_unlocked: bool = false
@@ -43,6 +44,7 @@ func to_dict() -> Dictionary:
 	return {
 		"ship_id": String(ship_id),
 		"model_id": String(model_id),
+		"ship_name": ship_name,
 		"speed_level": speed_level,
 		"capacity_level": capacity_level,
 		"automation_unlocked": automation_unlocked,
@@ -59,6 +61,7 @@ static func from_dict(data: Dictionary) -> ShipRuntimeState:
 	var s := ShipRuntimeState.new()
 	s.ship_id = StringName(data.get("ship_id", ""))
 	s.model_id = StringName(data.get("model_id", ""))
+	s.ship_name = String(data.get("ship_name", "")).strip_edges()
 	s.speed_level = maxi(int(data.get("speed_level", 0)), 0)
 	s.capacity_level = maxi(int(data.get("capacity_level", 0)), 0)
 	s.automation_unlocked = bool(data.get("automation_unlocked", false))
