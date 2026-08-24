@@ -583,10 +583,18 @@ Aşağıdaki konular sonraki test ve tasarım oturumlarında kesinleştirilecekt
 - Yakıt maliyetinin tahsil zamanı ve iflas koruması.
 - Nihai filo sınırı ve sınırı artırma yöntemi.
 - Liman seviyelerinin görev, yükleme hızı ve gelir üzerindeki etkileri.
+- Oyuncu birden fazla gemiye ulaştıktan sonra bakım veya küçük arıza nedeniyle
+  gemilerin geçici olarak kullanılamaması değerlendirilecektir. Sistem önce
+  reklamsız ve öngörülebilir bir oynanış mekaniği olarak dengelenecek; oyuncuyu
+  çalışır gemisiz bırakmayacak ve sonradan reklam izlemeye zorlayan yapay bir
+  cezaya dönüştürülmeyecektir.
 - 6'dan fazla gemi hedeflenirse büyük filo arayüzü.
 - Haritanın kesin ölçeği, kamera sınırları ve bölge açılma sırası.
 - Nihai görsel stil, ikon dili, animasyon süresi ve ses yönü.
-- Reklam, uygulama içi satın alma veya tamamen premium model tercihi.
+- Project Harbor'ın ticari gelir üretmesi hedeflenir. Oyuncunun isteyerek
+  izlediği ödüllü reklamlar ve düşük fiyatlı uygulama içi satın alımlar öncelikli
+  adaylardır; ödül miktarları, sıklık ve kesin model temel ekonomi
+  dengelendikten sonra kararlaştırılacaktır.
 
 ## 19. Tasarım dışı kapsam
 
