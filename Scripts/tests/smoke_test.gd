@@ -60,6 +60,30 @@ func _run() -> void:
 	assert(port_manager.has_sea_route(&"canakkale", &"istanbul"))
 	assert(port_manager.has_sea_route(&"samsun", &"trabzon"))
 	assert(port_manager.has_sea_route(&"antalya", &"trabzon"))
+	assert(not port_manager.has_sea_route(&"mersin", &"trabzon"))
+	assert(port_manager.has_route_path(&"mersin", &"trabzon"))
+	var mersin_trabzon_port_path: Array[StringName] = port_manager.get_route_port_path(
+		&"mersin",
+		&"trabzon"
+	)
+	assert(mersin_trabzon_port_path == [
+		&"mersin",
+		&"samsun",
+		&"trabzon",
+	])
+	var trabzon_mersin_port_path: Array[StringName] = port_manager.get_route_port_path(
+		&"trabzon",
+		&"mersin"
+	)
+	assert(trabzon_mersin_port_path == [
+		&"trabzon",
+		&"samsun",
+		&"mersin",
+	])
+	assert(is_equal_approx(
+		port_manager.get_distance(&"mersin", &"trabzon"),
+		1715.0
+	))
 	_assert_port_centers_are_spaced(port_manager, 320.0)
 	var antalya_data: PortData = port_manager.get_port_data(&"antalya")
 	var samsun_data: PortData = port_manager.get_port_data(&"samsun")
@@ -542,10 +566,24 @@ func _run() -> void:
 	var smooth_route: PackedVector2Array = port_manager.get_smoothed_route_points(&"mersin", &"izmir")
 	var s_curve_route: PackedVector2Array = port_manager.get_route_points(&"mersin", &"istanbul")
 	var expansion_route: PackedVector2Array = port_manager.get_route_points(&"izmir", &"antalya")
+	var connected_route: PackedVector2Array = port_manager.get_smoothed_route_points(
+		&"mersin",
+		&"trabzon"
+	)
 	assert(forward_route.size() == 4)
 	assert(smooth_route.size() > forward_route.size())
 	assert(s_curve_route.size() == 6)
 	assert(expansion_route.size() == 7)
+	assert(connected_route.size() > expansion_route.size())
+	assert(connected_route[0].is_equal_approx(
+		port_manager.get_port_node(&"mersin").global_position
+	))
+	assert(connected_route[connected_route.size() - 1].is_equal_approx(
+		port_manager.get_port_node(&"trabzon").global_position
+	))
+	assert(connected_route.has(
+		port_manager.get_port_node(&"samsun").global_position
+	))
 	_assert_all_sea_routes_avoid_land(port_manager, world)
 	var has_clockwise_turn := false
 	var has_counterclockwise_turn := false
@@ -697,7 +735,7 @@ func _run() -> void:
 		assert(port_manager.is_unlocked(offer.pickup_port_id))
 		assert(port_manager.is_unlocked(offer.delivery_port_id))
 		assert(offer.pickup_port_id != offer.delivery_port_id)
-		assert(port_manager.has_sea_route(offer.pickup_port_id, offer.delivery_port_id))
+		assert(port_manager.has_route_path(offer.pickup_port_id, offer.delivery_port_id))
 		if offer.pickup_port_id == &"mersin":
 			has_local_pickup_offer = true
 			assert(is_equal_approx(offer.loading_duration_sec, 1.7))
@@ -718,6 +756,23 @@ func _run() -> void:
 		assert(offer.cargo_type_id != &"grain")
 	assert(has_local_pickup_offer)
 	assert(has_remote_pickup_offer)
+	var samsun_runtime: PortRuntimeState = port_manager.get("_states")[&"samsun"]
+	var trabzon_runtime: PortRuntimeState = port_manager.get("_states")[&"trabzon"]
+	samsun_runtime.unlocked = true
+	trabzon_runtime.unlocked = true
+	var connected_candidates: Array = mission_manager.call(
+		"_build_offer_candidates",
+		&"mersin",
+		starter_ship_id
+	)
+	var has_mersin_trabzon_candidate := false
+	for candidate in connected_candidates:
+		has_mersin_trabzon_candidate = has_mersin_trabzon_candidate \
+			or (candidate["pickup_id"] == &"mersin" \
+			and candidate["destination_id"] == &"trabzon")
+	assert(has_mersin_trabzon_candidate)
+	samsun_runtime.unlocked = false
+	trabzon_runtime.unlocked = false
 	var local_offer: Mission = null
 	for offer in offers:
 		if offer.pickup_port_id == offer.origin_port_id:
@@ -1586,10 +1641,14 @@ func _assert_all_sea_routes_avoid_land(port_manager: Node, world: Node2D) -> voi
 	var routes: Array = port_manager.call("get_all_sea_routes")
 	assert(not routes.is_empty(), "No sea routes were registered for validation.")
 	for route in routes:
-		var route_points: PackedVector2Array = port_manager.call(
-			"get_smoothed_route_points",
+		var direct_points: PackedVector2Array = port_manager.call(
+			"_get_direct_route_points",
 			route.from_port_id,
 			route.to_port_id
+		)
+		var route_points: PackedVector2Array = port_manager.call(
+			"smooth_polyline_points",
+			direct_points
 		)
 		assert(route_points.size() >= 2, "Sea route has fewer than two points: %s -> %s" % [
 			route.from_port_id,

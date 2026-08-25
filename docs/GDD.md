@@ -89,7 +89,7 @@ mekanik eklenmez.
 - İlk oturum hedefi: Bir görev seçmek, gemiyi izlemek ve ödülü almak.
 - Orta vadeli hedef: İkinci gemiyi satın alıp aynı anda birden fazla görevi
   yönetmek.
-- Uzun vadeli hedef: 15–20 limanlık bir ağ ve farklı görevlere uygun,
+- Uzun vadeli hedef: Yaklaşık 12 limanlık bir ağ ve farklı görevlere uygun,
   geliştirilmiş bir filo kurmak.
 
 ## 4. Temel oyun döngüsü
@@ -181,7 +181,7 @@ katmanı eklemek değil, oyuncuya bir sonraki yatırım hedefini açıkça göst
 
 ### 5.4 Uzun vadeli dünya hedefi
 
-Tam sürüm için yaklaşık 15–20 açılabilir liman hedeflenir. Dünya, büyük kara
+Tam sürüm için yaklaşık 12 açılabilir liman hedeflenir. Dünya, büyük kara
 parçalarından ve bunların kıyılarındaki limanlardan oluşur. Gemiler karaların
 içinden geçemez; tanımlı deniz koridorlarını ve kıvrımlı rotaları izler.
 
@@ -321,6 +321,8 @@ kazanç yerine açıkça gösterilen bir süre veya sefer sınırı kullanılmal
 - Görev, geminin bulunduğu limandan başlamak zorunda değildir.
 - Aynı içeriğe sahip teklifler arayüzde ayrı ayrı tekrarlanmaz.
 - Kilidi açılmamış limanlar normal görev havuzunda yer almaz.
+- Doğrudan koridoru olmasa bile deniz ağı üzerinden birbirine bağlı her açık
+  liman çifti arasında görev üretilebilir.
 
 ### 8.2 Teklif bilgileri
 
@@ -379,6 +381,9 @@ oluşursa eklenir.
 ## 9. Rota, hareket ve liman animasyonları
 
 - Deniz rotaları hafif kavisli ve birbirinden farklı biçimlerde olmalıdır.
+- Gemiler, yükleme ve teslimat limanları arasında tanımlı deniz koridorlarının
+  oynanış mesafesine göre en kısa birleşimini kullanır. Ara limanlardan yükleme
+  veya duraklama yapmadan geçer; birleşik rota tek parça olarak gösterilir.
 - Bütün kayıtlı rotaların yumuşatılmış merkez çizgileri, geliştirme testlerinde
   tüm kara poligonlarına karşı otomatik olarak doğrulanır.
 - Tam görev rotası kırmızı, kesikli bir çizgiyle gösterilir.
@@ -607,7 +612,7 @@ tam tersini kapatabilir.
 
 Tam sürüm yönü için başlangıç hedefleri:
 
-- 15–20 açılabilir liman.
+- Yaklaşık 12 açılabilir liman.
 - Birden fazla gemi modeli ve uzmanlık alanı.
 - Genel, soğutmalı, dökme yük ve ileride eklenebilecek özel kargo sınıfları.
 - Kısa, orta ve uzun görev havuzları.

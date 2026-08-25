@@ -184,7 +184,7 @@ func _build_offer_candidates(
 		return candidates
 	for pickup_id in PortManager.get_unlocked_port_ids():
 		if pickup_id != ship_port_id \
-				and not PortManager.has_sea_route(ship_port_id, pickup_id):
+				and not PortManager.has_route_path(ship_port_id, pickup_id):
 			continue
 		for destination_id in _get_destinations(pickup_id):
 			for cargo_type in compatible_cargo_types:
@@ -240,7 +240,7 @@ func _pick_candidate_index(candidates: Array[Dictionary]) -> int:
 func _get_destinations(pickup_port_id: StringName) -> Array[StringName]:
 	var destinations: Array[StringName] = []
 	for port_id in PortManager.get_unlocked_port_ids():
-		if port_id != pickup_port_id and PortManager.has_sea_route(pickup_port_id, port_id):
+		if port_id != pickup_port_id and PortManager.has_route_path(pickup_port_id, port_id):
 			destinations.append(port_id)
 	return destinations
 
