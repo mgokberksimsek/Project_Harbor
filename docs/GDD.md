@@ -491,6 +491,8 @@ adımıyla karşılaşmaz.
 
 - Seçili gemi kendi siluetini izleyen renkli bir vurgu alır ve `%5` büyür.
 - Seçili liman da kendi şekline uygun vurgu alır ve `%5` büyür.
+- Boşta geminin sabit duran durum yazısı, görev verilebileceğini belli eden
+  hafif bir renk nefesi kullanır; gemi göreve başladığında normal duruma döner.
 - Dairesel, nesneden kopuk seçim halkaları kullanılmaz.
 - Aynı anda hangi geminin ve limanın seçildiği açıkça anlaşılmalıdır.
 
@@ -574,6 +576,10 @@ istenen görsel ilkeler şunlardır:
 - Mobil ekranda haritayı kapatmayan kompakt paneller.
 - Görevler için ileride sade ve dikkat çekici ünlem/işaret rozetleri.
 - Seçim ve durum renklerinin deniz, kara ve rota renklerinden kolay ayrılması.
+- Nihai deniz yüzeyi düşük yoğunlukta, sürekli bir akış veya dalga hareketiyle
+  canlı görünmelidir. Limanda bekleyen gemiler bu atmosfere uyumlu çok hafif
+  salınım yapabilir; gerçek dünya konumları, dokunma alanları ve yuva düzenleri
+  sabit kalmalıdır.
 
 Nihai kara, gemi, liman, görev rozeti ve arayüz varlıkları ayrı bir sanat
 yönü çalışmasında belirlenecektir.

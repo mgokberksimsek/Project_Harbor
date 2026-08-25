@@ -598,6 +598,28 @@ func _run() -> void:
 	assert(is_equal_approx(starter_icon.scale.y, 0.8))
 	var starter_route_line := starter_map_ship.get_node("RouteLine") as ShipRouteLine
 	assert(starter_route_line != null)
+	var starter_status_label := starter_map_ship.get_node("StatusLabel") as Label
+	assert(starter_status_label != null)
+	starter_map_ship.set_tutorial_focus(false)
+	starter_map_ship.call(
+		"_update_idle_status_visual",
+		ShipRuntimeState.State.IDLE,
+		0.5
+	)
+	assert(starter_status_label.modulate != Color.WHITE)
+	assert(starter_status_label.scale == Vector2.ONE)
+	settings_manager.set_locale("en")
+	assert(starter_status_label.text == "Idle")
+	settings_manager.set_locale("tr")
+	assert(starter_status_label.text == "Boşta")
+	starter_map_ship.set_tutorial_focus(true)
+	starter_map_ship.call(
+		"_update_idle_status_visual",
+		ShipRuntimeState.State.IDLE,
+		0.1
+	)
+	assert(starter_status_label.modulate == Color.WHITE)
+	assert(starter_status_label.scale == Vector2.ONE)
 	starter_route_line.set_route(smooth_route, 0.0, true)
 	var full_route_length := starter_route_line.get_remaining_length()
 	starter_route_line.set_route(smooth_route, 0.5, true)
@@ -762,6 +784,8 @@ func _run() -> void:
 
 	world.call("_on_offer_accepted", first_offer.id)
 	await process_frame
+	assert(starter_status_label.modulate == Color.WHITE)
+	assert(starter_status_label.scale == Vector2.ONE)
 	assert(int(game_manager.get("tutorial_step")) == 8)
 	assert(not game_manager.is_tutorial_completed())
 	assert(instruction_label.text.contains("ÖĞRETİCİ 8/8"))

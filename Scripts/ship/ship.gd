@@ -29,6 +29,9 @@ const DEPARTURE_TURN_SNAP_RAD := 0.02
 const SELECTED_SCALE_MULTIPLIER := 1.05
 const SELECTION_SCALE_TWEEN_SEC := 0.16
 const TUTORIAL_PULSE_SPEED := 4.0
+const IDLE_STATUS_PULSE_SPEED := 3.4
+const IDLE_STATUS_DIM_COLOR := Color(1.0, 0.78, 0.28, 0.58)
+const IDLE_STATUS_BRIGHT_COLOR := Color(1.0, 0.96, 0.70, 1.0)
 
 var _sailing_route_points := PackedVector2Array()
 var _mission_preview_route_points := PackedVector2Array()
@@ -37,6 +40,7 @@ var _preview_total_route_length := 0.0
 var _is_selected := false
 var _tutorial_focused := false
 var _tutorial_pulse_elapsed := 0.0
+var _idle_status_pulse_elapsed := 0.0
 var _turn_velocity := 0.0
 var _departure_start_rotation := 0.0
 var _departure_turn_start_progress := 0.0
@@ -70,6 +74,7 @@ func _ready() -> void:
 	EventBus.ship_state_changed.connect(_on_ship_state_changed)
 	EventBus.ship_dock_slot_changed.connect(_on_ship_dock_slot_changed)
 	EventBus.ship_selection_changed.connect(_on_ship_selection_changed)
+	EventBus.language_changed.connect(_on_language_changed)
 	input_event.connect(_on_input_event)
 
 	if not _restore_runtime_visual_state():
@@ -94,6 +99,7 @@ func _process(delta: float) -> void:
 		_update_heading(previous_position, delta)
 	_update_route_visual(state)
 	_update_tutorial_focus_visual(delta)
+	_update_idle_status_visual(state, delta)
 
 
 func set_initial_world_position(
@@ -566,6 +572,24 @@ func _update_tutorial_focus_visual(delta: float) -> void:
 	_selection_outline.modulate = Color(1.0, 0.72 + pulse * 0.28, 0.35, 0.55 + pulse * 0.45)
 
 
+func _update_idle_status_visual(state: ShipRuntimeState.State, delta: float) -> void:
+	if state != ShipRuntimeState.State.IDLE or _tutorial_focused:
+		_reset_idle_status_visual()
+		return
+	_idle_status_pulse_elapsed += delta
+	var pulse := (sin(_idle_status_pulse_elapsed * IDLE_STATUS_PULSE_SPEED) + 1.0) * 0.5
+	_status_label.modulate = IDLE_STATUS_DIM_COLOR.lerp(
+		IDLE_STATUS_BRIGHT_COLOR,
+		pulse
+	)
+
+
+func _reset_idle_status_visual() -> void:
+	_idle_status_pulse_elapsed = 0.0
+	_status_label.modulate = Color.WHITE
+	_status_label.scale = Vector2.ONE
+
+
 func _update_route_visual(state: ShipRuntimeState.State) -> void:
 	var mission := FleetManager.get_ship_mission(ship_id)
 	if mission == null:
@@ -711,6 +735,10 @@ func _on_input_event(viewport: Node, event: InputEvent, _shape_idx: int) -> void
 	if touch_pressed or mouse_pressed:
 		EventBus.ship_tapped.emit(ship_id)
 		viewport.set_input_as_handled()
+
+
+func _on_language_changed(_locale: String) -> void:
+	_refresh_visuals()
 
 
 func _refresh_visuals() -> void:
