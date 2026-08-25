@@ -554,6 +554,36 @@ func _run() -> void:
 	var starter_map_ship: Area2D = fleet_manager.get_ship_node(starter_ship_id) as Area2D
 	var mersin_map_port: Area2D = port_manager.get_port_node(&"mersin") as Area2D
 	assert(starter_map_ship != null)
+	var approach_probe_duration := 10.0 * 60.0
+	var approach_probe_length := 1000.0
+	# Match the authored Ship approach values without loading the Ship class
+	# before the test tree's autoload identifiers are available.
+	var approach_time_ratio := 1.6 / approach_probe_duration
+	var approach_route_ratio := 140.0 / approach_probe_length
+	var approach_start_raw := 1.0 - approach_time_ratio
+	var approach_start_visual: float = starter_map_ship.call(
+		"calculate_visual_sailing_progress",
+		approach_start_raw,
+		approach_probe_duration,
+		approach_probe_length
+	)
+	assert(is_equal_approx(approach_start_visual, 1.0 - approach_route_ratio))
+	var approach_half_visual: float = starter_map_ship.call(
+		"calculate_visual_sailing_progress",
+		approach_start_raw + approach_time_ratio * 0.5,
+		approach_probe_duration,
+		approach_probe_length
+	)
+	assert(is_equal_approx(
+		approach_half_visual,
+		1.0 - approach_route_ratio * 0.5
+	))
+	assert(is_equal_approx(float(starter_map_ship.call(
+		"calculate_visual_sailing_progress",
+		1.0,
+		approach_probe_duration,
+		approach_probe_length
+	)), 1.0))
 	assert(starter_map_ship.global_position.distance_to(
 		headquarters.get_delivery_position()
 	) < 40.0)
@@ -1028,6 +1058,74 @@ func _run() -> void:
 	await process_frame
 	assert(company_manager.company_value == 6000)
 	assert(company_manager.company_level == 4)
+	assert(is_equal_approx(port_manager.get_distance(&"mersin", &"izmir"), 250.0))
+	assert(is_equal_approx(port_manager.get_distance(&"izmir", &"mersin"), 250.0))
+	assert(is_equal_approx(port_manager.get_distance(&"samsun", &"trabzon"), 380.0))
+	assert(is_equal_approx(port_manager.get_distance(&"antalya", &"trabzon"), 815.0))
+	assert(port_manager.get_distance(&"mersin", &"samsun") \
+		> port_manager.get_distance(&"antalya", &"samsun"))
+	var nominal_starter_speed: float = fleet_manager.get_ship_effective_speed(
+		starter_ship_id
+	)
+	assert(is_equal_approx(
+		fleet_manager.get_ship_sailing_speed(starter_ship_id, 0),
+		nominal_starter_speed * 1.10
+	))
+	assert(is_equal_approx(
+		fleet_manager.get_ship_sailing_speed(starter_ship_id, 1),
+		nominal_starter_speed * 0.95
+	))
+	assert(is_equal_approx(
+		fleet_manager.get_ship_sailing_speed(starter_ship_id, 4),
+		nominal_starter_speed * 0.80
+	))
+	assert(is_equal_approx(
+		fleet_manager.get_ship_sailing_speed(starter_ship_id, 8),
+		nominal_starter_speed * 0.80
+	))
+	var mersin_samsun_duration: float = fleet_manager.estimate_mission_duration(
+		starter_ship_id,
+		&"mersin",
+		&"samsun",
+		&"mersin",
+		-1.0,
+		1
+	)
+	var antalya_samsun_duration: float = fleet_manager.estimate_mission_duration(
+		starter_ship_id,
+		&"antalya",
+		&"samsun",
+		&"antalya",
+		-1.0,
+		1
+	)
+	assert(mersin_samsun_duration > antalya_samsun_duration)
+	var samsun_trabzon_duration: float = fleet_manager.estimate_mission_duration(
+		starter_ship_id,
+		&"samsun",
+		&"trabzon",
+		&"samsun",
+		-1.0,
+		1
+	)
+	var antalya_trabzon_duration: float = fleet_manager.estimate_mission_duration(
+		starter_ship_id,
+		&"antalya",
+		&"trabzon",
+		&"antalya",
+		-1.0,
+		1
+	)
+	assert(antalya_trabzon_duration > samsun_trabzon_duration)
+	var four_unit_antalya_trabzon_duration: float = fleet_manager.estimate_mission_duration(
+		starter_ship_id,
+		&"antalya",
+		&"trabzon",
+		&"antalya",
+		-1.0,
+		4
+	)
+	assert(four_unit_antalya_trabzon_duration > antalya_trabzon_duration)
 	assert(next_goal_label.text.contains("Çanakkale"))
 	assert(next_goal_label.text.contains("Sv. 5"))
 	assert(next_goal_label.text.contains("6000 / 8000 CV"))
@@ -1096,20 +1194,26 @@ func _run() -> void:
 	)
 	world.add_child(resumed_ship)
 	var resumed_progress: float = resumed_mission.get_leg_progress()
-	var expected_resume_position: Vector2 = port_manager.get_route_position(
-		fleet_manager.get_ship_current_port(resumed_ship_id),
-		resumed_mission.pickup_port_id,
-		resumed_progress
+	var resumed_route: PackedVector2Array = resumed_ship.get("_sailing_route_points")
+	assert(resumed_route.size() >= 2)
+	var resumed_visual_progress: float = resumed_ship.call(
+		"calculate_visual_sailing_progress",
+		resumed_progress,
+		resumed_mission.leg_duration_sec,
+		resumed_ship.call("_get_polyline_length", resumed_route)
+	)
+	var expected_resume_position: Vector2 = resumed_ship.call(
+		"_get_position_along_points",
+		resumed_route,
+		resumed_visual_progress
 	)
 	assert(resumed_ship.global_position.distance_to(expected_resume_position) < 2.0)
 	assert(resumed_ship.global_position.distance_to(Vector2.ZERO) > 100.0)
-	var resumed_route: PackedVector2Array = resumed_ship.get("_sailing_route_points")
-	assert(resumed_route.size() >= 2)
-	var resumed_tangent: Vector2 = port_manager.get_route_position(
-		fleet_manager.get_ship_current_port(resumed_ship_id),
-		resumed_mission.pickup_port_id,
-		minf(resumed_progress + 0.01, 1.0)
-	) - resumed_ship.global_position
+	var resumed_tangent: Vector2 = resumed_ship.call(
+		"_get_direction_along_points",
+		resumed_route,
+		resumed_visual_progress
+	)
 	var resumed_icon := resumed_ship.get_node("Icon") as Sprite2D
 	var resumed_forward := Vector2.RIGHT.rotated(
 		resumed_icon.rotation + resumed_ship_data.sprite_forward_angle_rad

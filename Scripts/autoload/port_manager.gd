@@ -218,6 +218,12 @@ func get_distance(port_a_id: StringName, port_b_id: StringName) -> float:
 	if points.is_empty():
 		push_warning("get_distance: missing node for '%s' or '%s'." % [port_a_id, port_b_id])
 		return 0.0
+	var route: SeaRouteData = _sea_routes.get(
+		_get_route_key(port_a_id, port_b_id),
+		null
+	)
+	if route != null and route.gameplay_distance > 0.0:
+		return route.gameplay_distance
 	return _get_polyline_length(points) * GAMEPLAY_DISTANCE_PER_WORLD_PIXEL
 
 

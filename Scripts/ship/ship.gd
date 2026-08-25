@@ -16,6 +16,9 @@ const TURN_DAMPING := 8.0
 const MAX_TURN_SPEED_RAD_PER_SEC := 4.5
 const MIN_HEADING_MOVEMENT_SQUARED := 0.01
 const ROUTE_TANGENT_SAMPLE_PROGRESS := 0.015
+const PORT_APPROACH_WORLD_DISTANCE := 140.0
+const PORT_APPROACH_DURATION_SEC := 1.6
+const MAX_PORT_APPROACH_ROUTE_RATIO := 0.25
 const DOCK_TRANSITION_DURATION_SEC := 0.9
 const DELIVERY_TRANSITION_DURATION_SEC := 1.8
 const DEPARTURE_HEADING_LEAD_MIN := 24.0
@@ -36,8 +39,10 @@ var _tutorial_focused := false
 var _tutorial_pulse_elapsed := 0.0
 var _turn_velocity := 0.0
 var _departure_start_rotation := 0.0
+var _departure_turn_start_progress := 0.0
+var _departure_turn_initialized := false
 var _preparing_departure_heading := false
-var _smoothing_pickup_departure_turn := false
+var _smoothing_departure_turn := false
 var _dock_transition_active := false
 var _dock_transition_elapsed := 0.0
 var _dock_transition_start := Vector2.ZERO
@@ -127,7 +132,10 @@ func _restore_runtime_visual_state() -> bool:
 			)
 			if _sailing_route_points.size() < 2:
 				return false
-			var progress := mission.get_leg_progress()
+			var progress := _get_visual_sailing_progress(
+				mission,
+				_sailing_route_points
+			)
 			global_position = _get_position_along_points(
 				_sailing_route_points,
 				progress
@@ -145,6 +153,7 @@ func _restore_runtime_visual_state() -> bool:
 			_sailing_route_points = _build_delivery_route(mission)
 			_snap_heading_to_route(0.0)
 			_departure_start_rotation = _icon.rotation
+			_departure_turn_initialized = false
 			_preparing_departure_heading = true
 			_update_route_visual(state)
 			return true
@@ -249,6 +258,10 @@ func _update_pre_departure_heading() -> bool:
 	var mission := FleetManager.get_ship_mission(ship_id)
 	if mission == null:
 		return false
+	# While entering the pickup center, the bow follows the actual movement.
+	# Departure preparation begins only after that fixed-speed approach ends.
+	if _dock_transition_active:
+		return false
 	# The ship may still be finishing a previous dock animation while loading.
 	# Rebuild from its current visual position so departure never jumps.
 	_sailing_route_points = _build_delivery_route(mission)
@@ -262,7 +275,16 @@ func _update_pre_departure_heading() -> bool:
 		departure_direction,
 		ship_data.sprite_forward_angle_rad
 	)
-	var linear_progress := mission.get_leg_progress()
+	if not _departure_turn_initialized:
+		_departure_start_rotation = _icon.rotation
+		_departure_turn_start_progress = mission.get_leg_progress()
+		_departure_turn_initialized = true
+	var progress_span := maxf(1.0 - _departure_turn_start_progress, 0.001)
+	var linear_progress := clampf(
+		(mission.get_leg_progress() - _departure_turn_start_progress) / progress_span,
+		0.0,
+		1.0
+	)
 	var smooth_progress := linear_progress * linear_progress \
 		* (3.0 - 2.0 * linear_progress)
 	_icon.rotation = lerp_angle(
@@ -307,7 +329,7 @@ func _update_sailing_position(state: ShipRuntimeState.State, delta: float) -> bo
 				true
 			)
 			_build_remote_mission_preview(mission)
-	var progress := mission.get_leg_progress()
+	var progress := _get_visual_sailing_progress(mission, _sailing_route_points)
 	var route_position := _get_position_along_points(_sailing_route_points, progress)
 	if route_position != Vector2.ZERO:
 		global_position = route_position
@@ -317,13 +339,12 @@ func _update_sailing_position(state: ShipRuntimeState.State, delta: float) -> bo
 			tangent,
 			ship_data.sprite_forward_angle_rad
 		)
-		if state == ShipRuntimeState.State.SAILING_TO_PICKUP \
-				and _smoothing_pickup_departure_turn:
+		if _smoothing_departure_turn:
 			var angle_error := wrapf(target_rotation - _icon.rotation, -PI, PI)
 			var maximum_turn := DEPARTURE_TURN_SPEED_RAD_PER_SEC * delta
 			if absf(angle_error) <= maxf(maximum_turn, DEPARTURE_TURN_SNAP_RAD):
 				_icon.rotation = target_rotation
-				_smoothing_pickup_departure_turn = false
+				_smoothing_departure_turn = false
 			else:
 				_icon.rotation = wrapf(
 					_icon.rotation + signf(angle_error) * maximum_turn,
@@ -343,22 +364,24 @@ func _on_ship_state_changed(changed_ship_id: StringName, previous_state: int, ne
 			_hold_initial_position_while_idle = false
 		var mission := FleetManager.get_ship_mission(ship_id)
 		if new_state == ShipRuntimeState.State.LOADING and mission != null:
-			_smoothing_pickup_departure_turn = false
+			_smoothing_departure_turn = false
 			if FleetManager.get_ship_dock_slot_index(ship_id) < 0 \
 					and not _sailing_route_points.is_empty():
 				global_position = _sailing_route_points[_sailing_route_points.size() - 1]
 			_clear_mission_preview()
 			_sailing_route_points = _build_delivery_route(mission)
-			_departure_start_rotation = _icon.rotation
+			_departure_turn_initialized = false
 			_preparing_departure_heading = true
 		elif new_state == ShipRuntimeState.State.SAILING_TO_DELIVERY:
 			_preparing_departure_heading = false
-			_smoothing_pickup_departure_turn = false
+			_departure_turn_initialized = false
+			_smoothing_departure_turn = true
 			if _sailing_route_points.is_empty() and mission != null:
 				_sailing_route_points = _build_delivery_route(mission)
 		elif new_state == ShipRuntimeState.State.SAILING_TO_PICKUP:
 			_preparing_departure_heading = false
-			_smoothing_pickup_departure_turn = mission != null \
+			_departure_turn_initialized = false
+			_smoothing_departure_turn = mission != null \
 				and FleetManager.get_ship_current_port(ship_id) \
 				!= mission.pickup_port_id
 			_turn_velocity = 0.0
@@ -366,7 +389,8 @@ func _on_ship_state_changed(changed_ship_id: StringName, previous_state: int, ne
 			_clear_mission_preview()
 		else:
 			_preparing_departure_heading = false
-			_smoothing_pickup_departure_turn = false
+			_departure_turn_initialized = false
+			_smoothing_departure_turn = false
 			_sailing_route_points.clear()
 			_clear_mission_preview()
 		if new_state == ShipRuntimeState.State.UNLOADING \
@@ -537,7 +561,7 @@ func _update_route_visual(state: ShipRuntimeState.State) -> void:
 	elif state == ShipRuntimeState.State.SAILING_TO_DELIVERY:
 		_route_line.set_route(
 			_sailing_route_points,
-			mission.get_leg_progress(),
+			_get_visual_sailing_progress(mission, _sailing_route_points),
 			_is_selected
 		)
 	elif state == ShipRuntimeState.State.SAILING_TO_PICKUP \
@@ -546,7 +570,10 @@ func _update_route_visual(state: ShipRuntimeState.State) -> void:
 			_build_remote_mission_preview(mission)
 		var preview_progress := 0.0
 		if _preview_total_route_length > 0.001:
-			preview_progress = mission.get_leg_progress() \
+			preview_progress = _get_visual_sailing_progress(
+				mission,
+				_sailing_route_points
+			) \
 				* _preview_pickup_route_length / _preview_total_route_length
 		_route_line.set_route(
 			_mission_preview_route_points,
@@ -585,6 +612,43 @@ func _get_polyline_length(points: PackedVector2Array) -> float:
 	for point_index in range(points.size() - 1):
 		total_length += points[point_index].distance_to(points[point_index + 1])
 	return total_length
+
+
+func _get_visual_sailing_progress(
+		mission: Mission,
+		points: PackedVector2Array
+) -> float:
+	if mission == null:
+		return 0.0
+	return calculate_visual_sailing_progress(
+		mission.get_leg_progress(),
+		mission.leg_duration_sec,
+		_get_polyline_length(points)
+	)
+
+
+func calculate_visual_sailing_progress(
+		raw_progress: float,
+		leg_duration_sec: float,
+		route_length: float
+) -> float:
+	var progress := clampf(raw_progress, 0.0, 1.0)
+	if leg_duration_sec <= PORT_APPROACH_DURATION_SEC \
+			or route_length <= PORT_APPROACH_WORLD_DISTANCE:
+		return progress
+
+	var approach_route_ratio := minf(
+		PORT_APPROACH_WORLD_DISTANCE / route_length,
+		MAX_PORT_APPROACH_ROUTE_RATIO
+	)
+	var approach_time_ratio := PORT_APPROACH_DURATION_SEC / leg_duration_sec
+	var cruise_time_ratio := 1.0 - approach_time_ratio
+	var cruise_route_ratio := 1.0 - approach_route_ratio
+	if progress <= cruise_time_ratio:
+		return progress / cruise_time_ratio * cruise_route_ratio
+	return cruise_route_ratio \
+		+ (progress - cruise_time_ratio) / approach_time_ratio \
+		* approach_route_ratio
 
 
 func _get_direction_along_points(

@@ -21,7 +21,8 @@ extends Resource
 ## visually/mechanically distinct ship models exist side by side later.
 @export var scene: PackedScene
 
-@export var base_speed: float = 100.0 ## px/sec at world map scale.
+## Nominal cruise speed before empty/load modifiers and upgrades.
+@export var base_speed: float = 100.0
 @export var speed_upgrade_base_cost: int = 250
 @export var max_speed_level: int = 5
 @export var cargo_capacity: int = 1

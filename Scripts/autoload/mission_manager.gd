@@ -166,7 +166,8 @@ func _create_offer(
 		pickup_port_id,
 		delivery_port_id,
 		ship_port_id,
-		mission.loading_duration_sec
+		mission.loading_duration_sec,
+		mission.cargo_amount
 	)
 	mission.duration_class = _classify_duration(mission.estimated_duration_sec)
 	return mission

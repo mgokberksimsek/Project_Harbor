@@ -4,6 +4,9 @@ extends Node
 
 const SHIP_PRICE_GROWTH := 1.6
 const SHIP_SPEED_PER_LEVEL := 0.15
+const EMPTY_SHIP_SPEED_MULTIPLIER := 1.10
+const LOADED_SPEED_PENALTY_PER_CARGO_UNIT := 0.05
+const MAX_LOADED_SPEED_PENALTY := 0.20
 const SHIP_SPEED_UPGRADE_COST_GROWTH := 1.7
 const SHIP_CAPACITY_UPGRADE_COST_GROWTH := 1.8
 const EXTRA_CARGO_REWARD_BONUS := 0.25
@@ -63,6 +66,17 @@ func calculate_ship_purchase_price(base_cost: int, owned_ship_count: int) -> int
 
 func calculate_ship_speed(base_speed: float, speed_level: int) -> float:
 	return maxf(base_speed, 1.0) * (1.0 + SHIP_SPEED_PER_LEVEL * maxi(speed_level, 0))
+
+
+func calculate_ship_sailing_speed(effective_speed: float, cargo_amount: int) -> float:
+	var safe_speed := maxf(effective_speed, 1.0)
+	if cargo_amount <= 0:
+		return safe_speed * EMPTY_SHIP_SPEED_MULTIPLIER
+	var load_penalty := minf(
+		maxi(cargo_amount, 0) * LOADED_SPEED_PENALTY_PER_CARGO_UNIT,
+		MAX_LOADED_SPEED_PENALTY
+	)
+	return safe_speed * (1.0 - load_penalty)
 
 
 func calculate_ship_speed_upgrade_cost(base_cost: int, speed_level: int) -> int:

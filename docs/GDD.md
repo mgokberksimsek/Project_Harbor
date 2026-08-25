@@ -354,6 +354,28 @@ Görevler ileride kısa, orta ve uzun olarak dengelenecektir:
 Prototipte yolculuk ve liman süreleri testleri hızlandırmak amacıyla bilerek
 çok kısadır. Bu sayılar nihai denge değildir.
 
+Aynı gemiyle aynı yükü aynı iki liman arasında taşıyan görevin süresi yalnızca
+şirket büyüdüğü için artmaz. Şirket ilerlemesi daha uzak bölgeleri ve daha uzun
+görevleri açar; eski kısa rotalar hızlı sefer seçeneği olarak kalır. Mevcut
+bölgesel rotalar açık rota mesafesine göre saniyeler veya birkaç dakika sürer.
+İleride eklenecek uzak yabancı bölgeler ve büyük kontratlar 20–60 dakikalık ve
+daha uzun seferleri taşır.
+
+Stilize haritadaki görsel mesafe ile oynanış mesafesi rota verisinde ayrılabilir.
+Oynanış mesafesi süreyi, ödülü ve sefer masrafını birlikte etkiler; yalnızca
+süreyi uzatıp uzun rotaları ekonomik olarak değersizleştirmez. İleri aşamada
+aynı rotada çıkabilecek büyük kontratlar daha fazla kargo ve yükleme süresi
+karşılığında daha yüksek ödül sunabilir, ancak ilk süre dengelemesine dahil
+edilmez.
+
+Görev süresi boş konumlanma yolculuğu, yükleme, yüklü teslimat yolculuğu ve
+boşaltmanın toplamıdır. Geminin kaynak verisindeki hız nominal seyir hızıdır.
+Boş gemi bu hızdan %10 daha hızlı gider; yüklü gemi her kargo birimi için %5
+yavaşlar ve toplam yavaşlama %20 ile sınırlıdır. Böylece gemi modeli, hız
+geliştirmesi, rota mesafesi ve taşınan miktar süreyi anlaşılır biçimde etkiler.
+Kargo türlerine ayrı ağırlık sınıfları ancak ileride somut bir oynanış ihtiyacı
+oluşursa eklenir.
+
 ## 9. Rota, hareket ve liman animasyonları
 
 - Deniz rotaları hafif kavisli ve birbirinden farklı biçimlerde olmalıdır.
@@ -365,6 +387,11 @@ Prototipte yolculuk ve liman süreleri testleri hızlandırmak amacıyla bilerek
 - Geminin burnu hareket ettiği rotanın teğetine hizalanır.
 - Yuvadan çıkış, yük limanına giriş ve teslimat limanına yanaşma ani açı
   değişimleri olmadan yumuşak yapılır.
+- Uzun sefer katsayısı açık deniz ilerlemesini uzatabilir ancak limanın son
+  yaklaşma bölgesini ağır çekime dönüştürmez. Son yaklaşım görev süresinden
+  bağımsız, kısa ve sabit bir görsel sürede tamamlanır. Yük alırken gemi önce
+  gerçek giriş yönüne bakar, liman merkezine ulaştıktan sonra kalan yükleme
+  süresinde çıkış rotasına yumuşakça döner.
 - Başka limana yük almaya giden gemi mevcut liman merkezine uğramaz.
 - Yükleme limanına ulaşan gemi yuvaya oturmadan liman merkezinde bekler ve
   ardından teslimat rotasına devam eder.

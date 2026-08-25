@@ -21,8 +21,7 @@ extends Node
 const LOADING_DURATION_SEC := 1.7
 const UNLOADING_DURATION_SEC := 0.5
 const MIN_SAILING_DURATION_SEC := 2.0
-## Keeps map scale and economy distance unchanged while giving early missions
-## enough time to read the route and manage another ship.
+## Converts operating distance and ship speed into test-friendly seconds.
 const SAILING_DURATION_SCALE := 6.0
 const SHIP_RESOURCE_DIR := "res://Resources/ships"
 const BASE_FLEET_CAPACITY := 6
@@ -337,6 +336,13 @@ func get_ship_effective_speed(ship_id: StringName) -> float:
 	)
 
 
+func get_ship_sailing_speed(ship_id: StringName, cargo_amount: int = 0) -> float:
+	return EconomyManager.calculate_ship_sailing_speed(
+		get_ship_effective_speed(ship_id),
+		cargo_amount
+	)
+
+
 func get_ship_speed_upgrade_cost(ship_id: StringName) -> int:
 	var ship_data := get_ship_data(ship_id)
 	if ship_data == null:
@@ -537,7 +543,8 @@ func get_ship_mission_remaining_sec(ship_id: StringName, unix_time: float = -1.0
 				mission.pickup_port_id,
 				mission.delivery_port_id,
 				mission.pickup_port_id,
-				mission.loading_duration_sec
+				mission.loading_duration_sec,
+				mission.cargo_amount
 			)
 		ShipRuntimeState.State.LOADING:
 			return current_leg_remaining + maxf(
@@ -546,7 +553,8 @@ func get_ship_mission_remaining_sec(ship_id: StringName, unix_time: float = -1.0
 					mission.pickup_port_id,
 					mission.delivery_port_id,
 					mission.pickup_port_id,
-					mission.loading_duration_sec
+					mission.loading_duration_sec,
+					mission.cargo_amount
 				)
 				- mission.loading_duration_sec,
 				0.0
@@ -564,7 +572,8 @@ func estimate_mission_duration(
 		pickup_port_id: StringName,
 		delivery_port_id: StringName,
 		origin_port_id: StringName = &"",
-		loading_duration_sec: float = -1.0
+		loading_duration_sec: float = -1.0,
+		cargo_amount: int = 1
 ) -> float:
 	var ship_data: ShipData = get_ship_data(ship_id)
 	if ship_data == null:
@@ -583,12 +592,14 @@ func estimate_mission_duration(
 		pickup_sailing_duration = _estimate_sailing_duration(
 			ship_id,
 			actual_origin,
-			pickup_port_id
+			pickup_port_id,
+			0
 		)
 	var delivery_sailing_duration := _estimate_sailing_duration(
 		ship_id,
 		pickup_port_id,
-		delivery_port_id
+		delivery_port_id,
+		maxi(cargo_amount, 1)
 	)
 	return pickup_sailing_duration \
 		+ actual_loading_duration \
@@ -606,13 +617,14 @@ func get_mission_loading_duration(
 func _estimate_sailing_duration(
 		ship_id: StringName,
 		from_port_id: StringName,
-		to_port_id: StringName
+		to_port_id: StringName,
+		cargo_amount: int = 0
 ) -> float:
 	var distance := PortManager.get_distance(from_port_id, to_port_id)
 	if distance <= 0.0:
 		return 0.0
 	return maxf(
-		distance / maxf(get_ship_effective_speed(ship_id), 1.0) \
+		distance / maxf(get_ship_sailing_speed(ship_id, cargo_amount), 1.0) \
 				* SAILING_DURATION_SCALE,
 		MIN_SAILING_DURATION_SEC
 	)
@@ -702,7 +714,14 @@ func _start_leg(ship_id: StringName, new_state: ShipRuntimeState.State,
 	if forced_duration_sec >= 0.0:
 		duration = forced_duration_sec
 	else:
-		duration = _estimate_sailing_duration(ship_id, from_port_id, to_port_id)
+		var cargo_amount := mission.cargo_amount \
+			if new_state == ShipRuntimeState.State.SAILING_TO_DELIVERY else 0
+		duration = _estimate_sailing_duration(
+			ship_id,
+			from_port_id,
+			to_port_id,
+			cargo_amount
+		)
 
 	mission.stage = _state_to_mission_stage(new_state)
 	mission.start_leg(duration, leg_start_unix)

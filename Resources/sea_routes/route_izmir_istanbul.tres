@@ -7,3 +7,4 @@ script = ExtResource("1_route")
 from_port_id = &"izmir"
 to_port_id = &"istanbul"
 waypoints = PackedVector2Array(2070, 1660, 2230, 1760, 2320, 1900)
+gameplay_distance = 300.0
