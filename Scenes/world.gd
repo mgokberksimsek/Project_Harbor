@@ -127,6 +127,7 @@ func _ready() -> void:
 	EventBus.company_level_requirement_failed.connect(
 		_on_company_level_requirement_failed
 	)
+	EventBus.mission_completed.connect(_on_mission_completed)
 	EventBus.mission_offers_updated.connect(_on_mission_offers_updated)
 	EventBus.port_unlocked.connect(_on_port_unlocked)
 	EventBus.port_unlock_failed.connect(_on_port_unlock_failed)
@@ -233,6 +234,14 @@ func _on_money_changed(new_amount: int, _delta: int) -> void:
 	_update_money(new_amount)
 	_port_unlock_panel.update_status(new_amount, CompanyManager.company_level)
 	_update_next_goal()
+
+
+func _on_mission_completed(mission: Mission) -> void:
+	_instruction_label.text = tr("INSTRUCTION_MISSION_COMPLETED") % [
+		mission.get_net_reward(),
+		mission.reward,
+		mission.operating_cost,
+	]
 
 
 func _on_company_value_changed(_new_value: int, _delta: int) -> void:

@@ -246,9 +246,11 @@ rotasına çıkar, mevcut limanın merkezine gereksiz yere uğramaz.
 
 ### 7.3 Satın alma ve filo sınırı
 
-Aynı modelden alınan her yeni gemi bir öncekinden daha pahalıdır. Mevcut
-prototip formülü taban fiyatı her sahip olunan gemi için `1,6` katsayısıyla
-büyütür ve fiyatı en yakın 10'a yuvarlar.
+Filoya alınan her yeni gemi, modelinden bağımsız olarak mağazadaki bütün gemi
+fiyatlarını artırır. Mevcut prototip formülü her modelin taban fiyatını toplam
+sahip olunan gemi sayısı için `1,6` katsayısıyla büyütür ve fiyatı en yakın
+10'a yuvarlar. Böylece oyuncu sürekli farklı modeller alarak fiyat artışını
+atlayamaz.
 
 Bir gemi modelinin satın alınabilmesi için gereken Company Level'a ulaşılmış
 olmalı ve güncel Cash fiyatı ayrıca ödenmelidir.
@@ -288,6 +290,12 @@ kararlaştırılacaktır.
 - Oyuncu otomasyonu kapattığında mevcut görev tamamlanır, yeni görev alınmaz.
 - İlk sürüm çevrimdışıyken arka arkaya yeni görev üretmez; yalnızca önceden
   başlamış görevin zaman bazlı ilerlemesi uygulanır.
+
+Çevrimdışı otomasyonu genişletmeden önce Company Level ve bölge ilerlemesiyle
+orta/uzun görevler açılmalıdır. Bir dakikadan kısa prototip görevlerini
+çevrimdışı tamamlamak tek başına anlamlı bir idle döngü sayılmaz. İleri aşamada
+otomasyonun uygulama kapalıyken görev zincirlemesi değerlendirilirse sınırsız
+kazanç yerine açıkça gösterilen bir süre veya sefer sınırı kullanılmalıdır.
 
 ### 7.6 Gemi kimliği ve isimlendirme
 
@@ -373,10 +381,11 @@ Görev ödülü şu girdilerden oluşur:
 - Kargo miktarı.
 - Yükleme ve teslimat limanlarının seviye çarpanları.
 
-Mevcut erken oyun ödülleri, 750 TL'lik ilk limana 3–4 görevde ve ardından 800
-TL'lik ikinci gemiye sonraki 3–4 görevde ulaşılacak şekilde korunur. Nihai görev
-süreleri ve sefer masrafı oranları mobil oynanış testlerinde birlikte yeniden
-değerlendirilir.
+Mevcut erken oyun ödülleri ve masrafları, 750 TL'lik ilk limana yaklaşık 3–5
+görevde ulaşılacak şekilde dengelenir. Başlangıç gemisi satın alındıktan sonra
+filo geneli fiyat artışıyla 1.280 TL olan ikinci gemi yaklaşık 4–8 görevlik bir
+sonraki hedeftir. Nihai görev süreleri ve sefer masrafı oranları mobil oynanış
+testlerinde birlikte yeniden değerlendirilir.
 
 ### 10.2 Giderler
 
@@ -389,7 +398,9 @@ Mevcut çalışan giderler:
 - Görevin yükleme ve teslimat ayaklarının toplam mesafesiyle geminin tüketim
   oranına bağlı sefer masrafı.
 
-Görev kartında brüt ödül, sefer masrafı ve net kazanç kabulden önce gösterilir.
+Görev kartında net kazanç ilk sırada; brüt ödül ve sefer masrafı onun yanında
+kabulden önce gösterilir. Teslimatta da gelir, masraf ve net kazanç tek satırlık
+bir özetle bildirilir.
 Başka limana yük almaya giden geminin boş seyir mesafesi de masrafa dahildir.
 İlk sürümde ayrı yakıt tankı veya yakıt satın alma akışı yoktur; masraf görev
 teslim edildiğinde brüt ödülden düşülür. Böylece oyuncu başlangıçta yakıt parası
@@ -500,6 +511,13 @@ bölgesel limanın açma maliyetine dönüşür; uygun yatırım yoksa limanın 
 Company Value eşiği gösterilir. Veri dosyalarında başka genişleme kalmadığında
 alan kaybolur. Bu akış kalıcı görev listesine veya yeni bir yönetim sistemine
 dönüşmez.
+
+Başlangıç öğreticisi henüz açılmamış ileri sistemleri peşinen anlatmaz. Oyuncu
+ilk kez gemi geliştirme ekranına ulaştığında hızın görev süresine, kapasitenin
+kargo ve kazanca etkisi; otomasyon açıldığında gereksinimleri ve açık/kapalı oyun
+davranışı; ilk orta/uzun görevi başlattığında ise çevrimdışı ilerleme tek bir kısa
+bağlamsal açıklamayla gösterilir. Aynı bilgiler daha sonra ilgili paneldeki `?`
+düğmesinden yeniden okunabilir.
 
 ### 12.5 Ayarlar ve dil
 

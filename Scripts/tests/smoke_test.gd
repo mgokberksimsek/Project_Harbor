@@ -251,6 +251,9 @@ func _run() -> void:
 	assert(fleet_manager.get_all_ship_ids().size() == 1)
 	var starter_ship_id: StringName = fleet_manager.get_all_ship_ids()[0]
 	assert(fleet_manager.get_ship_data(starter_ship_id).id == starter_model.id)
+	assert(fleet_manager.get_ship_purchase_price(&"starter_freighter") == 800)
+	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 1280)
+	assert(fleet_manager.get_ship_purchase_price(&"bulk_carrier") == 2400)
 	assert(not fleet_manager.get_ship_name(starter_ship_id).is_empty())
 	var legacy_fleet_save: Dictionary = fleet_manager.get_save_state()
 	var legacy_starter_state: Dictionary = legacy_fleet_save[String(starter_ship_id)]
@@ -321,7 +324,8 @@ func _run() -> void:
 		starter_ship_id,
 		750
 	)
-	assert(first_port_balance["mission_range"] == Vector2i(3, 4))
+	var first_port_mission_range: Vector2i = first_port_balance["mission_range"]
+	assert(first_port_mission_range.x >= 3 and first_port_mission_range.y <= 5)
 	var fleet_panel := world.get_node("UI/FleetStatusPanel")
 	assert(fleet_panel != null)
 	world.call("_refresh_fleet_panel")
@@ -636,6 +640,8 @@ func _run() -> void:
 		assert(offer.reward > 0)
 		assert(offer.operating_cost > 0)
 		assert(offer.get_net_reward() > 0)
+		var operating_cost_ratio := float(offer.operating_cost) / float(offer.reward)
+		assert(operating_cost_ratio >= 0.08 and operating_cost_ratio <= 0.25)
 		assert(offer.cargo_amount == 1)
 		var offered_cargo: CargoTypeData = mission_manager.get_cargo_type(offer.cargo_type_id)
 		assert(starter_ship_data.can_carry(offered_cargo))
@@ -649,6 +655,9 @@ func _run() -> void:
 			local_offer = offer
 			break
 	assert(local_offer != null)
+	var mission_offer_panel: Node = world.get_node("UI/MissionOfferPanel")
+	var local_offer_text: String = mission_offer_panel.call("_format_offer", local_offer)
+	assert(local_offer_text.contains("NET +%d ₺" % local_offer.get_net_reward()))
 	var local_pickup_route: PackedVector2Array = starter_map_ship.call(
 		"_build_delivery_route",
 		local_offer
@@ -671,6 +680,10 @@ func _run() -> void:
 			first_offer = offer
 			break
 	assert(first_offer != null)
+	assert(local_offer.estimated_duration_sec >= 10.0)
+	assert(local_offer.estimated_duration_sec <= 30.0)
+	assert(first_offer.estimated_duration_sec > local_offer.estimated_duration_sec)
+	assert(first_offer.estimated_duration_sec <= 60.0)
 	assert(first_offer.operating_cost > local_offer.operating_cost)
 	var pickup_node: Node = port_manager.get_port_node(first_offer.pickup_port_id)
 	var mission_badge := pickup_node.get_node("MissionBadge") as Button
@@ -696,7 +709,7 @@ func _run() -> void:
 	) as Button
 	assert(first_offer_button.text.contains("Brüt"))
 	assert(first_offer_button.text.contains("Masraf"))
-	assert(first_offer_button.text.contains("Net"))
+	assert(first_offer_button.text.contains("NET"))
 	settings_manager.set_locale("en")
 	assert(first_offer_button.text.contains("Gross"))
 	assert(first_offer_button.text.contains("Cost"))
@@ -803,6 +816,9 @@ func _run() -> void:
 
 	assert(mission.stage == Mission.Stage.COMPLETED)
 	assert(game_manager.money == mission.get_net_reward())
+	assert(instruction_label.text.contains("Net +%d" % mission.get_net_reward()))
+	assert(instruction_label.text.contains("%d gelir" % mission.reward))
+	assert(instruction_label.text.contains("-%d masraf" % mission.operating_cost))
 	await process_frame
 	assert(next_goal_label.text.contains("%d / 750" % mission.get_net_reward()))
 	assert(mission_manager.get_offers().size() == 3)
@@ -832,15 +848,20 @@ func _run() -> void:
 	assert(company_manager.company_level == 2)
 	assert(next_goal_label.visible)
 	assert(next_goal_label.text.contains("Soğutmalı"))
-	assert(next_goal_label.text.contains("0 / 800"))
+	var refrigerated_purchase_price: int = fleet_manager.get_ship_purchase_price(
+		&"refrigerated_freighter"
+	)
+	assert(refrigerated_purchase_price == 1280)
+	assert(next_goal_label.text.contains("0 / %d" % refrigerated_purchase_price))
 	var second_ship_balance := _get_mission_balance_for_cost(
 		mission_manager,
 		fleet_manager,
 		economy_manager,
 		starter_ship_id,
-		800
+		refrigerated_purchase_price
 	)
-	assert(second_ship_balance["mission_range"] == Vector2i(3, 4))
+	var second_ship_mission_range: Vector2i = second_ship_balance["mission_range"]
+	assert(second_ship_mission_range.x >= 4 and second_ship_mission_range.y <= 8)
 	var first_port_missions: Vector2i = first_port_balance["mission_range"]
 	var first_port_gross: Vector2i = first_port_balance["gross_reward_range"]
 	var first_port_costs: Vector2i = first_port_balance["operating_cost_range"]
@@ -877,14 +898,17 @@ func _run() -> void:
 	assert(refrigerated_model.can_carry(food_cargo))
 	assert(not refrigerated_model.can_carry(grain_cargo))
 	assert(fleet_manager.get_owned_model_count(&"refrigerated_freighter") == 0)
-	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 800)
-	game_manager.add_money(800)
+	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") \
+		== refrigerated_purchase_price)
+	game_manager.add_money(refrigerated_purchase_price)
 	assert(game_manager.try_purchase_ship(&"refrigerated_freighter", &"mersin"))
 	await process_frame
 	assert(game_manager.money == 0)
 	assert(fleet_manager.get_all_ship_ids().size() == 2)
 	assert(fleet_manager.get_owned_model_count(&"refrigerated_freighter") == 1)
-	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 1280)
+	assert(fleet_manager.get_ship_purchase_price(&"starter_freighter") == 1280)
+	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 2050)
+	assert(fleet_manager.get_ship_purchase_price(&"bulk_carrier") == 3840)
 	assert(next_goal_label.visible)
 	assert(next_goal_label.text.contains("Antalya"))
 	assert(next_goal_label.text.contains("0 / 1500"))
@@ -905,8 +929,8 @@ func _run() -> void:
 	shop_buy_button.text = "Satın Al · 800 ₺"
 	event_bus.game_loaded.emit()
 	await process_frame
-	assert(shop_buy_button.text.contains("1280"))
-	assert(shop_buy_button.disabled == (game_manager.money < 1280))
+	assert(shop_buy_button.text.contains("2050"))
+	assert(shop_buy_button.disabled == (game_manager.money < 2050))
 
 	var refrigerated_ship_found := false
 	var refrigerated_ship_id: StringName = &""
@@ -945,7 +969,9 @@ func _run() -> void:
 	assert(company_manager.company_level == 3)
 	assert(next_goal_label.visible)
 	assert(next_goal_label.text.contains("Dökme"))
-	assert(next_goal_label.text.contains("0 / 1500"))
+	var bulk_purchase_price: int = fleet_manager.get_ship_purchase_price(&"bulk_carrier")
+	assert(bulk_purchase_price == 3840)
+	assert(next_goal_label.text.contains("0 / %d" % bulk_purchase_price))
 	settings_manager.set_locale("en")
 	assert(next_goal_label.text.contains("Buy Bulk Carrier"))
 	settings_manager.set_locale("tr")
@@ -959,7 +985,7 @@ func _run() -> void:
 	next_model_button.pressed.emit()
 	assert(model_position_label.text == "3 / 3")
 	assert((shop_panel.get_node("Margin/VBox/Body/Title") as Label).text.contains("Dökme"))
-	game_manager.add_money(1500)
+	game_manager.add_money(bulk_purchase_price)
 	assert(not tutorial_buy_button.disabled)
 	tutorial_buy_button.pressed.emit()
 	await process_frame
@@ -1104,7 +1130,7 @@ func _run() -> void:
 	for active_mission in mission_manager.get_active_missions():
 		expected_offline_reward += active_mission.get_net_reward()
 		var fleet_mission: Mission = fleet_manager.get_ship_mission(active_mission.assigned_ship_id)
-		fleet_mission.leg_start_unix = Time.get_unix_time_from_system() - 100
+		fleet_mission.leg_start_unix = Time.get_unix_time_from_system() - 3600
 	var saved_company_value: int = company_manager.company_value
 	var saved_company_level: int = company_manager.company_level
 	var saved_starter_ship_name: String = fleet_manager.get_ship_name(starter_ship_id)

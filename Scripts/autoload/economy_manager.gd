@@ -7,7 +7,9 @@ const SHIP_SPEED_PER_LEVEL := 0.15
 const SHIP_SPEED_UPGRADE_COST_GROWTH := 1.7
 const SHIP_CAPACITY_UPGRADE_COST_GROWTH := 1.8
 const EXTRA_CARGO_REWARD_BONUS := 0.25
-const FUEL_UNIT_PRICE := 1.0
+## First balance target: operating costs should be visible in the mission
+## choice without making any early offer unprofitable.
+const FUEL_UNIT_PRICE := 2.5
 
 
 func calculate_mission_reward(
@@ -52,9 +54,9 @@ func calculate_mission_operating_cost(
 	return maxi(roundi(fuel_used * FUEL_UNIT_PRICE), 0)
 
 
-func calculate_ship_purchase_price(base_cost: int, owned_model_count: int) -> int:
+func calculate_ship_purchase_price(base_cost: int, owned_ship_count: int) -> int:
 	var safe_base_cost := maxi(base_cost, 0)
-	var safe_owned_count := maxi(owned_model_count, 0)
+	var safe_owned_count := maxi(owned_ship_count, 0)
 	var raw_price := safe_base_cost * pow(SHIP_PRICE_GROWTH, safe_owned_count)
 	return maxi(roundi(raw_price / 10.0) * 10, safe_base_cost)
 

@@ -21,6 +21,9 @@ extends Node
 const LOADING_DURATION_SEC := 1.7
 const UNLOADING_DURATION_SEC := 0.5
 const MIN_SAILING_DURATION_SEC := 2.0
+## Keeps map scale and economy distance unchanged while giving early missions
+## enough time to read the route and manage another ship.
+const SAILING_DURATION_SCALE := 6.0
 const SHIP_RESOURCE_DIR := "res://Resources/ships"
 const BASE_FLEET_CAPACITY := 6
 const MIN_SHIP_NAME_LENGTH := 2
@@ -479,7 +482,7 @@ func get_ship_purchase_price(model_id: StringName) -> int:
 		return -1
 	return EconomyManager.calculate_ship_purchase_price(
 		ship_data.purchase_cost,
-		get_owned_model_count(model_id)
+		_states.size()
 	)
 
 
@@ -609,7 +612,8 @@ func _estimate_sailing_duration(
 	if distance <= 0.0:
 		return 0.0
 	return maxf(
-		distance / maxf(get_ship_effective_speed(ship_id), 1.0),
+		distance / maxf(get_ship_effective_speed(ship_id), 1.0) \
+				* SAILING_DURATION_SCALE,
 		MIN_SAILING_DURATION_SEC
 	)
 
@@ -698,14 +702,7 @@ func _start_leg(ship_id: StringName, new_state: ShipRuntimeState.State,
 	if forced_duration_sec >= 0.0:
 		duration = forced_duration_sec
 	else:
-		var distance: float = PortManager.get_distance(from_port_id, to_port_id)
-		if distance <= 0.0:
-			duration = 0.0
-		else:
-			duration = maxf(
-				distance / maxf(get_ship_effective_speed(ship_id), 1.0),
-				MIN_SAILING_DURATION_SEC
-			)
+		duration = _estimate_sailing_duration(ship_id, from_port_id, to_port_id)
 
 	mission.stage = _state_to_mission_stage(new_state)
 	mission.start_leg(duration, leg_start_unix)

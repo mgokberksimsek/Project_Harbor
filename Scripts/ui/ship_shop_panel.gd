@@ -97,7 +97,6 @@ func _refresh() -> void:
 		_ship_data.cargo_capacity,
 	]
 	var current_price := FleetManager.get_ship_purchase_price(model_id)
-	var owned_count := FleetManager.get_owned_model_count(model_id)
 	if CompanyManager.company_level < _ship_data.required_company_level:
 		_buy_button.text = tr("SHOP_LEVEL_REQUIRED") % _ship_data.required_company_level
 		_buy_button.disabled = true
@@ -112,7 +111,10 @@ func _refresh() -> void:
 	else:
 		_buy_button.text = tr("SHOP_BUY") % current_price
 		_buy_button.disabled = not _interaction_enabled or GameManager.money < current_price
-		_status.text = tr("SHOP_OWNED") % owned_count
+		_status.text = tr("SHOP_OWNED") % [
+			FleetManager.get_all_ship_ids().size(),
+			FleetManager.get_fleet_capacity(),
+		]
 	_refresh_model_selector()
 
 

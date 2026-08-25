@@ -105,9 +105,9 @@ func _format_offer(mission: Mission) -> String:
 		mission.cargo_amount,
 		_format_duration(mission.estimated_duration_sec),
 		tr("MISSION_FINANCIALS") % [
+			mission.get_net_reward(),
 			mission.reward,
 			mission.operating_cost,
-			mission.get_net_reward(),
 		],
 	]
 
