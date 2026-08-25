@@ -24,11 +24,23 @@ theme_override_constants/margin_bottom = 8
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="ToggleButton" type="Button" parent="Margin/VBox"]
+[node name="Header" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ToggleButton" type="Button" parent="Margin/VBox/Header"]
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "Filo Durumu ▶"
+
+[node name="InfoButton" type="Button" parent="Margin/VBox/Header"]
+custom_minimum_size = Vector2(42, 38)
+layout_mode = 2
+focus_mode = 0
+theme_override_font_sizes/font_size = 20
+text = "?"
 
 [node name="Body" type="VBoxContainer" parent="Margin/VBox"]
 visible = false
@@ -45,3 +57,8 @@ scroll_deadzone = 18
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
+
+[node name="HelpDialog" type="AcceptDialog" parent="."]
+title = "Filo Durumu"
+dialog_text = "Gemilerini seç, durumlarını takip et ve geliştir."
+ok_button_text = "Anladım"

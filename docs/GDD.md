@@ -503,6 +503,11 @@ doğrulanmamıştır. Üç ila altı gemiyle yapılacak kullanılabilirlik testl
 sonra filtreleme, sıralama, görevde/boşta gruplama veya kompakt filo görünümü
 eklenebilir.
 
+Filo paneli başlığındaki isteğe bağlı `?` düğmesi panelin gemi seçimi ve durum
+takibi için kullanıldığını; hız, kapasite ve otomatik görev seçeneklerinin temel
+etkilerini kısa, kompakt bir pencerede açıklar. Bu açıklama başlangıç
+öğreticisine yeni zorunlu bir adım eklemez.
+
 ### 12.4 Başlangıç öğreticisi
 
 Öğreticinin ana yönlendirmesi mevcut üst bilgi alanını kullanır ve sekiz zorunlu
@@ -672,8 +677,6 @@ Aşağıdaki konular sonraki test ve tasarım oturumlarında kesinleştirilecekt
   çalışır gemisiz bırakmayacak ve sonradan reklam izlemeye zorlayan yapay bir
   cezaya dönüştürülmeyecektir.
 - 6'dan fazla gemi hedeflenirse büyük filo arayüzü.
-- Mobil UX turunda filo paneli başlığına, panelin amacını kısa ve kompakt bir
-  açıklamayla anlatan isteğe bağlı `?` yardım düğmesi değerlendirilmelidir.
 - Haritanın kesin ölçeği, kamera sınırları ve bölge açılma sırası.
 - Nihai görsel stil, ikon dili, animasyon süresi ve ses yönü.
 - Project Harbor'ın ticari gelir üretmesi hedeflenir. Oyuncunun isteyerek

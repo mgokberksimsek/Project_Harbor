@@ -328,6 +328,23 @@ func _run() -> void:
 	assert(first_port_mission_range.x >= 3 and first_port_mission_range.y <= 5)
 	var fleet_panel := world.get_node("UI/FleetStatusPanel")
 	assert(fleet_panel != null)
+	var fleet_info_button := fleet_panel.get_node("Margin/VBox/Header/InfoButton") as Button
+	var fleet_help_dialog := fleet_panel.get_node("HelpDialog") as AcceptDialog
+	assert(fleet_info_button != null)
+	assert(fleet_info_button.custom_minimum_size.x >= 42.0)
+	assert(fleet_help_dialog != null)
+	assert(not fleet_help_dialog.visible)
+	fleet_info_button.pressed.emit()
+	await process_frame
+	assert(fleet_help_dialog.visible)
+	assert(fleet_help_dialog.size.x <= 420)
+	assert(fleet_help_dialog.size.y <= 230)
+	assert(fleet_help_dialog.dialog_text.contains("kapasite"))
+	settings_manager.set_locale("en")
+	assert(fleet_help_dialog.title == "Fleet Status")
+	assert(fleet_help_dialog.dialog_text.contains("Auto Dispatch"))
+	settings_manager.set_locale("tr")
+	fleet_help_dialog.hide()
 	world.call("_refresh_fleet_panel")
 	var starter_name_card: Dictionary = fleet_panel.get("_cards")[starter_ship_id]
 	var starter_card_button: Button = starter_name_card["button"]
@@ -387,7 +404,7 @@ func _run() -> void:
 	assert(fleet_scroll.scroll_deadzone == 18)
 	var settings_button := settings_menu.get_node("SettingsButton") as Button
 	assert(not fleet_panel.get_global_rect().intersects(settings_button.get_global_rect()))
-	var fleet_toggle := fleet_panel.get_node("Margin/VBox/ToggleButton") as Button
+	var fleet_toggle := fleet_panel.get_node("Margin/VBox/Header/ToggleButton") as Button
 	assert(not fleet_panel.is_expanded())
 	assert(is_equal_approx(fleet_panel.offset_bottom - fleet_panel.offset_top, 56.0))
 	assert(not fleet_panel.get_node("Margin/VBox/Body").visible)

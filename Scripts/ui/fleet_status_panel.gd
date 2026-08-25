@@ -9,9 +9,11 @@ signal rename_requested(ship_id: StringName)
 
 @export var start_expanded := false
 
-@onready var _toggle_button: Button = $Margin/VBox/ToggleButton
+@onready var _toggle_button: Button = $Margin/VBox/Header/ToggleButton
+@onready var _info_button: Button = $Margin/VBox/Header/InfoButton
 @onready var _body: VBoxContainer = $Margin/VBox/Body
 @onready var _list: VBoxContainer = $Margin/VBox/Body/Scroll/List
+@onready var _help_dialog: AcceptDialog = $HelpDialog
 
 const COLLAPSED_HEIGHT := 56.0
 const EXPANDED_HEIGHT := 290.0
@@ -23,7 +25,9 @@ var _interaction_enabled := true
 
 func _ready() -> void:
 	_toggle_button.pressed.connect(_on_toggle_pressed)
+	_info_button.pressed.connect(_show_help_dialog)
 	get_node("/root/EventBus").language_changed.connect(_on_language_changed)
+	_refresh_help_dialog()
 	set_expanded(start_expanded)
 
 
@@ -41,7 +45,9 @@ func is_expanded() -> bool:
 func set_interaction_enabled(enabled: bool) -> void:
 	_interaction_enabled = enabled
 	_toggle_button.disabled = not enabled
+	_info_button.disabled = not enabled
 	if not enabled:
+		_help_dialog.hide()
 		set_expanded(false)
 	for card in _cards.values():
 		var button: Button = card["button"]
@@ -232,6 +238,22 @@ func _on_toggle_pressed() -> void:
 
 func _on_language_changed(_locale: String) -> void:
 	set_expanded(_expanded)
+	_refresh_help_dialog()
+
+
+func _show_help_dialog() -> void:
+	_refresh_help_dialog()
+	var message_label := _help_dialog.get_label()
+	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	message_label.custom_minimum_size = Vector2(340, 0)
+	message_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_help_dialog.popup_centered(Vector2i(400, 190))
+
+
+func _refresh_help_dialog() -> void:
+	_help_dialog.title = tr("FLEET_HELP_TITLE")
+	_help_dialog.dialog_text = tr("FLEET_HELP_MESSAGE")
+	_help_dialog.get_ok_button().text = tr("FLEET_HELP_OK")
 
 
 func _on_speed_upgrade_pressed(ship_id: StringName) -> void:
