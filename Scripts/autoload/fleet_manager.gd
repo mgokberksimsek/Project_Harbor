@@ -19,7 +19,7 @@ extends Node
 ## Reserved as tunable constants for now; a natural place for "higher-level
 ## ports load faster" to plug in later (Phase 5, EconomyManager territory).
 const LOADING_DURATION_SEC := 1.7
-const UNLOADING_DURATION_SEC := 0.5
+const UNLOADING_DURATION_SEC := 1.7
 const MIN_SAILING_DURATION_SEC := 2.0
 ## Converts operating distance and ship speed into test-friendly seconds.
 const SAILING_DURATION_SCALE := 6.0

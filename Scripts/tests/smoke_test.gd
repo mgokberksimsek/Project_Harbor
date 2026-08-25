@@ -699,6 +699,21 @@ func _run() -> void:
 	assert(local_pickup_route[local_pickup_route.size() - 1].is_equal_approx(
 		port_manager.get_port_node(local_offer.delivery_port_id).global_position
 	))
+	var local_route_test_position := starter_map_ship.global_position
+	starter_map_ship.set("_sailing_route_points", local_pickup_route)
+	var local_loading_start_progress: float = starter_map_ship.call(
+		"_get_local_loading_route_progress",
+		local_offer
+	)
+	starter_map_ship.global_position = local_pickup_port.global_position
+	var local_loading_end_progress: float = starter_map_ship.call(
+		"_get_local_loading_route_progress",
+		local_offer
+	)
+	assert(is_equal_approx(local_loading_start_progress, 0.0))
+	assert(local_loading_end_progress > local_loading_start_progress)
+	starter_map_ship.global_position = local_route_test_position
+	starter_map_ship.set("_sailing_route_points", PackedVector2Array())
 
 	event_bus.ship_tapped.emit(starter_ship_id)
 	await process_frame
@@ -837,14 +852,25 @@ func _run() -> void:
 		delivery_port_node.global_position
 	))
 
-	for _step in range(5):
-		if mission.stage == Mission.Stage.COMPLETED:
-			break
-		mission.leg_duration_sec = 0.0
-		await process_frame
-		await process_frame
+	mission.leg_duration_sec = 0.0
+	await process_frame
+	await process_frame
+	assert(fleet_manager.get_ship_state(starter_ship_id) \
+		== ShipRuntimeState.State.UNLOADING)
+	assert(is_equal_approx(mission.leg_duration_sec, 1.7))
+	assert(starter_map_ship.global_position.distance_to(
+		delivery_port_node.global_position
+	) < 1.0)
+	starter_map_ship.call("_update_docked_position", 0.5)
+	assert(starter_map_ship.global_position.distance_to(
+		delivery_port_node.global_position
+	) < 1.0)
+	mission.leg_duration_sec = 0.0
+	await process_frame
+	await process_frame
 
 	assert(mission.stage == Mission.Stage.COMPLETED)
+	assert(bool(starter_map_ship.get("_dock_transition_active")))
 	assert(game_manager.money == mission.get_net_reward())
 	assert(instruction_label.text.contains("Net +%d" % mission.get_net_reward()))
 	assert(instruction_label.text.contains("%d gelir" % mission.reward))

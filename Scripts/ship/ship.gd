@@ -190,8 +190,14 @@ func _update_docked_position(delta: float) -> void:
 		global_position = _initial_world_position
 		return
 	var dock_position := FleetManager.get_ship_dock_position(ship_id)
-	if dock_position == Vector2.ZERO \
-			and FleetManager.get_ship_state(ship_id) == ShipRuntimeState.State.LOADING:
+	var state := FleetManager.get_ship_state(ship_id)
+	if state == ShipRuntimeState.State.UNLOADING:
+		var mission := FleetManager.get_ship_mission(ship_id)
+		var delivery_port := PortManager.get_port_node(mission.delivery_port_id) \
+			if mission != null else null
+		if delivery_port != null:
+			dock_position = delivery_port.global_position
+	elif dock_position == Vector2.ZERO and state == ShipRuntimeState.State.LOADING:
 		var mission := FleetManager.get_ship_mission(ship_id)
 		var pickup_port := PortManager.get_port_node(mission.pickup_port_id) \
 			if mission != null else null
@@ -393,12 +399,25 @@ func _on_ship_state_changed(changed_ship_id: StringName, previous_state: int, ne
 			_smoothing_departure_turn = false
 			_sailing_route_points.clear()
 			_clear_mission_preview()
-		if new_state == ShipRuntimeState.State.UNLOADING \
-				or (new_state == ShipRuntimeState.State.LOADING \
-				and previous_state == ShipRuntimeState.State.SAILING_TO_PICKUP):
+		if new_state == ShipRuntimeState.State.UNLOADING:
+			# The route ends at the port center. Hold there while cargo is
+			# unloaded; the berth transition begins only after completion.
+			var delivery_port := PortManager.get_port_node(mission.delivery_port_id) \
+				if mission != null else null
+			if delivery_port != null:
+				global_position = delivery_port.global_position
+			_dock_transition_active = false
+		elif new_state == ShipRuntimeState.State.LOADING \
+				and previous_state == ShipRuntimeState.State.SAILING_TO_PICKUP:
 			_dock_transition_start = global_position
 			_dock_transition_elapsed = 0.0
 			_dock_transition_duration_sec = DOCK_TRANSITION_DURATION_SEC
+			_dock_transition_active = true
+		elif new_state == ShipRuntimeState.State.IDLE \
+				and previous_state == ShipRuntimeState.State.UNLOADING:
+			_dock_transition_start = global_position
+			_dock_transition_elapsed = 0.0
+			_dock_transition_duration_sec = DELIVERY_TRANSITION_DURATION_SEC
 			_dock_transition_active = true
 		_refresh_visuals()
 
@@ -555,7 +574,7 @@ func _update_route_visual(state: ShipRuntimeState.State) -> void:
 	if state == ShipRuntimeState.State.LOADING:
 		_route_line.set_route(
 			_sailing_route_points,
-			0.0,
+			_get_local_loading_route_progress(mission),
 			_is_selected
 		)
 	elif state == ShipRuntimeState.State.SAILING_TO_DELIVERY:
@@ -582,6 +601,28 @@ func _update_route_visual(state: ShipRuntimeState.State) -> void:
 		)
 	else:
 		_route_line.clear_route()
+
+
+func _get_local_loading_route_progress(mission: Mission) -> float:
+	if mission == null \
+			or mission.origin_port_id != mission.pickup_port_id \
+			or _sailing_route_points.size() < 2:
+		return 0.0
+	var pickup_port := PortManager.get_port_node(mission.pickup_port_id)
+	if pickup_port == null:
+		return 0.0
+	var total_route_length := _get_polyline_length(_sailing_route_points)
+	var local_pickup_length := _sailing_route_points[0].distance_to(
+		pickup_port.global_position
+	)
+	if total_route_length <= 0.001 or local_pickup_length <= 0.001:
+		return 0.0
+	var travelled_pickup_length := clampf(
+		local_pickup_length - global_position.distance_to(pickup_port.global_position),
+		0.0,
+		local_pickup_length
+	)
+	return travelled_pickup_length / total_route_length
 
 
 func _get_position_along_points(points: PackedVector2Array, progress: float) -> Vector2:

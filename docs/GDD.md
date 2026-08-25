@@ -395,6 +395,8 @@ oluşursa eklenir.
 - Başka limana yük almaya giden gemi mevcut liman merkezine uğramaz.
 - Yükleme limanına ulaşan gemi yuvaya oturmadan liman merkezinde bekler ve
   ardından teslimat rotasına devam eder.
+- Teslimat limanına ulaşan gemi yükünü liman merkezinde boşaltır; görünür
+  boşaltma beklemesi tamamlandıktan sonra ayrılmış yuvaya yumuşakça geçer.
 - Teslimattan sonra gemi ayrılmış boş yuvaya yumuşakça yerleşir.
 
 ## 10. Ekonomi
