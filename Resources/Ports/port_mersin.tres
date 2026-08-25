@@ -10,5 +10,6 @@ display_name = "Mersin"
 icon = ExtResource("2_icon")
 unlocked_by_default = true
 base_company_value = 200
-dock_slot_offsets = PackedVector2Array(-70, -75, 0, -95, 70, -75, -105, -140, 0, -155, 105, -140)
+dock_slot_offsets = PackedVector2Array(-70, 75, 0, 95, 70, 75, -105, 140, 0, 155, 105, 140)
+transit_offset = Vector2(0, 260)
 metadata/_custom_type_script = "uid://c7gex5obwbhbk"

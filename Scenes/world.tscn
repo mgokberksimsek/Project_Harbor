@@ -31,6 +31,8 @@
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_canakkale_istanbul.tres" id="30_route_canakkale_istanbul"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_samsun_trabzon.tres" id="31_route_samsun_trabzon"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_antalya_trabzon.tres" id="32_route_antalya_trabzon"]
+[ext_resource type="Resource" path="res://Resources/sea_routes/route_mersin_antalya.tres" id="33_route_mersin_antalya"]
+[ext_resource type="Resource" path="res://Resources/sea_routes/route_istanbul_samsun.tres" id="34_route_istanbul_samsun"]
 
 [node name="World" type="Node2D" unique_id=1405839556]
 script = ExtResource("1_world")
@@ -45,66 +47,69 @@ color = Color(0.145, 0.42, 0.72, 1)
 [node name="LandMasses" type="Node2D" parent="." unique_id=1679331096]
 z_index = -5
 
-[node name="SouthwestLand" type="Polygon2D" parent="LandMasses" unique_id=196392431]
+[node name="MainLand" type="Polygon2D" parent="LandMasses" unique_id=196392431]
+color = Color(0.4, 0.58, 0.29, 1)
+polygon = PackedVector2Array(1680, 1175, 1940, 920, 2405, 850, 2870, 960, 3255, 850, 3680, 900, 4060, 1045, 4320, 1300, 4360, 1640, 4190, 1855, 4060, 2025, 3765, 2195, 3340, 2238, 3000, 2297, 2788, 2323, 2575, 2288, 2320, 2280, 2065, 2153, 1938, 1898, 1725, 1728, 1598, 1473)
+
+[node name="IzmirIsland" type="Polygon2D" parent="LandMasses" unique_id=1103081544]
 color = Color(0.38, 0.56, 0.28, 1)
-polygon = PackedVector2Array(1050, 2120, 1350, 2020, 1500, 2050, 1650, 2140, 1740, 2500, 1600, 2800, 1100, 2800, 950, 2500)
+polygon = PackedVector2Array(1550, 2860, 1800, 2730, 2050, 2820, 2180, 3050, 2050, 3260, 1650, 3280, 1450, 3110)
 
-[node name="NorthLand" type="Polygon2D" parent="LandMasses" unique_id=1103081544]
-color = Color(0.42, 0.6, 0.3, 1)
-polygon = PackedVector2Array(1450, 900, 2350, 900, 2320, 1350, 2150, 1550, 1900, 1700, 1700, 1570, 1500, 1400)
-
-[node name="EastLand" type="Polygon2D" parent="LandMasses" unique_id=1911289241]
+[node name="WestExpansionLand" type="Polygon2D" parent="LandMasses" unique_id=1911289241]
 color = Color(0.36, 0.54, 0.27, 1)
-polygon = PackedVector2Array(2350, 2020, 2500, 1920, 3150, 2000, 3350, 2400, 3250, 2850, 2550, 2850, 2300, 2500)
+polygon = PackedVector2Array(250, 1850, 520, 1650, 820, 1700, 980, 2050, 900, 2500, 560, 2700, 250, 2500, 150, 2150)
 
-[node name="ExpansionLand" type="Polygon2D" parent="LandMasses" unique_id=1604695494]
-position = Vector2(-46, -680)
-color = Color(0.4, 0.57, 0.29, 1)
-polygon = PackedVector2Array(3420, 2050, 3700, 1920, 4200, 1980, 4500, 2260, 4480, 2920, 3500, 2920, 3280, 2500)
+[node name="NorthExpansionLand" type="Polygon2D" parent="LandMasses" unique_id=1604695494]
+color = Color(0.42, 0.6, 0.3, 1)
+polygon = PackedVector2Array(2450, 120, 2850, 60, 3250, 180, 3340, 470, 3100, 610, 2650, 570, 2350, 360)
 
-[node name="NortheastLand" type="Polygon2D" parent="LandMasses"]
+[node name="EastExpansionLand" type="Polygon2D" parent="LandMasses"]
 color = Color(0.39, 0.56, 0.28, 1)
-polygon = PackedVector2Array(4400, 1570, 4800, 1400, 5200, 1500, 5400, 1900, 5350, 2400, 4430, 2240)
+polygon = PackedVector2Array(5200, 1050, 5550, 900, 5850, 1150, 5900, 1650, 5700, 2050, 5300, 2000, 5100, 1600)
+
+[node name="SoutheastExpansionLand" type="Polygon2D" parent="LandMasses"]
+color = Color(0.37, 0.55, 0.28, 1)
+polygon = PackedVector2Array(3950, 3000, 4300, 2800, 4850, 2850, 5250, 3100, 5100, 3450, 4150, 3450, 3850, 3250)
 
 [node name="CompanyHeadquarters" parent="." unique_id=536382575 instance=ExtResource("18_headquarters")]
-position = Vector2(1200, 2185)
+position = Vector2(3085, 2153)
 
 [node name="Ports" type="Node2D" parent="." unique_id=1320507721]
 
 [node name="Mersin" parent="Ports" unique_id=643857306 instance=ExtResource("2_port")]
-position = Vector2(1500, 2050)
+position = Vector2(2788, 2323)
 port_data = ExtResource("4_mersin")
 
 [node name="Izmir" parent="Ports" unique_id=2146219901 instance=ExtResource("2_port")]
-position = Vector2(1900, 1700)
+position = Vector2(1800, 2730)
 port_data = ExtResource("5_izmir")
 
 [node name="Istanbul" parent="Ports" unique_id=790530954 instance=ExtResource("2_port")]
-position = Vector2(2350, 2020)
+position = Vector2(1680, 1175)
 port_data = ExtResource("6_istanbul")
 
 [node name="Antalya" parent="Ports" unique_id=2006326562 instance=ExtResource("2_port")]
-position = Vector2(3374, 1370)
+position = Vector2(2320, 2280)
 port_data = ExtResource("19_antalya")
 
 [node name="Samsun" parent="Ports" unique_id=289815167 instance=ExtResource("2_port")]
-position = Vector2(4154, 1300)
+position = Vector2(3255, 850)
 port_data = ExtResource("20_samsun")
 
 [node name="Canakkale" parent="Ports" instance=ExtResource("2_port")]
-position = Vector2(2180, 1515)
+position = Vector2(1725, 1728)
 port_data = ExtResource("27_canakkale")
 
 [node name="Trabzon" parent="Ports" instance=ExtResource("2_port")]
-position = Vector2(4800, 1400)
+position = Vector2(4060, 1045)
 port_data = ExtResource("28_trabzon")
 
 [node name="SeaRoutes" type="Node" parent="." unique_id=156795111]
 script = ExtResource("13_route_registry")
-routes = Array[ExtResource("17_route_data")]([ExtResource("14_route_mersin_izmir"), ExtResource("15_route_izmir_istanbul"), ExtResource("16_route_mersin_istanbul"), ExtResource("21_route_izmir_antalya"), ExtResource("22_route_istanbul_antalya"), ExtResource("23_route_antalya_samsun"), ExtResource("24_route_mersin_samsun"), ExtResource("29_route_izmir_canakkale"), ExtResource("30_route_canakkale_istanbul"), ExtResource("31_route_samsun_trabzon"), ExtResource("32_route_antalya_trabzon")])
+routes = Array[ExtResource("17_route_data")]([ExtResource("14_route_mersin_izmir"), ExtResource("15_route_izmir_istanbul"), ExtResource("16_route_mersin_istanbul"), ExtResource("21_route_izmir_antalya"), ExtResource("22_route_istanbul_antalya"), ExtResource("23_route_antalya_samsun"), ExtResource("24_route_mersin_samsun"), ExtResource("29_route_izmir_canakkale"), ExtResource("30_route_canakkale_istanbul"), ExtResource("31_route_samsun_trabzon"), ExtResource("32_route_antalya_trabzon"), ExtResource("33_route_mersin_antalya"), ExtResource("34_route_istanbul_samsun")])
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1288995194]
-position = Vector2(1950, 1900)
+position = Vector2(2450, 2500)
 zoom = Vector2(0.65, 0.65)
 script = ExtResource("12_world_camera")
 

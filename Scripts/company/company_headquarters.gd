@@ -10,8 +10,17 @@ const WINDOW_SIZE := Vector2(34.0, 28.0)
 const WINDOW_COLOR := Color(0.38, 0.72, 0.86, 1.0)
 const PIER_WIDTHS: Array[float] = [28.0, 32.0, 36.0, 40.0]
 const PIER_CONNECTION_Y := 25.0
-const PIER_MIDDLE_OFFSET := Vector2(55.0, -70.0)
-const PIER_DELIVERY_POSITION := Vector2(155.0, -180.0)
+const PIER_MIDDLE_OFFSET := Vector2(55.0, 70.0)
+const PIER_DELIVERY_POSITION := Vector2(155.0, 180.0)
+const DELIVERY_SLOT_OFFSETS: Array[Vector2] = [
+	Vector2.ZERO,
+	Vector2(-70.0, 45.0),
+	Vector2(70.0, 45.0),
+	Vector2(-140.0, 90.0),
+	Vector2(0.0, 90.0),
+	Vector2(140.0, 90.0),
+]
+const DELIVERY_APPROACH_OFFSET := Vector2(0.0, 180.0)
 
 @onready var _delivery_berth: Marker2D = $DeliveryBerth
 @onready var _label: Label = $Label
@@ -34,8 +43,13 @@ func _ready() -> void:
 	_refresh_label()
 
 
-func get_delivery_position() -> Vector2:
-	return _delivery_berth.global_position
+func get_delivery_position(slot_index: int = 0) -> Vector2:
+	var safe_slot_index := clampi(slot_index, 0, DELIVERY_SLOT_OFFSETS.size() - 1)
+	return _delivery_berth.global_position + DELIVERY_SLOT_OFFSETS[safe_slot_index]
+
+
+func get_delivery_approach_position(slot_index: int = 0) -> Vector2:
+	return get_delivery_position(slot_index) + DELIVERY_APPROACH_OFFSET
 
 
 func get_visual_tier() -> int:

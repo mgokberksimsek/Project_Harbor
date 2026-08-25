@@ -211,11 +211,28 @@ func get_route_points(
 		)
 		if edge_points.size() < 2:
 			return PackedVector2Array()
+		# Intermediate ports are graph junctions, not gameplay stops. Replace
+		# their center points with authored open-water transit points so a long
+		# route can reuse sea corridors without appearing to visit each port.
+		if path_index > 0:
+			edge_points[0] = get_route_transit_position(port_path[path_index])
+		if path_index < port_path.size() - 2:
+			edge_points[edge_points.size() - 1] = get_route_transit_position(
+				port_path[path_index + 1]
+			)
 		for point_index in range(edge_points.size()):
 			if path_index > 0 and point_index == 0:
 				continue
 			points.append(edge_points[point_index])
 	return points
+
+
+func get_route_transit_position(port_id: StringName) -> Vector2:
+	var port_node := get_port_node(port_id)
+	var port_data := get_port_data(port_id)
+	if port_node == null or port_data == null:
+		return Vector2.ZERO
+	return port_node.global_position + port_data.transit_offset
 
 
 func _get_direct_route_points(
@@ -247,22 +264,7 @@ func get_smoothed_route_points(
 		port_a_id: StringName,
 		port_b_id: StringName
 ) -> PackedVector2Array:
-	var port_path := get_route_port_path(port_a_id, port_b_id)
-	if port_path.size() < 2:
-		return PackedVector2Array()
-	var points := PackedVector2Array()
-	for path_index in range(port_path.size() - 1):
-		var edge_points := smooth_polyline_points(_get_direct_route_points(
-			port_path[path_index],
-			port_path[path_index + 1]
-		))
-		if edge_points.size() < 2:
-			return PackedVector2Array()
-		for point_index in range(edge_points.size()):
-			if path_index > 0 and point_index == 0:
-				continue
-			points.append(edge_points[point_index])
-	return points
+	return smooth_polyline_points(get_route_points(port_a_id, port_b_id))
 
 
 func smooth_polyline_points(

@@ -62,11 +62,13 @@ açıklanabilen bir karar katıyorsa eklenir. Gerçekçilik uğruna zorunlu seya
 bekleme, tekrarlanan bakım veya gereksiz mikro yönetim oluşturulmaz. Aynı amacı
 daha az adımla karşılayan çözüm her zaman tercih edilir.
 
-Yeni satın alınan gemiler şirket merkezinin teslimat iskelesinde görünür ve
-ayrılmış liman yuvasına kısa bir tanıtım hareketiyle geçer. Oyuncu ilk gemisini
-öğreticinin ilk adımında satın alır; gemi şirket merkezinde görünerek aynı
-teslimat akışını izler. Bu yalnızca görsel bir teslimat akışıdır; oyuncuya ek
-işlem veya bekleme yüklemez.
+Yeni satın alınan gemiler şirket merkezinin açık deniz tarafında belirir,
+teslimat iskelesindeki boş bir yuvaya kısa bir yanaşma hareketi yapar ve ilk
+görevlerini alana kadar burada bekler. Oyuncu ilk gemisini
+öğreticinin ilk adımında satın alır; başlangıç gemisi de aynı merkez akışını
+izler. Görev seçildiğinde gemi merkezden yumuşakça ayrılır ve ilk yük limanına
+normal rota hızıyla gider. Bu yalnızca görsel bir teslimat akışıdır; oyuncuya
+ek işlem veya bekleme yüklemez.
 
 ### 2.6 Şirket büyütme hissi
 
@@ -115,9 +117,8 @@ Mevcut prototipte oyuncu:
 - Sıfır gemiyle başlar.
 - Başlangıç yük gemisini satın almaya tam yetecek 500 TL'ye sahiptir.
 - Mersin ve İzmir limanları açık başlar.
-- İstanbul kilitlidir.
-- Antalya, Şirket Seviyesi 3; Samsun ise Şirket Seviyesi 4 genişleme
-  hedefi olarak kilitlidir.
+- Yeni harita yerleşimindeki ilk genişleme hedefi Antalya'dır. Ardından
+  Çanakkale, İstanbul, Samsun ve Trabzon açılarak ağ yakından uzağa büyür.
 - İlk gemiyi satın aldıktan sonra kasası sıfırlanır ve ilk yeni parasını
   görevlerden kazanır.
 - Bir gemi seçildiğinde o gemiye ait üç görev teklifi görür.
@@ -190,9 +191,28 @@ açıldıkça mesafeleri ve rota karmaşıklığını kademeli artırmalıdır.
 İlk bölgesel ağ Türkiye kıyılarındaki limanlarla büyür; daha sonraki uzak bölge
 genişlemelerinde yabancı limanlar kullanılarak yeni bir ölçek duygusu yaratılır.
 
-İlk prototip genişlemesinde Antalya `1.500 ₺` karşılığında `800 CV`, Samsun
-ise `2.600 ₺` karşılığında `1.200 CV` şirket varlığı kazandırır. Bu değerler
-nihai ekonomi dengesi değildir; seviye ve bölge akışını test etmek içindir.
+Başlangıç kompozisyonunda Mersin ve şirket merkezi büyük ana karanın güney
+kıyısında, İzmir ise ana karaya yakın ayrı bir adanın kıyısında bulunur. Antalya
+ilk genişleme hedefi olarak aynı başlangıç görünümünde kalır. Böylece ilk kısa
+rotalar anlaşılır olurken oyuncu daha ilk dakikada ada ile ana kara arasında
+taşımacılık yaptığını görür.
+
+Dış bölgelerdeki kara parçalarının bazıları ileride daha büyük adalar halinde
+birleştirilebilir. Haritada az sayıda doğal dar boğaz bırakılması, ileri oyunda
+satın alınabilen kanal yatırımlarına alan sağlar. Kanal açıldığında daha kısa
+deniz koridorları kullanılabilmelidir; bu özellik ilk harita yerleşiminin değil,
+ilerideki altyapı ilerlemesinin parçasıdır.
+
+Prototip genişleme sırası ve mevcut test paketleri şöyledir:
+
+- Antalya: Şirket Sv. 1, `750 ₺`, `500 CV`.
+- Çanakkale: Şirket Sv. 3, `1.500 ₺`, `800 CV`.
+- İstanbul: Şirket Sv. 4, `2.600 ₺`, `1.200 CV`.
+- Samsun: Şirket Sv. 5, `4.200 ₺`, `2.000 CV`.
+- Trabzon: Şirket Sv. 6, `6.500 ₺`, `3.000 CV`.
+
+Bu değerler nihai ekonomi dengesi değildir; mevcut haritada yakından uzağa
+genişleme ve Company Level akışını test etmek içindir.
 
 ## 6. Limanlar
 
@@ -353,8 +373,9 @@ Görevler ileride kısa, orta ve uzun olarak dengelenecektir:
 - **Orta:** Gelişmiş oyuncunun birkaç gemiyi paralel yönetmesi için.
 - **Uzun:** Uygulama kapalıyken de ilerleyen ileri oyun görevleri için.
 
-Prototipte yolculuk ve liman süreleri testleri hızlandırmak amacıyla bilerek
-çok kısadır. Bu sayılar nihai denge değildir.
+Prototipte başlangıç rotaları yaklaşık yarım dakika sürerken mevcut haritanın
+uzak bölgesel rotaları yaklaşık bir dakikaya yaklaşır. Bu sayılar
+testleri hızlandırmaya devam eder ve nihai denge değildir.
 
 Aynı gemiyle aynı yükü aynı iki liman arasında taşıyan görevin süresi yalnızca
 şirket büyüdüğü için artmaz. Şirket ilerlemesi daha uzak bölgeleri ve daha uzun
@@ -380,13 +401,26 @@ oluşursa eklenir.
 
 ## 9. Rota, hareket ve liman animasyonları
 
-- Deniz rotaları hafif kavisli ve birbirinden farklı biçimlerde olmalıdır.
+- Deniz rotaları düz bağlantılar olmamalıdır. Kimi koridorlar geniş yaylar,
+  kimileri ise birden fazla yön değiştiren yumuşak S-kıvrımları kullanmalıdır.
 - Gemiler, yükleme ve teslimat limanları arasında tanımlı deniz koridorlarının
-  oynanış mesafesine göre en kısa birleşimini kullanır. Ara limanlardan yükleme
-  veya duraklama yapmadan geçer; birleşik rota tek parça olarak gösterilir.
+  oynanış mesafesine göre en kısa birleşimini kullanır. Bağlantı noktası olan
+  ara limanların merkezine girmez; limanın açık deniz tarafındaki geçiş
+  noktasını kullanır. Birleşik rota tek parça olarak gösterilir.
 - Bütün kayıtlı rotaların yumuşatılmış merkez çizgileri, geliştirme testlerinde
-  tüm kara poligonlarına karşı otomatik olarak doğrulanır.
+  tüm kara poligonlarına karşı otomatik olarak doğrulanır. Doğrulama doğrudan
+  koridorların yanında bütün liman çiftlerinden oluşan birleşik rotaları da
+  kapsar. Aynı testler rota ağının düz çizgilere dönüşmemesini ve birden fazla
+  S-kıvrımı içermesini korur.
+- Görev süresi, gelir ve işletme masrafında kullanılan rota mesafeleri görsel
+  deniz koridorlarının algılanan uzunluk sırasıyla tutarlı olmalıdır. Harita
+  yerleşimi değiştiğinde eski mesafe değerleri yeni konumlara göre yeniden
+  dengelenir; süre formülü ayrıca değiştirilmez.
 - Tam görev rotası kırmızı, kesikli bir çizgiyle gösterilir.
+- Boş konumlanma ve yüklü dönüş etapları aynı koridoru ters yönlerde
+  kullanıyorsa iki etap denizde hafif paralel şeritlere ayrılır. Şeritler liman
+  merkezlerinde birleşir ve gemi gösterilen şeridi gerçekten izler; böylece
+  üst üste gelen kesikler düz bir çizgiye dönüşmez.
 - Gemi ilerledikçe geçtiği çizgi parçaları kaybolur; ilerideki parçalar yerinde
   kalır ve gemiye doğru kaymaz.
 - Geminin burnu hareket ettiği rotanın teğetine hizalanır.

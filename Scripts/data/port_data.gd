@@ -44,6 +44,11 @@ extends Resource
 ## ship id, so slot indexes never need to enter save data.
 @export var dock_slot_offsets: PackedVector2Array = PackedVector2Array()
 
+## Local open-water point used only when a connected route passes this port
+## without stopping. This keeps transit traffic out of the port center while
+## still letting authored sea corridors form a scalable network.
+@export var transit_offset: Vector2 = Vector2.ZERO
+
 
 ## Returns the cost to upgrade from current_level to current_level + 1,
 ## or -1 if no further upgrade is defined for this port.

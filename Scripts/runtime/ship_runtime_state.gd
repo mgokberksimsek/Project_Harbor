@@ -21,6 +21,12 @@ var speed_level: int = 0
 var capacity_level: int = 0
 var automation_unlocked: bool = false
 var automation_enabled: bool = false
+## Newly purchased ships wait at the company headquarters until their first
+## mission. Older saves omit this field and continue from their saved port.
+var awaiting_headquarters_dispatch: bool = false
+## True only during the first pickup leg after leaving headquarters. Persisted
+## so reopening the game can rebuild that leg from the headquarters berth.
+var headquarters_dispatch_active: bool = false
 var state: State = State.IDLE
 
 ## The port this ship is currently docked at (when IDLE/LOADING/UNLOADING)
@@ -49,6 +55,8 @@ func to_dict() -> Dictionary:
 		"capacity_level": capacity_level,
 		"automation_unlocked": automation_unlocked,
 		"automation_enabled": automation_enabled,
+		"awaiting_headquarters_dispatch": awaiting_headquarters_dispatch,
+		"headquarters_dispatch_active": headquarters_dispatch_active,
 		"state": state,
 		"current_port_id": String(current_port_id),
 		"dock_port_id": String(dock_port_id),
@@ -67,7 +75,15 @@ static func from_dict(data: Dictionary) -> ShipRuntimeState:
 	s.automation_unlocked = bool(data.get("automation_unlocked", false))
 	s.automation_enabled = s.automation_unlocked \
 		and bool(data.get("automation_enabled", false))
+	s.awaiting_headquarters_dispatch = bool(
+		data.get("awaiting_headquarters_dispatch", false)
+	)
+	s.headquarters_dispatch_active = bool(
+		data.get("headquarters_dispatch_active", false)
+	)
 	s.state = data.get("state", State.IDLE) as State
+	s.headquarters_dispatch_active = s.headquarters_dispatch_active \
+		and s.state == State.SAILING_TO_PICKUP
 	s.current_port_id = StringName(data.get("current_port_id", ""))
 	# Older saves have no berth fields. FleetManager assigns their first free
 	# berth after all ships have been restored.

@@ -21,8 +21,14 @@ extends Node
 const LOADING_DURATION_SEC := 1.7
 const UNLOADING_DURATION_SEC := 1.7
 const MIN_SAILING_DURATION_SEC := 2.0
-## Converts operating distance and ship speed into test-friendly seconds.
-const SAILING_DURATION_SCALE := 6.0
+## Converts operating distance and ship speed into prototype mission seconds.
+## The current value keeps the first route under half a minute while allowing
+## the far side of the regional map to approach a full minute.
+const SAILING_DURATION_SCALE := 10.0
+## The headquarters sits outside the port graph, so its first departure uses a
+## short authored duration instead of pretending that the ship already starts
+## inside its home port.
+const HEADQUARTERS_DISPATCH_DURATION_SEC := 8.0
 const SHIP_RESOURCE_DIR := "res://Resources/ships"
 const BASE_FLEET_CAPACITY := 6
 const MIN_SHIP_NAME_LENGTH := 2
@@ -102,6 +108,16 @@ func get_ship_current_port(ship_id: StringName) -> StringName:
 	if not _states.has(ship_id):
 		return &""
 	return _states[ship_id].current_port_id
+
+
+func is_awaiting_headquarters_dispatch(ship_id: StringName) -> bool:
+	return _states.has(ship_id) \
+		and _states[ship_id].awaiting_headquarters_dispatch
+
+
+func is_headquarters_dispatch_active(ship_id: StringName) -> bool:
+	return _states.has(ship_id) \
+		and _states[ship_id].headquarters_dispatch_active
 
 
 func get_ship_dock_slot_index(ship_id: StringName) -> int:
@@ -512,6 +528,7 @@ func purchase_ship(model_id: StringName, home_port_id: StringName) -> StringName
 	state.model_id = model_id
 	state.ship_name = _generate_unique_ship_name()
 	state.current_port_id = home_port_id
+	state.awaiting_headquarters_dispatch = true
 	state.state = ShipRuntimeState.State.IDLE
 	_states[ship_id] = state
 	_data[ship_id] = ship_data
@@ -601,7 +618,10 @@ func estimate_mission_duration(
 		delivery_port_id,
 		maxi(cargo_amount, 1)
 	)
-	return pickup_sailing_duration \
+	var headquarters_dispatch_duration := HEADQUARTERS_DISPATCH_DURATION_SEC \
+		if is_awaiting_headquarters_dispatch(ship_id) else 0.0
+	return headquarters_dispatch_duration \
+		+ pickup_sailing_duration \
 		+ actual_loading_duration \
 		+ delivery_sailing_duration \
 		+ UNLOADING_DURATION_SEC
@@ -643,9 +663,21 @@ func assign_mission(ship_id: StringName, mission: Mission) -> bool:
 		push_warning("Ship '%s' is not idle, cannot assign a new mission." % ship_id)
 		return false
 
+	var headquarters_dispatch_duration := HEADQUARTERS_DISPATCH_DURATION_SEC \
+		if state.awaiting_headquarters_dispatch else 0.0
+	state.headquarters_dispatch_active = state.awaiting_headquarters_dispatch
+	state.awaiting_headquarters_dispatch = false
 	state.current_mission = mission
 	mission.assigned_ship_id = ship_id
-	_start_leg(ship_id, ShipRuntimeState.State.SAILING_TO_PICKUP, state.current_port_id, mission.pickup_port_id)
+	_start_leg(
+		ship_id,
+		ShipRuntimeState.State.SAILING_TO_PICKUP,
+		state.current_port_id,
+		mission.pickup_port_id,
+		-1.0,
+		-1.0,
+		headquarters_dispatch_duration
+	)
 	return true
 
 
@@ -669,6 +701,7 @@ func _advance_state(
 
 	match state.state:
 		ShipRuntimeState.State.SAILING_TO_PICKUP:
+			state.headquarters_dispatch_active = false
 			var loading_duration := mission.loading_duration_sec
 			if loading_duration <= 0.0:
 				loading_duration = get_mission_loading_duration(
@@ -706,7 +739,8 @@ func _advance_state(
 ## unloading) pass forced_duration_sec instead of relying on distance.
 func _start_leg(ship_id: StringName, new_state: ShipRuntimeState.State,
 		from_port_id: StringName, to_port_id: StringName,
-		forced_duration_sec: float = -1.0, leg_start_unix: float = -1.0) -> void:
+		forced_duration_sec: float = -1.0, leg_start_unix: float = -1.0,
+		extra_duration_sec: float = 0.0) -> void:
 	var state: ShipRuntimeState = _states[ship_id]
 	var mission: Mission = state.current_mission
 
@@ -722,6 +756,7 @@ func _start_leg(ship_id: StringName, new_state: ShipRuntimeState.State,
 			to_port_id,
 			cargo_amount
 		)
+	duration += maxf(extra_duration_sec, 0.0)
 
 	mission.stage = _state_to_mission_stage(new_state)
 	mission.start_leg(duration, leg_start_unix)

@@ -134,6 +134,7 @@ func _ready() -> void:
 	EventBus.port_tapped.connect(_on_port_tapped)
 	EventBus.ship_purchased.connect(_on_ship_purchased)
 	EventBus.ship_tapped.connect(_on_ship_tapped)
+	EventBus.ship_dock_slot_changed.connect(_on_ship_dock_slot_changed)
 	EventBus.ship_speed_upgraded.connect(_on_ship_speed_upgraded)
 	EventBus.ship_capacity_upgraded.connect(_on_ship_capacity_upgraded)
 	EventBus.ship_automation_changed.connect(_on_ship_automation_changed)
@@ -776,12 +777,14 @@ func _on_ship_purchased(
 		ship_data: ShipData,
 		home_port_id: StringName
 ) -> void:
+	var delivery_position := _get_headquarters_delivery_position(ship_id)
 	_spawn_ship(
 		ship_id,
 		ship_data,
 		home_port_id,
-		_company_headquarters.get_delivery_position(),
-		true
+		_get_headquarters_delivery_approach_position(ship_id),
+		true,
+		delivery_position
 	)
 	if not _update_tutorial_instruction():
 		_instruction_label.text = tr("INSTRUCTION_SHIP_JOINED") % \
@@ -797,14 +800,30 @@ func _on_game_loaded() -> void:
 	if SaveManager.loaded_existing_save:
 		for existing_ship_id in FleetManager.get_all_ship_ids():
 			var existing_ship := FleetManager.get_ship_node(existing_ship_id) as Ship
-			if existing_ship != null:
+			if existing_ship == null:
+				continue
+			if FleetManager.is_awaiting_headquarters_dispatch(existing_ship_id):
+				existing_ship.hold_at_world_position(
+					_get_headquarters_delivery_position(existing_ship_id)
+				)
+			else:
 				existing_ship.clear_initial_world_position_override()
 	for ship_id in FleetManager.get_all_ship_ids():
 		if FleetManager.get_ship_node(ship_id) != null:
 			continue
 		var ship_data := FleetManager.get_ship_data(ship_id)
 		var home_port_id := FleetManager.get_ship_current_port(ship_id)
-		_spawn_ship(ship_id, ship_data, home_port_id)
+		var awaiting_dispatch := FleetManager.is_awaiting_headquarters_dispatch(ship_id)
+		var dispatch_active := FleetManager.is_headquarters_dispatch_active(ship_id)
+		var headquarters_position := _get_headquarters_delivery_position(ship_id)
+		_spawn_ship(
+			ship_id,
+			ship_data,
+			home_port_id,
+			headquarters_position,
+			awaiting_dispatch or dispatch_active,
+			headquarters_position if awaiting_dispatch else Vector2.ZERO
+		)
 	_update_money(GameManager.money)
 	_update_company_progress()
 	_update_next_goal()
@@ -846,7 +865,8 @@ func _spawn_ship(
 		ship_data: ShipData,
 		home_port_id: StringName,
 		initial_world_position := Vector2.ZERO,
-		use_initial_world_position := false
+		use_initial_world_position := false,
+		headquarters_berth_position := Vector2.ZERO
 ) -> void:
 	if FleetManager.get_ship_node(ship_id) != null:
 		return
@@ -860,8 +880,39 @@ func _spawn_ship(
 	ship.ship_data = ship_data
 	ship.home_port_id = home_port_id
 	if use_initial_world_position:
-		ship.set_initial_world_position(initial_world_position)
+		if headquarters_berth_position != Vector2.ZERO:
+			ship.set_headquarters_delivery(
+				initial_world_position,
+				headquarters_berth_position
+			)
+		else:
+			ship.set_initial_world_position(initial_world_position)
 	add_child(ship)
+
+
+func _get_headquarters_delivery_position(ship_id: StringName) -> Vector2:
+	return _company_headquarters.get_delivery_position(
+		FleetManager.get_ship_dock_slot_index(ship_id)
+	)
+
+
+func _get_headquarters_delivery_approach_position(ship_id: StringName) -> Vector2:
+	return _company_headquarters.get_delivery_approach_position(
+		FleetManager.get_ship_dock_slot_index(ship_id)
+	)
+
+
+func _on_ship_dock_slot_changed(
+		ship_id: StringName,
+		_port_id: StringName,
+		_previous_slot_index: int,
+		_new_slot_index: int
+) -> void:
+	if not FleetManager.is_awaiting_headquarters_dispatch(ship_id):
+		return
+	var ship := FleetManager.get_ship_node(ship_id) as Ship
+	if ship != null:
+		ship.hold_at_world_position(_get_headquarters_delivery_position(ship_id))
 
 
 func _refresh_fleet_panel() -> void:
@@ -875,9 +926,11 @@ func _refresh_fleet_panel() -> void:
 		var remaining_sec := FleetManager.get_ship_mission_remaining_sec(ship_id)
 		var has_mission := mission != null
 		var progress := 0.0
-		var route_text := tr("AT_PORT") % _translated_port_name(
-			FleetManager.get_ship_current_port(ship_id)
-		)
+		var route_text := tr("COMPANY_HEADQUARTERS") \
+			if FleetManager.is_awaiting_headquarters_dispatch(ship_id) \
+			else tr("AT_PORT") % _translated_port_name(
+				FleetManager.get_ship_current_port(ship_id)
+			)
 		var cargo_text := tr("NO_CARGO")
 		if mission != null:
 			var total_duration := maxf(mission.estimated_duration_sec, 0.001)
