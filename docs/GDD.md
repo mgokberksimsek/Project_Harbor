@@ -214,6 +214,7 @@ Prototip genişleme sırası ve mevcut test paketleri şöyledir:
 - Samsun: Şirket Sv. 5, `4.200 ₺`, `2.000 CV`.
 - Trabzon: Şirket Sv. 6, `6.500 ₺`, `3.000 CV`.
 - Pire: Şirket Sv. 7, `8.500 ₺`, `4.200 CV`.
+- Varna: Şirket Sv. 8, `11.000 ₺`, `5.500 CV`.
 
 Bu değerler nihai ekonomi dengesi değildir; mevcut haritada yakından uzağa
 genişleme ve Company Level akışını test etmek içindir.
@@ -722,7 +723,8 @@ veri dosyaları üzerinden tanımlanmalıdır.
 
 Prototipte bulunan içerik:
 
-- Limanlar: Mersin, İzmir, İstanbul, Antalya, Samsun, Çanakkale, Trabzon ve Pire.
+- Limanlar: Mersin, İzmir, İstanbul, Antalya, Samsun, Çanakkale, Trabzon, Pire
+  ve Varna.
 - Kargolar: Konteyner, Metal, Makine Parçaları, Gıda ve Tahıl.
 - Ana gemiler: Başlangıç yük gemisi, soğutmalı yük gemisi ve dökme yük gemisi.
 

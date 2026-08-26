@@ -36,6 +36,9 @@
 [ext_resource type="Resource" path="res://Resources/Ports/port_pire.tres" id="35_pire"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_pire_izmir.tres" id="36_route_pire_izmir"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_pire_canakkale.tres" id="37_route_pire_canakkale"]
+[ext_resource type="Resource" path="res://Resources/Ports/port_varna.tres" id="38_varna"]
+[ext_resource type="Resource" path="res://Resources/sea_routes/route_varna_istanbul.tres" id="39_route_varna_istanbul"]
+[ext_resource type="Resource" path="res://Resources/sea_routes/route_varna_samsun.tres" id="40_route_varna_samsun"]
 
 [node name="World" type="Node2D" unique_id=1405839556]
 script = ExtResource("1_world")
@@ -113,9 +116,13 @@ port_data = ExtResource("28_trabzon")
 position = Vector2(900, 2500)
 port_data = ExtResource("35_pire")
 
+[node name="Varna" parent="Ports" instance=ExtResource("2_port")]
+position = Vector2(2850, 588)
+port_data = ExtResource("38_varna")
+
 [node name="SeaRoutes" type="Node" parent="." unique_id=156795111]
 script = ExtResource("13_route_registry")
-routes = Array[ExtResource("17_route_data")]([ExtResource("14_route_mersin_izmir"), ExtResource("15_route_izmir_istanbul"), ExtResource("16_route_mersin_istanbul"), ExtResource("21_route_izmir_antalya"), ExtResource("22_route_istanbul_antalya"), ExtResource("23_route_antalya_samsun"), ExtResource("24_route_mersin_samsun"), ExtResource("29_route_izmir_canakkale"), ExtResource("30_route_canakkale_istanbul"), ExtResource("31_route_samsun_trabzon"), ExtResource("32_route_antalya_trabzon"), ExtResource("33_route_mersin_antalya"), ExtResource("34_route_istanbul_samsun"), ExtResource("36_route_pire_izmir"), ExtResource("37_route_pire_canakkale")])
+routes = Array[ExtResource("17_route_data")]([ExtResource("14_route_mersin_izmir"), ExtResource("15_route_izmir_istanbul"), ExtResource("16_route_mersin_istanbul"), ExtResource("21_route_izmir_antalya"), ExtResource("22_route_istanbul_antalya"), ExtResource("23_route_antalya_samsun"), ExtResource("24_route_mersin_samsun"), ExtResource("29_route_izmir_canakkale"), ExtResource("30_route_canakkale_istanbul"), ExtResource("31_route_samsun_trabzon"), ExtResource("32_route_antalya_trabzon"), ExtResource("33_route_mersin_antalya"), ExtResource("34_route_istanbul_samsun"), ExtResource("36_route_pire_izmir"), ExtResource("37_route_pire_canakkale"), ExtResource("39_route_varna_istanbul"), ExtResource("40_route_varna_samsun")])
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1288995194]
 position = Vector2(2450, 2500)

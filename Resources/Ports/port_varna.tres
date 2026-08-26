@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="PortData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/data/port_data.gd" id="1_port_data"]
+[ext_resource type="Texture2D" path="res://Assets/Sprites/Ports/tile_18.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_port_data")
+id = &"varna"
+display_name = "Varna"
+description = "Kuzey adasını bölgesel ağa bağlayan uzak Karadeniz ticaret limanı."
+icon = ExtResource("2_icon")
+base_unlock_cost = 11000
+base_company_value = 5500
+required_company_level = 8
+economic_tier = 4
+upgrade_company_values = Array[int]([2300, 3800])
+level_upgrade_costs = Array[int]([8500, 17000])
+level_reward_multipliers = Array[float]([1.0, 1.08, 1.16])
+level_handling_duration_multipliers = Array[float]([1.0, 0.8, 0.6])
+dock_slot_offsets = PackedVector2Array(-80, 70, 0, 95, 80, 70, -120, 135, 0, 155, 120, 135)
+transit_offset = Vector2(0, 200)
