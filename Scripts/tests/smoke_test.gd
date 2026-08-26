@@ -527,20 +527,20 @@ func _run() -> void:
 	assert(world_camera.limit_left < 0)
 	assert(world_camera.zoom.x < WorldCamera.MIN_ZOOM)
 	assert(world_camera.position.is_equal_approx(WorldCamera.WORLD_SIZE * 0.5))
-	var cinematic_visible_size := get_root().get_viewport().get_visible_rect().size \
+	var cinematic_visible_size: Vector2 = get_root().get_viewport().get_visible_rect().size \
 		/ world_camera.zoom.x
 	assert(cinematic_visible_size.x >= WorldCamera.WORLD_SIZE.x)
 	assert(cinematic_visible_size.y >= WorldCamera.WORLD_SIZE.y)
 	var ocean_background := world.get_node("Ocean") as ColorRect
-	var cinematic_top_left := world_camera.position - cinematic_visible_size * 0.5
-	var cinematic_bottom_right := world_camera.position + cinematic_visible_size * 0.5
+	var cinematic_top_left: Vector2 = world_camera.position - cinematic_visible_size * 0.5
+	var cinematic_bottom_right: Vector2 = world_camera.position + cinematic_visible_size * 0.5
 	assert(ocean_background.position.x <= cinematic_top_left.x)
 	assert(ocean_background.position.y <= cinematic_top_left.y)
 	assert(ocean_background.position.x + ocean_background.size.x \
 		>= cinematic_bottom_right.x)
 	assert(ocean_background.position.y + ocean_background.size.y \
 		>= cinematic_bottom_right.y)
-	var cinematic_position := world_camera.position
+	var cinematic_position: Vector2 = world_camera.position
 	world_camera.pan_by_screen_delta(Vector2(200.0, 0.0))
 	assert(world_camera.position.is_equal_approx(cinematic_position))
 	world_camera.call("_exit_cinematic_overview")
@@ -667,11 +667,11 @@ func _run() -> void:
 	return_corridor_probe.origin_port_id = &"mersin"
 	return_corridor_probe.pickup_port_id = &"izmir"
 	return_corridor_probe.delivery_port_id = &"mersin"
-	var outbound_centerline := port_manager.get_smoothed_route_points(
+	var outbound_centerline: PackedVector2Array = port_manager.get_smoothed_route_points(
 		&"mersin",
 		&"izmir"
 	)
-	var return_centerline := port_manager.get_smoothed_route_points(
+	var return_centerline: PackedVector2Array = port_manager.get_smoothed_route_points(
 		&"izmir",
 		&"mersin"
 	)
@@ -686,9 +686,13 @@ func _run() -> void:
 		return_corridor_probe
 	)
 	assert(outbound_lane[0].is_equal_approx(outbound_centerline[0]))
-	assert(outbound_lane.back().is_equal_approx(outbound_centerline.back()))
+	assert(outbound_lane[outbound_lane.size() - 1].is_equal_approx(
+		outbound_centerline[outbound_centerline.size() - 1]
+	))
 	assert(return_lane[0].is_equal_approx(return_centerline[0]))
-	assert(return_lane.back().is_equal_approx(return_centerline.back()))
+	assert(return_lane[return_lane.size() - 1].is_equal_approx(
+		return_centerline[return_centerline.size() - 1]
+	))
 	assert(outbound_lane.size() == return_lane.size())
 	var maximum_return_lane_separation := 0.0
 	for lane_index in range(1, outbound_lane.size() - 1):
@@ -838,6 +842,26 @@ func _run() -> void:
 	var two_unit_reward: int = economy_manager.calculate_mission_reward(
 		&"mersin", &"izmir", container_cargo, 2
 	)
+	var starting_port_multiplier: float = economy_manager.call(
+		"_get_port_pair_reward_multiplier",
+		&"mersin",
+		&"izmir"
+	)
+	var first_expansion_multiplier: float = economy_manager.call(
+		"_get_port_pair_reward_multiplier",
+		&"mersin",
+		&"antalya"
+	)
+	var late_region_multiplier: float = economy_manager.call(
+		"_get_port_pair_reward_multiplier",
+		&"mersin",
+		&"trabzon"
+	)
+	assert(is_equal_approx(starting_port_multiplier, 1.0))
+	assert(is_equal_approx(first_expansion_multiplier, 1.04))
+	assert(is_equal_approx(late_region_multiplier, 1.125))
+	assert(first_expansion_multiplier > starting_port_multiplier)
+	assert(late_region_multiplier > first_expansion_multiplier)
 	var extra_unit_reward_ratio := float(two_unit_reward) / float(one_unit_reward)
 	assert(extra_unit_reward_ratio >= 1.24 and extra_unit_reward_ratio <= 1.26)
 	assert(not starter_ship_data.can_carry(food_cargo))
@@ -1213,13 +1237,13 @@ func _run() -> void:
 		headquarters_arrival_ship = fleet_manager.get_ship_node(purchased_ship_id)
 		break
 	assert(headquarters_arrival_ship != null)
-	var headquarters_arrival_slot := fleet_manager.get_ship_dock_slot_index(
+	var headquarters_arrival_slot: int = fleet_manager.get_ship_dock_slot_index(
 		headquarters_arrival_ship_id
 	)
-	var headquarters_arrival_berth := headquarters.get_delivery_position(
+	var headquarters_arrival_berth: Vector2 = headquarters.get_delivery_position(
 		headquarters_arrival_slot
 	)
-	var headquarters_arrival_approach := headquarters.get_delivery_approach_position(
+	var headquarters_arrival_approach: Vector2 = headquarters.get_delivery_approach_position(
 		headquarters_arrival_slot
 	)
 	assert(bool(headquarters_arrival_ship.get("_dock_transition_active")))
@@ -1875,7 +1899,7 @@ func _assert_all_sea_routes_avoid_land(
 	var port_ids: Array[StringName] = port_manager.get_all_port_ids()
 	for first_index in range(port_ids.size()):
 		for second_index in range(first_index + 1, port_ids.size()):
-			var connected_points := port_manager.get_smoothed_route_points(
+			var connected_points: PackedVector2Array = port_manager.get_smoothed_route_points(
 				port_ids[first_index],
 				port_ids[second_index]
 			)
@@ -1891,7 +1915,7 @@ func _assert_all_sea_routes_avoid_land(
 			return_mission.origin_port_id = port_ids[first_index]
 			return_mission.pickup_port_id = port_ids[second_index]
 			return_mission.delivery_port_id = port_ids[first_index]
-			var return_points := port_manager.get_smoothed_route_points(
+			var return_points: PackedVector2Array = port_manager.get_smoothed_route_points(
 				port_ids[second_index],
 				port_ids[first_index]
 			)

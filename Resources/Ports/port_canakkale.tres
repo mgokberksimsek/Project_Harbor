@@ -12,5 +12,6 @@ icon = ExtResource("2_icon")
 base_unlock_cost = 1500
 base_company_value = 800
 required_company_level = 3
+economic_tier = 2
 dock_slot_offsets = PackedVector2Array(-75, -65, -135, -45, -155, 15, -90, 70, -150, 105, -215, 55)
 transit_offset = Vector2(-350, 0)

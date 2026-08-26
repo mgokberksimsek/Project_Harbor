@@ -222,7 +222,7 @@ Her limanın şu temel özellikleri vardır:
 - Dünya üzerindeki konum.
 - Kilit durumu ve açma maliyeti.
 - Seviye ve ileride kullanılacak geliştirme maliyetleri.
-- Ödül çarpanı.
+- Ekonomik kademe ve seviye ödül çarpanı.
 - Birden fazla gemi için tanımlı yanaşma yuvaları.
 - Bağlı olduğu deniz rotaları.
 
@@ -447,7 +447,19 @@ Görev ödülü şu girdilerden oluşur:
 - Kargonun temel değeri.
 - Yükleme ile teslimat arasındaki mesafe.
 - Kargo miktarı.
-- Yükleme ve teslimat limanlarının seviye çarpanları.
+- Yükleme ve teslimat limanlarının ekonomik kademeleri ve seviye çarpanları.
+
+Limanlar görev ekonomisi için dört kademeye ayrılır. Başlangıç limanları
+`x1,00`, gelişen bölge limanları `x1,08`, uzak bölge limanları `x1,16` ve
+prestij bölgesi limanları `x1,25` temel çarpan kullanır. Görevdeki iki limanın
+çarpanları ortalanır ve sonuca yalnızca bir kez uygulanır. Böylece yeni
+bölgeler daha yüksek toplam kazanç fırsatı yaratırken iki ileri limanın
+çarpanları birbirini katlayıp ekonomiyi kontrolsüz büyütmez.
+
+Mevcut prototipte Mersin ve İzmir kademe 1; Antalya ve Çanakkale kademe 2;
+İstanbul ve Samsun kademe 3; Trabzon kademe 4'tür. Ekonomik kademe Company
+Level'dan ayrı bir liman özelliğidir. Company Level içeriğe erişimi, ekonomik
+kademe ise o bölgedeki görevlerin ölçülü gelir primini belirler.
 
 Mevcut erken oyun ödülleri ve masrafları, 750 TL'lik ilk limana yaklaşık 3–5
 görevde ulaşılacak şekilde dengelenir. Başlangıç gemisi satın alındıktan sonra
@@ -483,6 +495,8 @@ kalmadığı için ilerleyemez duruma gelmez.
 - Hız geliştirmesi saat başına kazancı artırmalı fakat görevleri anlamsız
   derecede kısaltmamalıdır.
 - Kapasite geliştirmesi daha fazla kargoyla daha yüksek ödül sağlamalıdır.
+- İleri limanlar daha yüksek toplam görev ödemesi sağlamalı, ancak dakika
+  başına kazancı eski kısa rotaları anlamsızlaştıracak kadar artırmamalıdır.
 - Oyuncu kötü bir görev seçimi yüzünden kalıcı olarak ilerleyemez duruma
   düşmemelidir.
 

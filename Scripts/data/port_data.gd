@@ -29,6 +29,11 @@ extends Resource
 @export var upgrade_company_values: Array[int] = []
 @export_range(1, 15, 1) var required_company_level: int = 1
 
+## Economic tier adds a restrained regional premium to missions involving this
+## port. It is authored independently from Company Level so progression gates
+## and mission balance do not become the same system.
+@export_range(1, 4, 1) var economic_tier: int = 1
+
 ## Cost to upgrade FROM level N TO level N+1.
 ## Index 0 = cost of the 1st upgrade (level 1 -> 2), index 1 = 2nd, etc.
 ## A short/empty array simply means "no further upgrades authored yet" —
