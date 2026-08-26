@@ -518,14 +518,13 @@ func _build_local_pickup_sailing_route(
 	if pickup_port == null \
 			or global_position.distance_squared_to(pickup_port.global_position) <= 0.25:
 		return PackedVector2Array()
-	var points := PackedVector2Array([global_position])
-	var transit_position := PortManager.get_route_transit_position(pickup_port_id)
-	if transit_position != Vector2.ZERO \
-			and global_position.distance_squared_to(transit_position) > 0.25 \
-			and transit_position.distance_squared_to(pickup_port.global_position) > 0.25:
-		points.append(transit_position)
-	points.append(pickup_port.global_position)
-	return PortManager.smooth_polyline_points(points)
+	# This short leg mirrors the actual dock transition exactly. Sea-route
+	# transit points belong to travel between ports, not movement from a berth
+	# into the same port's loading center.
+	return PackedVector2Array([
+		global_position,
+		pickup_port.global_position,
+	])
 
 
 func _build_delivery_route(mission: Mission) -> PackedVector2Array:

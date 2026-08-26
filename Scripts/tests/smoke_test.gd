@@ -904,7 +904,7 @@ func _run() -> void:
 	var local_pickup_port: Node2D = port_manager.get_port_node(local_offer.pickup_port_id)
 	assert(local_pickup_route.size() > 2)
 	assert(local_pickup_route[0].is_equal_approx(starter_map_ship.global_position))
-	assert(local_pickup_route.has(local_pickup_port.global_position))
+	assert(local_pickup_route[1].is_equal_approx(local_pickup_port.global_position))
 	assert(local_pickup_route[local_pickup_route.size() - 1].is_equal_approx(
 		port_manager.get_port_node(local_offer.delivery_port_id).global_position
 	))
@@ -914,12 +914,41 @@ func _run() -> void:
 		"_get_local_loading_route_progress",
 		local_offer
 	)
+	starter_map_ship.global_position = local_route_test_position.lerp(
+		local_pickup_port.global_position,
+		0.5
+	)
+	var local_loading_mid_progress: float = starter_map_ship.call(
+		"_get_local_loading_route_progress",
+		local_offer
+	)
 	starter_map_ship.global_position = local_pickup_port.global_position
 	var local_loading_end_progress: float = starter_map_ship.call(
 		"_get_local_loading_route_progress",
 		local_offer
 	)
-	assert(local_loading_end_progress > local_loading_start_progress)
+	var expected_local_loading_end := local_route_test_position.distance_to(
+		local_pickup_port.global_position
+	) / float(starter_map_ship.call(
+		"_get_polyline_length",
+		local_pickup_route
+	))
+	assert(is_equal_approx(local_loading_start_progress, 0.0))
+	assert(local_loading_mid_progress > local_loading_start_progress)
+	assert(local_loading_end_progress > local_loading_mid_progress)
+	assert(is_equal_approx(local_loading_end_progress, expected_local_loading_end))
+	starter_route_line.set_route(local_pickup_route, local_loading_mid_progress, true)
+	var local_mid_dash_segments := starter_route_line.get_visible_dash_segments()
+	assert(not local_mid_dash_segments.is_empty())
+	var local_approach_direction := local_route_test_position.direction_to(
+		local_pickup_port.global_position
+	)
+	var first_visible_local_distance := (
+		local_mid_dash_segments[0][0] - local_route_test_position
+	).dot(local_approach_direction)
+	assert(first_visible_local_distance \
+		>= local_route_test_position.distance_to(local_pickup_port.global_position) * 0.5)
+	starter_route_line.clear_route()
 	starter_map_ship.global_position = local_route_test_position
 	starter_map_ship.set("_sailing_route_points", PackedVector2Array())
 
