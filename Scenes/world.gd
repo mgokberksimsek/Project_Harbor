@@ -365,6 +365,11 @@ func _on_mission_panel_dismissed() -> void:
 
 func _on_fleet_ship_selected(ship_id: StringName) -> void:
 	EventBus.ship_tapped.emit(ship_id)
+	if _selected_ship_id != ship_id:
+		return
+	var ship_node := FleetManager.get_ship_node(ship_id) as Node2D
+	if ship_node != null:
+		_world_camera.focus_world_position(ship_node.global_position)
 
 
 func _on_speed_upgrade_requested(ship_id: StringName) -> void:

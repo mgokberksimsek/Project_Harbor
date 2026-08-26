@@ -815,6 +815,15 @@ func _run() -> void:
 	assert(world.try_select_ship_at_screen_position(ship_tap_event.position))
 	assert(world.get("_selected_ship_id") == starter_ship_id)
 	assert(starter_selection_outline.visible)
+	world_camera.position = WorldCamera.WORLD_SIZE * 0.5
+	var expected_fleet_focus_position: Vector2 = world_camera.call(
+		"_clamp_camera_position_for_zoom",
+		starter_map_ship.global_position,
+		world_camera.zoom.x
+	)
+	world.call("_on_fleet_ship_selected", starter_ship_id)
+	await create_timer(WorldCamera.WORLD_FOCUS_DURATION_SEC + 0.05).timeout
+	assert(world_camera.position.distance_to(expected_fleet_focus_position) < 1.0)
 
 	# Re-registering a ship (as scene reload does after New Game) must rebuild offers.
 	mission_manager.reset_state()

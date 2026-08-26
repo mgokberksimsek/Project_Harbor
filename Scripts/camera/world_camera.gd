@@ -13,6 +13,7 @@ const DOUBLE_TAP_OVERVIEW_ZOOM := 0.65
 const DOUBLE_TAP_NEAR_ZOOM := 1.00
 const DOUBLE_TAP_ZOOM_THRESHOLD := 0.90
 const DOUBLE_TAP_ZOOM_DURATION_SEC := 0.28
+const WORLD_FOCUS_DURATION_SEC := 0.35
 const CINEMATIC_TRIGGER_PULL := 0.055
 const CINEMATIC_VIEW_PADDING := 0.94
 const CINEMATIC_ZOOM_DURATION_SEC := 0.45
@@ -104,6 +105,21 @@ func zoom_at_screen_position(target_zoom: float, screen_position: Vector2) -> vo
 	zoom = Vector2.ONE * clamped_zoom
 	position = world_anchor - (screen_position - viewport_center) / zoom.x
 	position = _clamp_camera_position(position)
+
+
+func focus_world_position(world_position: Vector2) -> void:
+	_stop_pan_inertia()
+	_stop_zoom_animation()
+	var target_zoom := clampf(zoom.x, MIN_ZOOM, MAX_ZOOM)
+	_cinematic_overview_active = false
+	_cinematic_exit_in_progress = false
+	_cinematic_zoom_pull = 0.0
+	_apply_normal_camera_limits()
+	_animate_camera_to(
+		target_zoom,
+		_clamp_camera_position_for_zoom(world_position, target_zoom),
+		WORLD_FOCUS_DURATION_SEC
+	)
 
 
 func animate_double_tap_zoom(screen_position: Vector2) -> void:
@@ -428,7 +444,11 @@ func _is_cinematic_camera_locked() -> bool:
 
 
 func _clamp_camera_position(candidate: Vector2) -> Vector2:
-	var half_visible := get_viewport_rect().size * 0.5 / zoom.x
+	return _clamp_camera_position_for_zoom(candidate, zoom.x)
+
+
+func _clamp_camera_position_for_zoom(candidate: Vector2, zoom_value: float) -> Vector2:
+	var half_visible := get_viewport_rect().size * 0.5 / maxf(zoom_value, 0.001)
 	var minimum := half_visible
 	var maximum := WORLD_SIZE - half_visible
 	return Vector2(

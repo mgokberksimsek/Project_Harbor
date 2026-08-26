@@ -525,7 +525,8 @@ adımıyla karşılaşmaz.
 ### 12.1 Temel kontroller
 
 - Gemiye dokunma: Gemiyi seçer ve uygun görevleri hazırlar.
-- Filo panelindeki gemiye dokunma: Haritadaki gemiyi seçmekle aynı sonucu verir.
+- Filo panelindeki gemiye dokunma: Haritadaki gemiyi seçer ve kamerayı mevcut
+  yakınlaştırmayı koruyan kısa, yumuşak bir geçişle gemiye odaklar.
 - Görev simgesine dokunma: İlgili limanın tekliflerini açar.
 - Limana dokunma: Limanı seçer; kilitliyse açma işlemini gösterir/denenir.
 - Boş dünya alanına dokunma: Gemi ve liman vurgularını kaldırır, açık görev
