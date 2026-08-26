@@ -4,13 +4,18 @@ extends Camera2D
 signal map_tapped(screen_position: Vector2)
 
 const WORLD_SIZE := Vector2(6000.0, 3500.0)
-const MIN_ZOOM := 0.45
+# Normal interactive zoom limit. The whole-map cinematic view is a separate
+# camera state instead of weakening normal map navigation.
+const MIN_ZOOM := 0.40
 const MAX_ZOOM := 1.30
 const ZOOM_STEP := 0.10
 const DOUBLE_TAP_OVERVIEW_ZOOM := 0.65
 const DOUBLE_TAP_NEAR_ZOOM := 1.00
 const DOUBLE_TAP_ZOOM_THRESHOLD := 0.90
 const DOUBLE_TAP_ZOOM_DURATION_SEC := 0.28
+const CINEMATIC_TRIGGER_PULL := 0.055
+const CINEMATIC_VIEW_PADDING := 0.94
+const CINEMATIC_ZOOM_DURATION_SEC := 0.45
 const TAP_DRAG_THRESHOLD_PX := 32.0
 const PAN_DRAG_SENSITIVITY := 0.70
 const PAN_INERTIA_DAMPING := 3.5
@@ -28,18 +33,34 @@ var _touch_dragged: Dictionary = {}
 var _touch_consumed: Dictionary = {}
 var _pan_velocity_screen := Vector2.ZERO
 var _zoom_tween: Tween = null
+var _cinematic_overview_active := false
+var _cinematic_exit_in_progress := false
+var _cinematic_zoom_pull := 0.0
 
 
 func _ready() -> void:
-	limit_left = 0
-	limit_top = 0
-	limit_right = int(WORLD_SIZE.x)
-	limit_bottom = int(WORLD_SIZE.y)
+	_apply_normal_camera_limits()
 	limit_smoothed = false
 	position = _clamp_camera_position(position)
 
 
+func _apply_normal_camera_limits() -> void:
+	limit_left = 0
+	limit_top = 0
+	limit_right = int(WORLD_SIZE.x)
+	limit_bottom = int(WORLD_SIZE.y)
+
+
+func _apply_cinematic_camera_limits() -> void:
+	limit_left = -int(WORLD_SIZE.x)
+	limit_top = -int(WORLD_SIZE.y)
+	limit_right = int(WORLD_SIZE.x * 2.0)
+	limit_bottom = int(WORLD_SIZE.y * 2.0)
+
+
 func _process(delta: float) -> void:
+	if _is_cinematic_camera_locked():
+		return
 	if _mouse_pointer_active or not _touches.is_empty():
 		return
 	if _pan_velocity_screen.length() < PAN_INERTIA_STOP_SPEED_PX:
@@ -65,11 +86,15 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func pan_by_screen_delta(screen_delta: Vector2) -> void:
+	if _is_cinematic_camera_locked():
+		return
 	position -= screen_delta / zoom.x
 	position = _clamp_camera_position(position)
 
 
 func zoom_at_screen_position(target_zoom: float, screen_position: Vector2) -> void:
+	if _is_cinematic_camera_locked():
+		return
 	var clamped_zoom := clampf(target_zoom, MIN_ZOOM, MAX_ZOOM)
 	if is_equal_approx(clamped_zoom, zoom.x):
 		return
@@ -83,6 +108,12 @@ func zoom_at_screen_position(target_zoom: float, screen_position: Vector2) -> vo
 
 func animate_double_tap_zoom(screen_position: Vector2) -> void:
 	_stop_pan_inertia()
+	if _cinematic_overview_active:
+		_stop_zoom_animation()
+		_exit_cinematic_overview()
+		return
+	if _cinematic_exit_in_progress:
+		return
 	_stop_zoom_animation()
 	var target_zoom := DOUBLE_TAP_NEAR_ZOOM \
 			if zoom.x < DOUBLE_TAP_ZOOM_THRESHOLD \
@@ -105,7 +136,8 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
 	if event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_stop_pan_inertia()
-			_stop_zoom_animation()
+			if not _is_cinematic_camera_locked():
+				_stop_zoom_animation()
 			_mouse_pointer_active = true
 			_mouse_press_position = event.position
 			_mouse_dragged = false
@@ -132,18 +164,27 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
 			get_viewport().set_input_as_handled()
 	elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 		_stop_pan_inertia()
-		_stop_zoom_animation()
-		zoom_at_screen_position(zoom.x + ZOOM_STEP, event.position)
+		if _cinematic_overview_active:
+			_exit_cinematic_overview()
+		elif not _cinematic_exit_in_progress:
+			_stop_zoom_animation()
+			zoom_at_screen_position(zoom.x + ZOOM_STEP, event.position)
 		get_viewport().set_input_as_handled()
 	elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 		_stop_pan_inertia()
-		_stop_zoom_animation()
-		zoom_at_screen_position(zoom.x - ZOOM_STEP, event.position)
+		if not _is_cinematic_camera_locked():
+			_stop_zoom_animation()
+			if zoom.x <= MIN_ZOOM + 0.001:
+				_enter_cinematic_overview()
+			else:
+				zoom_at_screen_position(zoom.x - ZOOM_STEP, event.position)
 		get_viewport().set_input_as_handled()
 
 
 func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 	if event.device == InputEvent.DEVICE_ID_EMULATION:
+		return
+	if _is_cinematic_camera_locked():
 		return
 	if not _mouse_dragging:
 		return
@@ -159,7 +200,8 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
 		_stop_pan_inertia()
-		_stop_zoom_animation()
+		if not _is_cinematic_camera_locked():
+			_stop_zoom_animation()
 		_touches[event.index] = event.position
 		_touch_starts[event.index] = event.position
 		_touch_dragged[event.index] = false
@@ -185,6 +227,8 @@ func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 		_touch_starts.erase(event.index)
 		_touch_dragged.erase(event.index)
 		_touch_consumed.erase(event.index)
+		if _touches.size() < 2:
+			_cinematic_zoom_pull = 0.0
 		if is_map_tap:
 			map_tapped.emit(event.position)
 			get_viewport().set_input_as_handled()
@@ -231,7 +275,7 @@ func _handle_screen_drag(event: InputEventScreenDrag) -> void:
 
 	if _touches.size() == 1:
 		_touches[event.index] = event.position
-		if bool(_touch_dragged[event.index]):
+		if bool(_touch_dragged[event.index]) and not _is_cinematic_camera_locked():
 			pan_by_screen_delta(event.relative * PAN_DRAG_SENSITIVITY)
 			_capture_pan_velocity(event.velocity, event.relative)
 	else:
@@ -250,7 +294,20 @@ func _handle_screen_drag(event: InputEventScreenDrag) -> void:
 		var current_distance := current_first.distance_to(current_second)
 		if previous_distance > 0.001:
 			var midpoint := (current_first + current_second) * 0.5
-			zoom_at_screen_position(zoom.x * current_distance / previous_distance, midpoint)
+			var target_zoom := zoom.x * current_distance / previous_distance
+			if _cinematic_overview_active:
+				if target_zoom > zoom.x:
+					_exit_cinematic_overview()
+			elif _cinematic_exit_in_progress:
+				pass
+			elif target_zoom < MIN_ZOOM:
+				zoom_at_screen_position(MIN_ZOOM, midpoint)
+				_cinematic_zoom_pull += MIN_ZOOM - target_zoom
+				if _cinematic_zoom_pull >= CINEMATIC_TRIGGER_PULL:
+					_enter_cinematic_overview()
+			else:
+				_cinematic_zoom_pull = 0.0
+				zoom_at_screen_position(target_zoom, midpoint)
 	get_viewport().set_input_as_handled()
 
 
@@ -278,6 +335,96 @@ func _stop_zoom_animation() -> void:
 	if _zoom_tween != null and _zoom_tween.is_valid():
 		_zoom_tween.kill()
 	_zoom_tween = null
+
+
+func _enter_cinematic_overview() -> void:
+	if _cinematic_overview_active:
+		return
+	_stop_pan_inertia()
+	_stop_zoom_animation()
+	_cinematic_overview_active = true
+	_cinematic_exit_in_progress = false
+	_cinematic_zoom_pull = 0.0
+	_apply_cinematic_camera_limits()
+	_animate_camera_to(
+		_get_cinematic_overview_zoom(),
+		WORLD_SIZE * 0.5,
+		CINEMATIC_ZOOM_DURATION_SEC
+	)
+
+
+func _exit_cinematic_overview() -> void:
+	if not _cinematic_overview_active:
+		return
+	_stop_zoom_animation()
+	_cinematic_overview_active = false
+	_cinematic_exit_in_progress = true
+	_cinematic_zoom_pull = 0.0
+	_animate_camera_to(
+		MIN_ZOOM,
+		WORLD_SIZE * 0.5,
+		CINEMATIC_ZOOM_DURATION_SEC,
+		true
+	)
+
+
+func _animate_camera_to(
+		target_zoom: float,
+		target_position: Vector2,
+		duration_sec: float,
+		finishes_cinematic_exit := false
+) -> void:
+	var start_zoom := zoom.x
+	var start_position := position
+	_zoom_tween = create_tween()
+	_zoom_tween.set_trans(Tween.TRANS_CUBIC)
+	_zoom_tween.set_ease(Tween.EASE_IN_OUT)
+	_zoom_tween.tween_method(
+		_apply_camera_transition.bind(
+			start_zoom,
+			target_zoom,
+			start_position,
+			target_position
+		),
+		0.0,
+		1.0,
+		duration_sec
+	)
+	if finishes_cinematic_exit:
+		_zoom_tween.tween_callback(_finish_cinematic_exit)
+	else:
+		_zoom_tween.tween_callback(_finish_zoom_animation)
+
+
+func _apply_camera_transition(
+		progress: float,
+		start_zoom: float,
+		target_zoom: float,
+		start_position: Vector2,
+		target_position: Vector2
+) -> void:
+	zoom = Vector2.ONE * lerpf(start_zoom, target_zoom, progress)
+	position = start_position.lerp(target_position, progress)
+
+
+func _get_cinematic_overview_zoom() -> float:
+	var viewport_size := get_viewport_rect().size
+	var fit_zoom := minf(
+		viewport_size.x / WORLD_SIZE.x,
+		viewport_size.y / WORLD_SIZE.y
+	) * CINEMATIC_VIEW_PADDING
+	return clampf(fit_zoom, 0.05, MIN_ZOOM - 0.05)
+
+
+func _finish_cinematic_exit() -> void:
+	_cinematic_exit_in_progress = false
+	_apply_normal_camera_limits()
+	position = _clamp_camera_position(position)
+	_finish_zoom_animation()
+
+
+func _is_cinematic_camera_locked() -> bool:
+	return _cinematic_overview_active or _cinematic_exit_in_progress
 
 
 func _clamp_camera_position(candidate: Vector2) -> Vector2:

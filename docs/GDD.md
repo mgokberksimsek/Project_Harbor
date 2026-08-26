@@ -519,6 +519,12 @@ adımıyla karşılaşmaz.
 - Sürükleme ve yakınlaştırma: Büyük dünya haritasında gezinmeyi sağlar. Boş
   denize çift dokunmak, dokunulan noktayı koruyan yumuşak bir geçişle genel ve
   yakın görünüm arasında geçiş yapar; gemi ve liman dokunuşlarını etkilemez.
+  Oyuncu manuel yakınlaştırmayla genel görünümden biraz daha uzağa çıkabilir,
+  ancak bu hâlâ hareket ettirilebilen normal oynanış kamerasıdır. Bu sınırda
+  uzaklaştırmaya devam etmek kamerayı yumuşakça bütün dünyayı ortalayan
+  sinematik görünüme geçirir. Sinematik görünüm sürüklenmez; yakınlaştırma,
+  çift dokunma veya fare tekerleği oyuncuyu normal kameranın en uzak sınırına
+  döndürür. Oyuncu buradan yaklaşmaya kesintisiz biçimde devam edebilir.
 - Filo durumu ve gemi satın alma panelleri haritayı kapatmamak için başlangıçta
   kompakt, kapalı sekmeler halinde durur ve başlıklarına dokunularak açılıp
   kapanır. UI dışındaki herhangi bir harita dokunuşu iki paneli de kapatır;

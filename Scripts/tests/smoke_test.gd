@@ -517,6 +517,40 @@ func _run() -> void:
 	world_camera.position = WorldCamera.WORLD_SIZE * 0.5
 	var double_tap_position := Vector2(760, 420)
 	var viewport_center: Vector2 = get_root().get_viewport().get_visible_rect().size * 0.5
+	world_camera.zoom_at_screen_position(0.10, viewport_center)
+	assert(is_equal_approx(world_camera.zoom.x, 0.40))
+	world_camera.zoom_at_screen_position(0.65, viewport_center)
+	assert(is_equal_approx(world_camera.zoom.x, 0.65))
+	world_camera.call("_enter_cinematic_overview")
+	await create_timer(0.50).timeout
+	assert(bool(world_camera.get("_cinematic_overview_active")))
+	assert(world_camera.limit_left < 0)
+	assert(world_camera.zoom.x < WorldCamera.MIN_ZOOM)
+	assert(world_camera.position.is_equal_approx(WorldCamera.WORLD_SIZE * 0.5))
+	var cinematic_visible_size := get_root().get_viewport().get_visible_rect().size \
+		/ world_camera.zoom.x
+	assert(cinematic_visible_size.x >= WorldCamera.WORLD_SIZE.x)
+	assert(cinematic_visible_size.y >= WorldCamera.WORLD_SIZE.y)
+	var ocean_background := world.get_node("Ocean") as ColorRect
+	var cinematic_top_left := world_camera.position - cinematic_visible_size * 0.5
+	var cinematic_bottom_right := world_camera.position + cinematic_visible_size * 0.5
+	assert(ocean_background.position.x <= cinematic_top_left.x)
+	assert(ocean_background.position.y <= cinematic_top_left.y)
+	assert(ocean_background.position.x + ocean_background.size.x \
+		>= cinematic_bottom_right.x)
+	assert(ocean_background.position.y + ocean_background.size.y \
+		>= cinematic_bottom_right.y)
+	var cinematic_position := world_camera.position
+	world_camera.pan_by_screen_delta(Vector2(200.0, 0.0))
+	assert(world_camera.position.is_equal_approx(cinematic_position))
+	world_camera.call("_exit_cinematic_overview")
+	await create_timer(0.50).timeout
+	assert(not bool(world_camera.get("_cinematic_overview_active")))
+	assert(not bool(world_camera.get("_cinematic_exit_in_progress")))
+	assert(world_camera.limit_left == 0)
+	assert(world_camera.limit_right == int(WorldCamera.WORLD_SIZE.x))
+	assert(is_equal_approx(world_camera.zoom.x, WorldCamera.MIN_ZOOM))
+	world_camera.zoom_at_screen_position(0.65, viewport_center)
 	var zoom_anchor_before: Vector2 = world_camera.position \
 			+ (double_tap_position - viewport_center) / world_camera.zoom.x
 	var double_tap_press := InputEventMouseButton.new()

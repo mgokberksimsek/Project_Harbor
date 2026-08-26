@@ -39,8 +39,10 @@ script = ExtResource("1_world")
 
 [node name="Ocean" type="ColorRect" parent="." unique_id=1478311842]
 z_index = -10
-offset_right = 6000.0
-offset_bottom = 3500.0
+offset_left = -1600.0
+offset_top = -800.0
+offset_right = 7600.0
+offset_bottom = 4300.0
 mouse_filter = 2
 color = Color(0.145, 0.42, 0.72, 1)
 
