@@ -223,6 +223,7 @@ Her limanın şu temel özellikleri vardır:
 - Kilit durumu ve açma maliyeti.
 - Seviye ve ileride kullanılacak geliştirme maliyetleri.
 - Ekonomik kademe ve seviye ödül çarpanı.
+- Seviyeye bağlı yükleme ve boşaltma süresi.
 - Birden fazla gemi için tanımlı yanaşma yuvaları.
 - Bağlı olduğu deniz rotaları.
 
@@ -232,7 +233,15 @@ Company Value katkısını gösteren kompakt bir onay paneli açılır. Koşulla
 sağlanmıyorsa açma düğmesi eksik para veya seviye nedenini göstererek devre dışı
 kalır. Liman yalnızca oyuncu etkin açma düğmesine dokunduğunda satın alınır.
 Açık limana dokunmak, seçili gemi varsa o limandaki uygun görev tekliflerini
-gösterir.
+gösterir. Seçili gemi yoksa aynı dokunuş kompakt liman geliştirme panelini
+açar; böylece görev verme akışına yeni bir adım eklenmez.
+
+Prototipte her liman en fazla üç seviyedir. Seviye 2 limanın görev geliri
+etkisini `%8` artırır ve yük işlemlerini `%20` hızlandırır. Seviye 3 bu
+değerleri `%16` gelir etkisine ve `%40` işlem hızına çıkarır. Bir görevin iki
+limanındaki gelir çarpanları ortalandığı için bu artış görevin toplam ödülüne
+iki kez uygulanmaz. Her geliştirme Cash harcar ve veri dosyasında tanımlı sabit
+Company Value katkısı sağlar; ayrıca Company Level şartı istemez.
 
 Bir limanda birden fazla gemi bulunduğunda gemiler üst üste binmez. Yeni gelen
 gemi ilk boş yuvaya yerleşir. Daha öndeki bir yuva boşaldığında en sondaki gemi
@@ -393,6 +402,10 @@ edilmez.
 
 Görev süresi boş konumlanma yolculuğu, yükleme, yüklü teslimat yolculuğu ve
 boşaltmanın toplamıdır. Geminin kaynak verisindeki hız nominal seyir hızıdır.
+Prototipte Seviye 1 limanın yükleme ve boşaltma süreleri ayrı ayrı `3,0`
+saniyedir. Bu süreler Seviye 2'de `2,4`, Seviye 3'te `1,8` saniyeye iner.
+Değerler geliştirme etkisini görünür tutarken kısa görevleri beklemeye
+dönüştürmeyecek test süreleridir.
 Boş gemi bu hızdan %10 daha hızlı gider; yüklü gemi her kargo birimi için %5
 yavaşlar ve toplam yavaşlama %20 ile sınırlıdır. Böylece gemi modeli, hız
 geliştirmesi, rota mesafesi ve taşınan miktar süreyi anlaşılır biçimde etkiler.
@@ -690,6 +703,7 @@ veri dosyaları üzerinden tanımlanmalıdır.
 - Kararlı ve sıkışık liman yuvası düzeni.
 - Liman açma, gemi satın alma ve gemi geliştirme ekonomisi.
 - Maliyet, seviye ve Company Value katkısını gösteren onaylı liman açma paneli.
+- Gelir ile yükleme/boşaltma hızını artıran üç seviyeli liman geliştirmeleri.
 - Artan gemi fiyatları ve sınırlı filo/geliştirme seviyeleri.
 - Varlık tabanlı Company Value ve kalıcı Company Level ilerlemesi.
 - Filo/liman değer dağılımı ve sonraki seviye açılımlarını gösteren ilerleme paneli.
@@ -698,7 +712,7 @@ veri dosyaları üzerinden tanımlanmalıdır.
 - Mobil öncelikli yatay kamera ve dokunma etkileşimleri.
 - Gemi satın alma, Company Value açıklaması, gemi ve liman seçimi ile görev
   kabulünü sırayla kilitleyip vurgulayan sekiz adımlı öğretici.
-- Oyunu duraklatan ayarlar menüsü; bağımsız efekt/müzik kontrolleri.
+- Oyun akışını durdurmayan ayarlar menüsü; bağımsız efekt/müzik kontrolleri.
 - Oyun sırasında değiştirilebilen Türkçe ve İngilizce arayüz.
 
 Prototipte bulunan içerik:
@@ -730,7 +744,7 @@ Aşağıdaki konular sonraki test ve tasarım oturumlarında kesinleştirilecekt
 - Nihai Company Value varlık değerleri ve 15 Company Level eşiği.
 - İleride ayrı yakıt tankı ve yakıt satın alma akışına ihtiyaç olup olmadığı.
 - Nihai filo sınırı ve sınırı artırma yöntemi.
-- Liman seviyelerinin görev, yükleme hızı ve gelir üzerindeki etkileri.
+- Liman geliştirme maliyetleri ile gelir/işlem süresi oranlarının nihai dengesi.
 - Oyuncu birden fazla gemiye ulaştıktan sonra bakım veya küçük arıza nedeniyle
   gemilerin geçici olarak kullanılamaması değerlendirilecektir. Sistem önce
   reklamsız ve öngörülebilir bir oynanış mekaniği olarak dengelenecek; oyuncuyu

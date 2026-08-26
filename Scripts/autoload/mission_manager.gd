@@ -22,6 +22,7 @@ func _ready() -> void:
 	_load_cargo_types()
 	EventBus.mission_completed.connect(_on_mission_completed)
 	EventBus.port_unlocked.connect(_on_port_unlocked)
+	EventBus.port_leveled_up.connect(_on_port_leveled_up)
 	EventBus.ship_purchased.connect(_on_ship_purchased)
 	EventBus.ship_registered.connect(_on_ship_registered)
 	EventBus.ship_speed_upgraded.connect(_on_ship_speed_upgraded)
@@ -161,13 +162,17 @@ func _create_offer(
 		ship_port_id,
 		pickup_port_id
 	)
+	mission.unloading_duration_sec = FleetManager.get_mission_unloading_duration(
+		delivery_port_id
+	)
 	mission.estimated_duration_sec = FleetManager.estimate_mission_duration(
 		ship_id,
 		pickup_port_id,
 		delivery_port_id,
 		ship_port_id,
 		mission.loading_duration_sec,
-		mission.cargo_amount
+		mission.cargo_amount,
+		mission.unloading_duration_sec
 	)
 	mission.duration_class = _classify_duration(mission.estimated_duration_sec)
 	return mission
@@ -341,6 +346,10 @@ func _on_ship_purchased(
 
 
 func _on_ship_registered(_ship_id: StringName) -> void:
+	call_deferred("refresh_offers")
+
+
+func _on_port_leveled_up(_port_id: StringName, _new_level: int) -> void:
 	call_deferred("refresh_offers")
 
 

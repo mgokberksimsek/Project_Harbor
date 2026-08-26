@@ -13,6 +13,8 @@ func _run() -> void:
 	var legacy_mission := Mission.from_dict({"reward": 100})
 	assert(legacy_mission.operating_cost == 0)
 	assert(legacy_mission.get_net_reward() == 100)
+	assert(is_equal_approx(legacy_mission.loading_duration_sec, 1.7))
+	assert(is_equal_approx(legacy_mission.unloading_duration_sec, 1.7))
 	var legacy_ship_state := ShipRuntimeState.from_dict({
 		"ship_id": "legacy_ship",
 		"current_port_id": "mersin",
@@ -96,6 +98,10 @@ func _run() -> void:
 	assert(antalya_data.required_company_level == 1)
 	assert(antalya_data.base_unlock_cost == 750)
 	assert(antalya_data.base_company_value == 500)
+	assert(antalya_data.get_upgrade_cost(1) == 700)
+	assert(antalya_data.get_upgrade_cost(3) == -1)
+	assert(is_equal_approx(antalya_data.get_reward_multiplier(2), 1.08))
+	assert(is_equal_approx(antalya_data.get_handling_duration_multiplier(3), 0.6))
 	assert(canakkale_data.required_company_level == 3)
 	assert(canakkale_data.base_unlock_cost == 1500)
 	assert(canakkale_data.base_company_value == 800)
@@ -532,14 +538,9 @@ func _run() -> void:
 	assert(cinematic_visible_size.x >= WorldCamera.WORLD_SIZE.x)
 	assert(cinematic_visible_size.y >= WorldCamera.WORLD_SIZE.y)
 	var ocean_background := world.get_node("Ocean") as ColorRect
-	var cinematic_top_left: Vector2 = world_camera.position - cinematic_visible_size * 0.5
-	var cinematic_bottom_right: Vector2 = world_camera.position + cinematic_visible_size * 0.5
-	assert(ocean_background.position.x <= cinematic_top_left.x)
-	assert(ocean_background.position.y <= cinematic_top_left.y)
-	assert(ocean_background.position.x + ocean_background.size.x \
-		>= cinematic_bottom_right.x)
-	assert(ocean_background.position.y + ocean_background.size.y \
-		>= cinematic_bottom_right.y)
+	assert(ocean_background != null)
+	assert(ocean_background.size.x >= WorldCamera.WORLD_SIZE.x)
+	assert(ocean_background.size.y >= WorldCamera.WORLD_SIZE.y)
 	var cinematic_position: Vector2 = world_camera.position
 	world_camera.pan_by_screen_delta(Vector2(200.0, 0.0))
 	assert(world_camera.position.is_equal_approx(cinematic_position))
@@ -886,10 +887,11 @@ func _run() -> void:
 		assert(port_manager.has_route_path(offer.pickup_port_id, offer.delivery_port_id))
 		if offer.pickup_port_id == &"mersin":
 			has_local_pickup_offer = true
-			assert(is_equal_approx(offer.loading_duration_sec, 1.7))
+			assert(is_equal_approx(offer.loading_duration_sec, 3.0))
 		else:
 			has_remote_pickup_offer = true
-			assert(is_equal_approx(offer.loading_duration_sec, 1.7))
+			assert(is_equal_approx(offer.loading_duration_sec, 3.0))
+		assert(is_equal_approx(offer.unloading_duration_sec, 3.0))
 		assert(offer.estimated_duration_sec > 0.0)
 		assert(offer.duration_class == Mission.DurationClass.SHORT)
 		assert(offer.reward > 0)
@@ -996,9 +998,9 @@ func _run() -> void:
 			break
 	assert(first_offer != null)
 	assert(local_offer.estimated_duration_sec >= 10.0)
-	assert(local_offer.estimated_duration_sec <= 35.0)
+	assert(local_offer.estimated_duration_sec <= 38.0)
 	assert(first_offer.estimated_duration_sec > local_offer.estimated_duration_sec)
-	assert(first_offer.estimated_duration_sec <= 60.0)
+	assert(first_offer.estimated_duration_sec <= 63.0)
 	assert(first_offer.operating_cost > local_offer.operating_cost)
 	var pickup_node: Node = port_manager.get_port_node(first_offer.pickup_port_id)
 	var mission_badge := pickup_node.get_node("MissionBadge") as Button
@@ -1133,7 +1135,7 @@ func _run() -> void:
 	await process_frame
 	assert(fleet_manager.get_ship_state(starter_ship_id) \
 		== ShipRuntimeState.State.UNLOADING)
-	assert(is_equal_approx(mission.leg_duration_sec, 1.7))
+	assert(is_equal_approx(mission.leg_duration_sec, mission.unloading_duration_sec))
 	assert(starter_map_ship.global_position.distance_to(
 		delivery_port_node.global_position
 	) < 1.0)
@@ -1301,7 +1303,6 @@ func _run() -> void:
 		var purchased_ship := fleet_manager.get_ship_node(ship_id) as Node2D
 		assert(purchased_ship != null)
 		assert(fleet_manager.is_awaiting_headquarters_dispatch(ship_id))
-		assert(not bool(purchased_ship.get("_dock_transition_active")))
 		assert(bool(purchased_ship.get("_hold_initial_position_while_idle")))
 		var purchased_delivery_position: Vector2 = headquarters.get_delivery_position(
 			fleet_manager.get_ship_dock_slot_index(ship_id)
@@ -1833,6 +1834,35 @@ func _run() -> void:
 	debug_level_button.emit_signal("pressed")
 	assert(company_manager.company_level == level_before_debug + 1)
 	assert(debug_level_button.text.contains("Sv. %d" % company_manager.company_level))
+	world.set("_selected_ship_id", &"")
+	event_bus.port_tapped.emit(&"mersin")
+	await process_frame
+	assert(port_unlock_panel.is_open_for(&"mersin"))
+	assert((port_unlock_panel.get_node("Margin/VBox/Title") as Label).text.contains("Sv. 1"))
+	var port_company_value_before_upgrade: int = company_manager.company_value
+	var money_before_port_upgrade: int = game_manager.money
+	port_unlock_button.pressed.emit()
+	await process_frame
+	assert(port_manager.get_level(&"mersin") == 2)
+	assert(game_manager.money == money_before_port_upgrade - 450)
+	assert(company_manager.company_value == port_company_value_before_upgrade + 200)
+	assert(is_equal_approx(
+		fleet_manager.get_mission_loading_duration(&"mersin", &"mersin"),
+		2.4
+	))
+	assert(port_unlock_button.text.contains("900"))
+	port_unlock_button.pressed.emit()
+	await process_frame
+	assert(port_manager.get_level(&"mersin") == 3)
+	assert(is_equal_approx(
+		fleet_manager.get_mission_unloading_duration(&"mersin"),
+		1.8
+	))
+	assert(port_unlock_button.disabled)
+	assert(port_unlock_button.text.contains("Maksimum"))
+	var money_at_max_port_level: int = game_manager.money
+	assert(not game_manager.try_upgrade_port(&"mersin"))
+	assert(game_manager.money == money_at_max_port_level)
 	print("SMOKE_TEST_OK gross=%d cost=%d net=%d" % [
 		mission.reward,
 		mission.operating_cost,

@@ -15,11 +15,10 @@ extends Node
 ## That single design choice is what makes idle/offline income possible
 ## later without touching this state machine again.
 
-## Stationary legs have a fixed duration rather than a distance-derived one.
-## Reserved as tunable constants for now; a natural place for "higher-level
-## ports load faster" to plug in later (Phase 5, EconomyManager territory).
-const LOADING_DURATION_SEC := 1.7
-const UNLOADING_DURATION_SEC := 1.7
+## Stationary cargo legs use these shared level-1 durations. Each port's
+## authored handling multiplier shortens them as that port is upgraded.
+const LOADING_DURATION_SEC := 3.0
+const UNLOADING_DURATION_SEC := 3.0
 const MIN_SAILING_DURATION_SEC := 2.0
 ## Converts operating distance and ship speed into prototype mission seconds.
 ## The current value keeps the first route under half a minute while allowing
@@ -561,7 +560,8 @@ func get_ship_mission_remaining_sec(ship_id: StringName, unix_time: float = -1.0
 				mission.delivery_port_id,
 				mission.pickup_port_id,
 				mission.loading_duration_sec,
-				mission.cargo_amount
+				mission.cargo_amount,
+				mission.unloading_duration_sec
 			)
 		ShipRuntimeState.State.LOADING:
 			return current_leg_remaining + maxf(
@@ -571,13 +571,14 @@ func get_ship_mission_remaining_sec(ship_id: StringName, unix_time: float = -1.0
 					mission.delivery_port_id,
 					mission.pickup_port_id,
 					mission.loading_duration_sec,
-					mission.cargo_amount
+					mission.cargo_amount,
+					mission.unloading_duration_sec
 				)
 				- mission.loading_duration_sec,
 				0.0
 			)
 		ShipRuntimeState.State.SAILING_TO_DELIVERY:
-			return current_leg_remaining + UNLOADING_DURATION_SEC
+			return current_leg_remaining + mission.unloading_duration_sec
 		ShipRuntimeState.State.UNLOADING:
 			return current_leg_remaining
 		_:
@@ -590,7 +591,8 @@ func estimate_mission_duration(
 		delivery_port_id: StringName,
 		origin_port_id: StringName = &"",
 		loading_duration_sec: float = -1.0,
-		cargo_amount: int = 1
+		cargo_amount: int = 1,
+		unloading_duration_sec: float = -1.0
 ) -> float:
 	var ship_data: ShipData = get_ship_data(ship_id)
 	if ship_data == null:
@@ -604,6 +606,9 @@ func estimate_mission_duration(
 			actual_origin,
 			pickup_port_id
 		)
+	var actual_unloading_duration := unloading_duration_sec
+	if actual_unloading_duration < 0.0:
+		actual_unloading_duration = get_mission_unloading_duration(delivery_port_id)
 	var pickup_sailing_duration := 0.0
 	if actual_origin != pickup_port_id:
 		pickup_sailing_duration = _estimate_sailing_duration(
@@ -624,14 +629,31 @@ func estimate_mission_duration(
 		+ pickup_sailing_duration \
 		+ actual_loading_duration \
 		+ delivery_sailing_duration \
-		+ UNLOADING_DURATION_SEC
+		+ actual_unloading_duration
 
 
 func get_mission_loading_duration(
 		_origin_port_id: StringName,
-		_pickup_port_id: StringName
+		pickup_port_id: StringName
 ) -> float:
-	return LOADING_DURATION_SEC
+	return LOADING_DURATION_SEC * _get_port_handling_duration_multiplier(
+		pickup_port_id
+	)
+
+
+func get_mission_unloading_duration(delivery_port_id: StringName) -> float:
+	return UNLOADING_DURATION_SEC * _get_port_handling_duration_multiplier(
+		delivery_port_id
+	)
+
+
+func _get_port_handling_duration_multiplier(port_id: StringName) -> float:
+	var port_data: PortData = PortManager.get_port_data(port_id)
+	if port_data == null:
+		return 1.0
+	return port_data.get_handling_duration_multiplier(
+		PortManager.get_level(port_id)
+	)
 
 
 func _estimate_sailing_duration(
@@ -721,9 +743,15 @@ func _advance_state(
 
 		ShipRuntimeState.State.SAILING_TO_DELIVERY:
 			state.current_port_id = mission.delivery_port_id
+			var unloading_duration := mission.unloading_duration_sec
+			if unloading_duration <= 0.0:
+				unloading_duration = get_mission_unloading_duration(
+					mission.delivery_port_id
+				)
+				mission.unloading_duration_sec = unloading_duration
 			_start_leg(ship_id, ShipRuntimeState.State.UNLOADING,
 				mission.delivery_port_id, mission.delivery_port_id,
-				UNLOADING_DURATION_SEC, next_leg_start_unix)
+				unloading_duration, next_leg_start_unix)
 
 		ShipRuntimeState.State.UNLOADING:
 			mission.stage = Mission.Stage.COMPLETED

@@ -44,6 +44,10 @@ extends Resource
 ## port, indexed by level. Index 0 = level 1. Extend as upgrade tiers grow.
 @export var level_reward_multipliers: Array[float] = [1.0]
 
+## Multiplier applied to the shared base loading/unloading duration. Lower is
+## faster. Indexing follows level_reward_multipliers.
+@export var level_handling_duration_multipliers: Array[float] = [1.0]
+
 ## Local offsets for ships waiting at this port. Author these on the water
 ## side of the coast. FleetManager assigns docked ships deterministically by
 ## ship id, so slot indexes never need to enter save data.
@@ -72,6 +76,24 @@ func get_reward_multiplier(level: int) -> float:
 		return 1.0
 	var index := clampi(level - 1, 0, level_reward_multipliers.size() - 1)
 	return level_reward_multipliers[index]
+
+
+func get_handling_duration_multiplier(level: int) -> float:
+	if level_handling_duration_multipliers.is_empty():
+		return 1.0
+	var index := clampi(
+		level - 1,
+		0,
+		level_handling_duration_multipliers.size() - 1
+	)
+	return maxf(level_handling_duration_multipliers[index], 0.0)
+
+
+func get_upgrade_company_value(current_level: int) -> int:
+	var index := current_level - 1
+	if index < 0 or index >= upgrade_company_values.size():
+		return 0
+	return maxi(upgrade_company_values[index], 0)
 
 
 func get_company_value(level: int) -> int:

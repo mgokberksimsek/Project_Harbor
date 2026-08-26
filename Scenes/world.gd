@@ -130,6 +130,7 @@ func _ready() -> void:
 	EventBus.mission_completed.connect(_on_mission_completed)
 	EventBus.mission_offers_updated.connect(_on_mission_offers_updated)
 	EventBus.port_unlocked.connect(_on_port_unlocked)
+	EventBus.port_leveled_up.connect(_on_port_leveled_up)
 	EventBus.port_unlock_failed.connect(_on_port_unlock_failed)
 	EventBus.port_tapped.connect(_on_port_tapped)
 	EventBus.ship_purchased.connect(_on_ship_purchased)
@@ -152,6 +153,7 @@ func _ready() -> void:
 	_fleet_status_panel.automation_requested.connect(_on_automation_requested)
 	_fleet_status_panel.rename_requested.connect(_on_ship_rename_requested)
 	_port_unlock_panel.unlock_requested.connect(_on_port_unlock_requested)
+	_port_unlock_panel.upgrade_requested.connect(_on_port_upgrade_requested)
 	_port_unlock_panel.closed.connect(_on_port_unlock_panel_closed)
 	_company_progress_panel.closed.connect(_on_company_progress_panel_closed)
 	_company_progress_panel.company_value_info_confirmed.connect(
@@ -556,7 +558,7 @@ func _on_port_tapped(port_id: StringName) -> void:
 	_port_unlock_panel.close_panel()
 	EventBus.port_selection_changed.emit(port_id)
 	if _selected_ship_id == &"":
-		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP_FIRST")
+		_show_port_upgrade_panel(port_id)
 		return
 	_show_port_offers(port_id)
 	if _open_mission_port_id == port_id \
@@ -765,6 +767,14 @@ func _on_port_unlocked(port_id: StringName) -> void:
 	if _port_unlock_panel.is_open_for(port_id):
 		_port_unlock_panel.close_panel()
 	_update_mission_markers()
+	_update_next_goal()
+
+
+func _on_port_leveled_up(port_id: StringName, new_level: int) -> void:
+	_instruction_label.text = tr("INSTRUCTION_PORT_UPGRADED") % [
+		_translated_port_name(port_id),
+		new_level,
+	]
 	_update_next_goal()
 
 
@@ -1016,12 +1026,49 @@ func _show_port_unlock_panel(port_id: StringName) -> void:
 	)
 
 
+func _show_port_upgrade_panel(port_id: StringName) -> void:
+	var port_data := PortManager.get_port_data(port_id)
+	if port_data == null or not PortManager.is_unlocked(port_id):
+		return
+	var current_level := PortManager.get_level(port_id)
+	var upgrade_cost := port_data.get_upgrade_cost(current_level)
+	var benefit_level := current_level + 1 if upgrade_cost >= 0 else current_level
+	var company_value := port_data.get_upgrade_company_value(current_level) \
+		if upgrade_cost >= 0 else port_data.get_company_value(current_level)
+	var reward_bonus_percent := roundi(
+		(port_data.get_reward_multiplier(benefit_level) - 1.0) * 100.0
+	)
+	var handling_reduction_percent := roundi(
+		(1.0 - port_data.get_handling_duration_multiplier(benefit_level)) * 100.0
+	)
+	_port_unlock_panel.show_upgrade_port(
+		port_id,
+		port_data.display_name,
+		current_level,
+		upgrade_cost,
+		company_value,
+		GameManager.money,
+		reward_bonus_percent,
+		handling_reduction_percent
+	)
+
+
 func _on_port_unlock_requested(port_id: StringName) -> void:
 	if not GameManager.is_tutorial_completed():
 		_update_tutorial_instruction()
 		return
 	GameManager.try_unlock_port(port_id)
 	_port_unlock_panel.update_status(GameManager.money, CompanyManager.company_level)
+
+
+func _on_port_upgrade_requested(port_id: StringName) -> void:
+	if not GameManager.is_tutorial_completed():
+		_update_tutorial_instruction()
+		return
+	if GameManager.try_upgrade_port(port_id):
+		_show_port_upgrade_panel(port_id)
+	else:
+		_port_unlock_panel.update_status(GameManager.money, CompanyManager.company_level)
 
 
 func _on_port_unlock_panel_closed() -> void:

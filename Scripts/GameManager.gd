@@ -72,6 +72,19 @@ func try_unlock_port(port_id: StringName) -> bool:
 	return false
 
 
+func try_upgrade_port(port_id: StringName) -> bool:
+	var port_data: PortData = _port_manager.get_port_data(port_id)
+	if port_data == null or not _port_manager.is_unlocked(port_id):
+		return false
+	var cost := port_data.get_upgrade_cost(_port_manager.get_level(port_id))
+	if cost < 0 or not spend_money(cost):
+		return false
+	if _port_manager.level_up_port(port_id):
+		return true
+	add_money(cost)
+	return false
+
+
 func try_purchase_ship(model_id: StringName, home_port_id: StringName) -> bool:
 	if _fleet_manager.is_fleet_at_capacity():
 		_event_bus.fleet_capacity_reached.emit(

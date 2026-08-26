@@ -388,8 +388,11 @@ func unlock_port(port_id: StringName) -> bool:
 
 
 func level_up_port(port_id: StringName) -> bool:
-	if not _states.has(port_id):
-		push_warning("Tried to level up unregistered port id '%s'." % port_id)
+	if not _states.has(port_id) or not _states[port_id].unlocked:
+		push_warning("Tried to level up unavailable port id '%s'." % port_id)
+		return false
+	var port_data: PortData = get_port_data(port_id)
+	if port_data == null or port_data.get_upgrade_cost(_states[port_id].level) < 0:
 		return false
 	_states[port_id].level += 1
 	EventBus.port_leveled_up.emit(port_id, _states[port_id].level)

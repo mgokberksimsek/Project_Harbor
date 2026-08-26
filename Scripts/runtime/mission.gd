@@ -40,7 +40,9 @@ var reward: int
 var operating_cost: int = 0
 var estimated_duration_sec: float = 0.0
 ## Time spent handling cargo at the pickup port center before departure.
-var loading_duration_sec: float = 1.7
+var loading_duration_sec: float = 3.0
+## Time spent handling cargo at the delivery port before moving to a berth.
+var unloading_duration_sec: float = 3.0
 var duration_class: DurationClass = DurationClass.SHORT
 var stage: Stage = Stage.AWAITING_PICKUP
 
@@ -104,6 +106,7 @@ func to_dict() -> Dictionary:
 		"operating_cost": operating_cost,
 		"estimated_duration_sec": estimated_duration_sec,
 		"loading_duration_sec": loading_duration_sec,
+		"unloading_duration_sec": unloading_duration_sec,
 		"duration_class": duration_class,
 		"stage": stage,
 		"offered_ship_id": String(offered_ship_id),
@@ -125,6 +128,10 @@ static func from_dict(data: Dictionary) -> Mission:
 	mission.operating_cost = maxi(int(data.get("operating_cost", 0)), 0)
 	mission.estimated_duration_sec = data.get("estimated_duration_sec", 0.0)
 	mission.loading_duration_sec = maxf(float(data.get("loading_duration_sec", 1.7)), 0.0)
+	mission.unloading_duration_sec = maxf(
+		float(data.get("unloading_duration_sec", 1.7)),
+		0.0
+	)
 	mission.duration_class = data.get("duration_class", DurationClass.SHORT) as DurationClass
 	mission.stage = data.get("stage", Stage.AWAITING_PICKUP) as Stage
 	mission.offered_ship_id = StringName(data.get("offered_ship_id", ""))
