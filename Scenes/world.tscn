@@ -45,6 +45,10 @@
 [ext_resource type="Resource" path="res://Resources/Ports/port_girne.tres" id="44_girne"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_girne_mersin.tres" id="45_route_girne_mersin"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_girne_antalya.tres" id="46_route_girne_antalya"]
+[ext_resource type="Resource" path="res://Resources/Ports/port_iskenderiye.tres" id="47_iskenderiye"]
+[ext_resource type="Resource" path="res://Resources/sea_routes/route_girne_iskenderiye.tres" id="48_route_girne_iskenderiye"]
+[ext_resource type="Resource" path="res://Resources/sea_routes/route_iskenderiye_batum.tres" id="49_route_iskenderiye_batum"]
+[ext_resource type="Resource" path="res://Resources/sea_routes/route_izmir_iskenderiye.tres" id="50_route_izmir_iskenderiye"]
 
 [node name="World" type="Node2D" unique_id=1405839556]
 script = ExtResource("1_world")
@@ -134,9 +138,13 @@ port_data = ExtResource("41_batum")
 position = Vector2(4300, 2800)
 port_data = ExtResource("44_girne")
 
+[node name="Iskenderiye" parent="Ports" instance=ExtResource("2_port")]
+position = Vector2(5100, 3450)
+port_data = ExtResource("47_iskenderiye")
+
 [node name="SeaRoutes" type="Node" parent="." unique_id=156795111]
 script = ExtResource("13_route_registry")
-routes = Array[ExtResource("17_route_data")]([ExtResource("14_route_mersin_izmir"), ExtResource("15_route_izmir_istanbul"), ExtResource("16_route_mersin_istanbul"), ExtResource("21_route_izmir_antalya"), ExtResource("22_route_istanbul_antalya"), ExtResource("23_route_antalya_samsun"), ExtResource("24_route_mersin_samsun"), ExtResource("29_route_izmir_canakkale"), ExtResource("30_route_canakkale_istanbul"), ExtResource("31_route_samsun_trabzon"), ExtResource("32_route_antalya_trabzon"), ExtResource("33_route_mersin_antalya"), ExtResource("34_route_istanbul_samsun"), ExtResource("36_route_pire_izmir"), ExtResource("37_route_pire_canakkale"), ExtResource("39_route_varna_istanbul"), ExtResource("40_route_varna_samsun"), ExtResource("42_route_batum_trabzon"), ExtResource("43_route_batum_samsun"), ExtResource("45_route_girne_mersin"), ExtResource("46_route_girne_antalya")])
+routes = Array[ExtResource("17_route_data")]([ExtResource("14_route_mersin_izmir"), ExtResource("15_route_izmir_istanbul"), ExtResource("16_route_mersin_istanbul"), ExtResource("21_route_izmir_antalya"), ExtResource("22_route_istanbul_antalya"), ExtResource("23_route_antalya_samsun"), ExtResource("24_route_mersin_samsun"), ExtResource("29_route_izmir_canakkale"), ExtResource("30_route_canakkale_istanbul"), ExtResource("31_route_samsun_trabzon"), ExtResource("32_route_antalya_trabzon"), ExtResource("33_route_mersin_antalya"), ExtResource("34_route_istanbul_samsun"), ExtResource("36_route_pire_izmir"), ExtResource("37_route_pire_canakkale"), ExtResource("39_route_varna_istanbul"), ExtResource("40_route_varna_samsun"), ExtResource("42_route_batum_trabzon"), ExtResource("43_route_batum_samsun"), ExtResource("45_route_girne_mersin"), ExtResource("46_route_girne_antalya"), ExtResource("48_route_girne_iskenderiye"), ExtResource("49_route_iskenderiye_batum"), ExtResource("50_route_izmir_iskenderiye")])
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1288995194]
 position = Vector2(2450, 2500)
