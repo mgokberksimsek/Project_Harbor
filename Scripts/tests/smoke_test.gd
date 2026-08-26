@@ -47,7 +47,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	assert(port_manager.get_all_port_ids().size() == 9)
+	assert(port_manager.get_all_port_ids().size() == 10)
 	assert(port_manager.is_unlocked(&"mersin"))
 	assert(port_manager.is_unlocked(&"izmir"))
 	assert(not port_manager.is_unlocked(&"istanbul"))
@@ -57,6 +57,7 @@ func _run() -> void:
 	assert(not port_manager.is_unlocked(&"trabzon"))
 	assert(not port_manager.is_unlocked(&"pire"))
 	assert(not port_manager.is_unlocked(&"varna"))
+	assert(not port_manager.is_unlocked(&"batum"))
 	assert(port_manager.has_sea_route(&"mersin", &"izmir"))
 	assert(port_manager.has_sea_route(&"mersin", &"antalya"))
 	assert(port_manager.has_sea_route(&"izmir", &"antalya"))
@@ -73,6 +74,9 @@ func _run() -> void:
 	assert(port_manager.has_sea_route(&"varna", &"istanbul"))
 	assert(port_manager.has_sea_route(&"varna", &"samsun"))
 	assert(port_manager.has_route_path(&"varna", &"pire"))
+	assert(port_manager.has_sea_route(&"batum", &"trabzon"))
+	assert(port_manager.has_sea_route(&"batum", &"samsun"))
+	assert(port_manager.has_route_path(&"batum", &"pire"))
 	assert(not port_manager.has_sea_route(&"mersin", &"trabzon"))
 	assert(port_manager.has_route_path(&"mersin", &"trabzon"))
 	var mersin_trabzon_port_path: Array[StringName] = port_manager.get_route_port_path(
@@ -105,6 +109,7 @@ func _run() -> void:
 	var trabzon_data: PortData = port_manager.get_port_data(&"trabzon")
 	var pire_data: PortData = port_manager.get_port_data(&"pire")
 	var varna_data: PortData = port_manager.get_port_data(&"varna")
+	var batum_data: PortData = port_manager.get_port_data(&"batum")
 	assert(antalya_data.required_company_level == 1)
 	assert(antalya_data.base_unlock_cost == 750)
 	assert(antalya_data.base_company_value == 500)
@@ -132,24 +137,30 @@ func _run() -> void:
 	assert(varna_data.base_unlock_cost == 11000)
 	assert(varna_data.base_company_value == 5500)
 	assert(varna_data.get_upgrade_cost(1) == 8500)
+	assert(batum_data.required_company_level == 9)
+	assert(batum_data.base_unlock_cost == 14500)
+	assert(batum_data.base_company_value == 7200)
+	assert(batum_data.get_upgrade_cost(1) == 11000)
 	port_manager.apply_save_state({
 		"mersin": {"port_id": "mersin", "unlocked": true, "level": 1},
 		"izmir": {"port_id": "izmir", "unlocked": true, "level": 1},
 		"istanbul": {"port_id": "istanbul", "unlocked": false, "level": 1},
 	})
-	assert(port_manager.get_all_port_ids().size() == 9)
+	assert(port_manager.get_all_port_ids().size() == 10)
 	assert(port_manager.is_registered(&"antalya"))
 	assert(port_manager.is_registered(&"samsun"))
 	assert(port_manager.is_registered(&"canakkale"))
 	assert(port_manager.is_registered(&"trabzon"))
 	assert(port_manager.is_registered(&"pire"))
 	assert(port_manager.is_registered(&"varna"))
+	assert(port_manager.is_registered(&"batum"))
 	assert(not port_manager.is_unlocked(&"antalya"))
 	assert(not port_manager.is_unlocked(&"samsun"))
 	assert(not port_manager.is_unlocked(&"canakkale"))
 	assert(not port_manager.is_unlocked(&"trabzon"))
 	assert(not port_manager.is_unlocked(&"pire"))
 	assert(not port_manager.is_unlocked(&"varna"))
+	assert(not port_manager.is_unlocked(&"batum"))
 	world.call("_update_tutorial_instruction")
 	var antalya_status := world.get_node("Ports/Antalya/StatusLabel") as Label
 	assert(antalya_status.text.contains("Sv. 1"))

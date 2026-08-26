@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="PortData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/data/port_data.gd" id="1_port_data"]
+[ext_resource type="Texture2D" path="res://Assets/Sprites/Ports/tile_23.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_port_data")
+id = &"batum"
+display_name = "Batum"
+description = "Doğu adasını Karadeniz ağına bağlayan ileri bölge ticaret limanı."
+icon = ExtResource("2_icon")
+base_unlock_cost = 14500
+base_company_value = 7200
+required_company_level = 9
+economic_tier = 4
+upgrade_company_values = Array[int]([3000, 5000])
+level_upgrade_costs = Array[int]([11000, 22000])
+level_reward_multipliers = Array[float]([1.0, 1.08, 1.16])
+level_handling_duration_multipliers = Array[float]([1.0, 0.8, 0.6])
+dock_slot_offsets = PackedVector2Array(40, -85, 110, -75, 85, 0, 130, -130, 190, -75, 170, 20)
+transit_offset = Vector2(0, -250)
