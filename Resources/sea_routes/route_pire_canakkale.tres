@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="SeaRouteData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/data/sea_route_data.gd" id="1_route"]
+
+[resource]
+script = ExtResource("1_route")
+from_port_id = &"pire"
+to_port_id = &"canakkale"
+waypoints = PackedVector2Array(1080, 2380, 1050, 2180, 1190, 2010, 1370, 1990, 1500, 1840, 1600, 1810)
+gameplay_distance = 330.0

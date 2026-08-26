@@ -7,8 +7,11 @@ const SELECTED_WIDTH := 6.0
 const UNSELECTED_WIDTH := 3.5
 const DASH_LENGTH := 30.0
 const GAP_LENGTH := 18.0
+const REVERSE_OVERLAP_TOLERANCE_PX := 10.0
+const REVERSE_DIRECTION_DOT_LIMIT := -0.92
 
 var _route_points := PackedVector2Array()
+var _hidden_reverse_segments: Array[bool] = []
 var _progress := 0.0
 var _highlighted := false
 
@@ -26,7 +29,11 @@ func set_route(
 		progress: float,
 		highlighted: bool
 ) -> void:
-	_route_points = points
+	if _route_points != points:
+		_route_points = points
+		_hidden_reverse_segments = _get_hidden_reverse_overlap_segments(
+			_route_points
+		)
 	_progress = clampf(progress, 0.0, 1.0)
 	_highlighted = highlighted
 	visible = _route_points.size() >= 2 and _progress < 1.0
@@ -35,6 +42,7 @@ func set_route(
 
 func clear_route() -> void:
 	_route_points.clear()
+	_hidden_reverse_segments.clear()
 	_progress = 0.0
 	visible = false
 	queue_redraw()
@@ -84,7 +92,9 @@ func get_visible_dash_segments() -> Array[PackedVector2Array]:
 			var step := minf(phase_remaining, segment_length - travelled)
 			var piece_start_distance := route_distance + travelled
 			var piece_end_distance := piece_start_distance + step
-			if drawing_dash and piece_end_distance > consumed_length:
+			if drawing_dash \
+					and not _hidden_reverse_segments[point_index] \
+					and piece_end_distance > consumed_length:
 				var visible_start_offset := travelled + maxf(
 					consumed_length - piece_start_distance,
 					0.0
@@ -103,6 +113,44 @@ func get_visible_dash_segments() -> Array[PackedVector2Array]:
 				phase_remaining = DASH_LENGTH if drawing_dash else GAP_LENGTH
 		route_distance += segment_length
 	return visible_segments
+
+
+func _get_hidden_reverse_overlap_segments(
+		points: PackedVector2Array
+) -> Array[bool]:
+	var hidden_segments: Array[bool] = []
+	hidden_segments.resize(maxi(points.size() - 1, 0))
+	hidden_segments.fill(false)
+	for segment_index in range(hidden_segments.size()):
+		var segment_start := points[segment_index]
+		var segment_end := points[segment_index + 1]
+		var segment_direction := segment_end - segment_start
+		if segment_direction.length_squared() <= 0.001:
+			continue
+		segment_direction = segment_direction.normalized()
+		var segment_midpoint := (segment_start + segment_end) * 0.5
+		# Prefer the later occurrence. During the pickup leg this keeps a shared
+		# corridor visible because the ship still needs to traverse it again.
+		for later_index in range(segment_index + 1, hidden_segments.size()):
+			var later_start := points[later_index]
+			var later_end := points[later_index + 1]
+			var later_direction := later_end - later_start
+			if later_direction.length_squared() <= 0.001:
+				continue
+			later_direction = later_direction.normalized()
+			if segment_direction.dot(later_direction) > REVERSE_DIRECTION_DOT_LIMIT:
+				continue
+			var closest_point := Geometry2D.get_closest_point_to_segment(
+				segment_midpoint,
+				later_start,
+				later_end
+			)
+			if segment_midpoint.distance_to(closest_point) \
+					> REVERSE_OVERLAP_TOLERANCE_PX:
+				continue
+			hidden_segments[segment_index] = true
+			break
+	return hidden_segments
 
 
 func _get_remaining_points() -> PackedVector2Array:

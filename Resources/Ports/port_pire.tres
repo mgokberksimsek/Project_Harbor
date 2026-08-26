@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="PortData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/data/port_data.gd" id="1_port_data"]
+[ext_resource type="Texture2D" path="res://Assets/Sprites/Ports/tile_23.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_port_data")
+id = &"pire"
+display_name = "Pire"
+description = "Batı adalarına ve yeni Akdeniz rotalarına açılan dış ticaret limanı."
+icon = ExtResource("2_icon")
+base_unlock_cost = 8500
+base_company_value = 4200
+required_company_level = 7
+economic_tier = 4
+upgrade_company_values = Array[int]([1700, 2800])
+level_upgrade_costs = Array[int]([6500, 13000])
+level_reward_multipliers = Array[float]([1.0, 1.08, 1.16])
+level_handling_duration_multipliers = Array[float]([1.0, 0.8, 0.6])
+dock_slot_offsets = PackedVector2Array(85, 5, 115, 60, 155, 0, 165, 95, 220, 45, 225, 125)
+transit_offset = Vector2(260, 60)

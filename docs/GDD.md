@@ -190,6 +190,9 @@ Harita ilk bölgedeki limanları yakın ve anlaşılır tutmalı, yeni bölgeler
 açıldıkça mesafeleri ve rota karmaşıklığını kademeli artırmalıdır.
 İlk bölgesel ağ Türkiye kıyılarındaki limanlarla büyür; daha sonraki uzak bölge
 genişlemelerinde yabancı limanlar kullanılarak yeni bir ölçek duygusu yaratılır.
+On iki limanlık ilk ağın dış bölge adayları Pire, Varna, Batum, Girne ve
+İskenderiye'dir. Sağ alttaki büyük kara parçasında Girne ile İskenderiye zıt
+kıyılara yerleşerek aynı bölgeye iki farklı deniz yaklaşımı sağlar.
 
 Başlangıç kompozisyonunda Mersin ve şirket merkezi büyük ana karanın güney
 kıyısında, İzmir ise ana karaya yakın ayrı bir adanın kıyısında bulunur. Antalya
@@ -210,6 +213,7 @@ Prototip genişleme sırası ve mevcut test paketleri şöyledir:
 - İstanbul: Şirket Sv. 4, `2.600 ₺`, `1.200 CV`.
 - Samsun: Şirket Sv. 5, `4.200 ₺`, `2.000 CV`.
 - Trabzon: Şirket Sv. 6, `6.500 ₺`, `3.000 CV`.
+- Pire: Şirket Sv. 7, `8.500 ₺`, `4.200 CV`.
 
 Bu değerler nihai ekonomi dengesi değildir; mevcut haritada yakından uzağa
 genişleme ve Company Level akışını test etmek içindir.
@@ -430,10 +434,11 @@ oluşursa eklenir.
   yerleşimi değiştiğinde eski mesafe değerleri yeni konumlara göre yeniden
   dengelenir; süre formülü ayrıca değiştirilmez.
 - Tam görev rotası kırmızı, kesikli bir çizgiyle gösterilir.
-- Boş konumlanma ve yüklü dönüş etapları aynı koridoru ters yönlerde
-  kullanıyorsa iki etap denizde hafif paralel şeritlere ayrılır. Şeritler liman
-  merkezlerinde birleşir ve gemi gösterilen şeridi gerçekten izler; böylece
-  üst üste gelen kesikler düz bir çizgiye dönüşmez.
+- Boş konumlanma ve yüklü teslimat etapları aynı koridoru ters yönlerde
+  kullanıyorsa ortak bölüm aynı merkez çizgisinde yalnızca bir kez çizilir.
+  Böylece rota paralel şeritlere ayrılmaz ve üst üste gelen kesikler düz bir
+  çizgiye dönüşmez. Ortak bölüm ileride yeniden kullanılacaksa ilk geçişte
+  kaybolmaz; son geçiş tamamlandığında normal şekilde silinir.
 - Gemi ilerledikçe geçtiği çizgi parçaları kaybolur; ilerideki parçalar yerinde
   kalır ve gemiye doğru kaymaz.
 - Geminin burnu hareket ettiği rotanın teğetine hizalanır.
@@ -717,7 +722,7 @@ veri dosyaları üzerinden tanımlanmalıdır.
 
 Prototipte bulunan içerik:
 
-- Limanlar: Mersin, İzmir, İstanbul, Antalya, Samsun, Çanakkale ve Trabzon.
+- Limanlar: Mersin, İzmir, İstanbul, Antalya, Samsun, Çanakkale, Trabzon ve Pire.
 - Kargolar: Konteyner, Metal, Makine Parçaları, Gıda ve Tahıl.
 - Ana gemiler: Başlangıç yük gemisi, soğutmalı yük gemisi ve dökme yük gemisi.
 

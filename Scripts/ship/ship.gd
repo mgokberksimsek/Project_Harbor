@@ -26,7 +26,6 @@ const DEPARTURE_HEADING_LEAD_MAX := 60.0
 const DEPARTURE_HEADING_LEAD_RATIO := 0.16
 const DEPARTURE_TURN_SPEED_RAD_PER_SEC := 1.8
 const DEPARTURE_TURN_SNAP_RAD := 0.02
-const RETURN_CORRIDOR_LANE_OFFSET_PX := 14.0
 const SELECTED_SCALE_MULTIPLIER := 1.05
 const SELECTION_SCALE_TWEEN_SEC := 0.16
 const TUTORIAL_PULSE_SPEED := 4.0
@@ -170,10 +169,6 @@ func _restore_runtime_visual_state() -> bool:
 					origin_id,
 					destination_id
 				)
-			_sailing_route_points = _apply_return_corridor_lane(
-				_sailing_route_points,
-				mission
-			)
 			if _sailing_route_points.size() < 2:
 				return false
 			var progress := _get_visual_sailing_progress(
@@ -384,10 +379,6 @@ func _update_sailing_position(state: ShipRuntimeState.State, delta: float) -> bo
 				true
 			)
 		if state == ShipRuntimeState.State.SAILING_TO_PICKUP:
-			_sailing_route_points = _apply_return_corridor_lane(
-				_sailing_route_points,
-				mission
-			)
 			_build_remote_mission_preview(mission)
 	if _sailing_route_points.size() < 2:
 		return false
@@ -552,7 +543,7 @@ func _build_delivery_route(mission: Mission) -> PackedVector2Array:
 		mission.pickup_port_id,
 		mission.delivery_port_id
 	)
-	return _apply_return_corridor_lane(delivery_route, mission)
+	return delivery_route
 
 
 func _build_route_from_current_position(
@@ -595,12 +586,9 @@ func _build_remote_mission_preview(mission: Mission) -> void:
 	if mission == null or _sailing_route_points.size() < 2:
 		return
 
-	var delivery_points := _apply_return_corridor_lane(
-		PortManager.get_smoothed_route_points(
-			mission.pickup_port_id,
-			mission.delivery_port_id
-		),
-		mission
+	var delivery_points := PortManager.get_smoothed_route_points(
+		mission.pickup_port_id,
+		mission.delivery_port_id
 	)
 	if delivery_points.size() < 2:
 		return
@@ -613,43 +601,6 @@ func _build_remote_mission_preview(mission: Mission) -> void:
 		_mission_preview_route_points.append(delivery_points[point_index])
 	_preview_pickup_route_length = _get_polyline_length(_sailing_route_points)
 	_preview_total_route_length = _get_polyline_length(_mission_preview_route_points)
-
-
-func _apply_return_corridor_lane(
-		points: PackedVector2Array,
-		mission: Mission
-) -> PackedVector2Array:
-	if mission == null \
-			or mission.origin_port_id != mission.delivery_port_id \
-			or mission.origin_port_id == mission.pickup_port_id:
-		return points
-	return _offset_route_lane(points, RETURN_CORRIDOR_LANE_OFFSET_PX)
-
-
-func _offset_route_lane(
-		points: PackedVector2Array,
-		offset_px: float
-) -> PackedVector2Array:
-	if points.size() < 3 or is_zero_approx(offset_px):
-		return points
-	var total_length := _get_polyline_length(points)
-	if total_length <= 0.001:
-		return points
-	var offset_points := points.duplicate()
-	var last_index := points.size() - 1
-	var travelled_length := 0.0
-	for point_index in range(1, last_index):
-		travelled_length += points[point_index - 1].distance_to(points[point_index])
-		var tangent := points[point_index + 1] - points[point_index - 1]
-		if tangent.is_zero_approx():
-			continue
-		var route_progress := travelled_length / total_length
-		# Keep the exact port endpoints and gradually open a parallel lane at
-		# sea, avoiding a sharp sideways jump when the ship enters either port.
-		var endpoint_fade := sin(PI * route_progress)
-		var normal := Vector2(-tangent.y, tangent.x).normalized()
-		offset_points[point_index] += normal * offset_px * endpoint_fade
-	return offset_points
 
 
 func _clear_mission_preview() -> void:

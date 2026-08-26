@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="SeaRouteData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/data/sea_route_data.gd" id="1_route"]
+
+[resource]
+script = ExtResource("1_route")
+from_port_id = &"pire"
+to_port_id = &"izmir"
+waypoints = PackedVector2Array(1050, 2580, 1230, 2520, 1400, 2630, 1570, 2580, 1700, 2660)
+gameplay_distance = 280.0

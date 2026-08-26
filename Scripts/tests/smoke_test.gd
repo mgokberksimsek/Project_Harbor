@@ -47,7 +47,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 
-	assert(port_manager.get_all_port_ids().size() == 7)
+	assert(port_manager.get_all_port_ids().size() == 8)
 	assert(port_manager.is_unlocked(&"mersin"))
 	assert(port_manager.is_unlocked(&"izmir"))
 	assert(not port_manager.is_unlocked(&"istanbul"))
@@ -55,6 +55,7 @@ func _run() -> void:
 	assert(not port_manager.is_unlocked(&"samsun"))
 	assert(not port_manager.is_unlocked(&"canakkale"))
 	assert(not port_manager.is_unlocked(&"trabzon"))
+	assert(not port_manager.is_unlocked(&"pire"))
 	assert(port_manager.has_sea_route(&"mersin", &"izmir"))
 	assert(port_manager.has_sea_route(&"mersin", &"antalya"))
 	assert(port_manager.has_sea_route(&"izmir", &"antalya"))
@@ -65,6 +66,9 @@ func _run() -> void:
 	assert(port_manager.has_sea_route(&"canakkale", &"istanbul"))
 	assert(port_manager.has_sea_route(&"samsun", &"trabzon"))
 	assert(port_manager.has_sea_route(&"antalya", &"trabzon"))
+	assert(port_manager.has_sea_route(&"pire", &"izmir"))
+	assert(port_manager.has_sea_route(&"pire", &"canakkale"))
+	assert(port_manager.has_route_path(&"pire", &"trabzon"))
 	assert(not port_manager.has_sea_route(&"mersin", &"trabzon"))
 	assert(port_manager.has_route_path(&"mersin", &"trabzon"))
 	var mersin_trabzon_port_path: Array[StringName] = port_manager.get_route_port_path(
@@ -95,6 +99,7 @@ func _run() -> void:
 	var samsun_data: PortData = port_manager.get_port_data(&"samsun")
 	var canakkale_data: PortData = port_manager.get_port_data(&"canakkale")
 	var trabzon_data: PortData = port_manager.get_port_data(&"trabzon")
+	var pire_data: PortData = port_manager.get_port_data(&"pire")
 	assert(antalya_data.required_company_level == 1)
 	assert(antalya_data.base_unlock_cost == 750)
 	assert(antalya_data.base_company_value == 500)
@@ -114,20 +119,26 @@ func _run() -> void:
 	assert(trabzon_data.required_company_level == 6)
 	assert(trabzon_data.base_unlock_cost == 6500)
 	assert(trabzon_data.base_company_value == 3000)
+	assert(pire_data.required_company_level == 7)
+	assert(pire_data.base_unlock_cost == 8500)
+	assert(pire_data.base_company_value == 4200)
+	assert(pire_data.get_upgrade_cost(1) == 6500)
 	port_manager.apply_save_state({
 		"mersin": {"port_id": "mersin", "unlocked": true, "level": 1},
 		"izmir": {"port_id": "izmir", "unlocked": true, "level": 1},
 		"istanbul": {"port_id": "istanbul", "unlocked": false, "level": 1},
 	})
-	assert(port_manager.get_all_port_ids().size() == 7)
+	assert(port_manager.get_all_port_ids().size() == 8)
 	assert(port_manager.is_registered(&"antalya"))
 	assert(port_manager.is_registered(&"samsun"))
 	assert(port_manager.is_registered(&"canakkale"))
 	assert(port_manager.is_registered(&"trabzon"))
+	assert(port_manager.is_registered(&"pire"))
 	assert(not port_manager.is_unlocked(&"antalya"))
 	assert(not port_manager.is_unlocked(&"samsun"))
 	assert(not port_manager.is_unlocked(&"canakkale"))
 	assert(not port_manager.is_unlocked(&"trabzon"))
+	assert(not port_manager.is_unlocked(&"pire"))
 	world.call("_update_tutorial_instruction")
 	var antalya_status := world.get_node("Ports/Antalya/StatusLabel") as Label
 	assert(antalya_status.text.contains("Sv. 1"))
@@ -663,57 +674,26 @@ func _run() -> void:
 	var starter_map_ship: Area2D = fleet_manager.get_ship_node(starter_ship_id) as Area2D
 	var mersin_map_port: Area2D = port_manager.get_port_node(&"mersin") as Area2D
 	assert(starter_map_ship != null)
-	_assert_all_sea_routes_avoid_land(port_manager, world, starter_map_ship)
-	var return_corridor_probe := Mission.new()
-	return_corridor_probe.origin_port_id = &"mersin"
-	return_corridor_probe.pickup_port_id = &"izmir"
-	return_corridor_probe.delivery_port_id = &"mersin"
-	var outbound_centerline: PackedVector2Array = port_manager.get_smoothed_route_points(
-		&"mersin",
-		&"izmir"
+	_assert_all_sea_routes_avoid_land(port_manager, world)
+	var route_line := starter_map_ship.get_node("RouteLine") as ShipRouteLine
+	var doubled_back_route := PackedVector2Array([
+		Vector2(0, 0),
+		Vector2(100, 0),
+		Vector2(200, 0),
+		Vector2(100, 0),
+		Vector2(0, 0),
+	])
+	var hidden_overlap_segments: Array = route_line.call(
+		"_get_hidden_reverse_overlap_segments",
+		doubled_back_route
 	)
-	var return_centerline: PackedVector2Array = port_manager.get_smoothed_route_points(
-		&"izmir",
-		&"mersin"
-	)
-	var outbound_lane: PackedVector2Array = starter_map_ship.call(
-		"_apply_return_corridor_lane",
-		outbound_centerline,
-		return_corridor_probe
-	)
-	var return_lane: PackedVector2Array = starter_map_ship.call(
-		"_apply_return_corridor_lane",
-		return_centerline,
-		return_corridor_probe
-	)
-	assert(outbound_lane[0].is_equal_approx(outbound_centerline[0]))
-	assert(outbound_lane[outbound_lane.size() - 1].is_equal_approx(
-		outbound_centerline[outbound_centerline.size() - 1]
-	))
-	assert(return_lane[0].is_equal_approx(return_centerline[0]))
-	assert(return_lane[return_lane.size() - 1].is_equal_approx(
-		return_centerline[return_centerline.size() - 1]
-	))
-	assert(outbound_lane.size() == return_lane.size())
-	var maximum_return_lane_separation := 0.0
-	for lane_index in range(1, outbound_lane.size() - 1):
-		maximum_return_lane_separation = maxf(
-			maximum_return_lane_separation,
-			outbound_lane[lane_index].distance_to(
-				return_lane[return_lane.size() - 1 - lane_index]
-			)
-		)
-	assert(maximum_return_lane_separation >= 20.0)
-	var non_return_probe := Mission.new()
-	non_return_probe.origin_port_id = &"mersin"
-	non_return_probe.pickup_port_id = &"izmir"
-	non_return_probe.delivery_port_id = &"antalya"
-	var unchanged_non_return_route: PackedVector2Array = starter_map_ship.call(
-		"_apply_return_corridor_lane",
-		outbound_centerline,
-		non_return_probe
-	)
-	assert(unchanged_non_return_route == outbound_centerline)
+	assert(hidden_overlap_segments == [true, true, false, false])
+	route_line.set_route(doubled_back_route, 0.0, true)
+	var visible_doubled_back_length := 0.0
+	for dash_segment in route_line.get_visible_dash_segments():
+		visible_doubled_back_length += dash_segment[0].distance_to(dash_segment[1])
+	assert(visible_doubled_back_length > 0.0)
+	assert(visible_doubled_back_length < 200.0)
 	var approach_probe_duration := 10.0 * 60.0
 	var approach_probe_length := 1000.0
 	# Match the authored Ship approach values without loading the Ship class
@@ -1893,8 +1873,7 @@ func _assert_port_centers_are_spaced(port_manager: Node, minimum_distance: float
 
 func _assert_all_sea_routes_avoid_land(
 		port_manager: Node,
-		world: Node2D,
-		ship: Area2D
+		world: Node2D
 ) -> void:
 	const ROUTE_SAMPLE_SPACING_PX := 20.0
 	var land_entries: Array[Dictionary] = []
@@ -1950,42 +1929,6 @@ func _assert_all_sea_routes_avoid_land(
 				ROUTE_SAMPLE_SPACING_PX
 			)
 
-			var return_mission := Mission.new()
-			return_mission.origin_port_id = port_ids[first_index]
-			return_mission.pickup_port_id = port_ids[second_index]
-			return_mission.delivery_port_id = port_ids[first_index]
-			var return_points: PackedVector2Array = port_manager.get_smoothed_route_points(
-				port_ids[second_index],
-				port_ids[first_index]
-			)
-			var outbound_separated: PackedVector2Array = ship.call(
-				"_apply_return_corridor_lane",
-				connected_points,
-				return_mission
-			)
-			var return_separated: PackedVector2Array = ship.call(
-				"_apply_return_corridor_lane",
-				return_points,
-				return_mission
-			)
-			_assert_route_points_avoid_land(
-				outbound_separated,
-				land_entries,
-				"Separated %s -> %s" % [
-					port_ids[first_index],
-					port_ids[second_index],
-				],
-				ROUTE_SAMPLE_SPACING_PX
-			)
-			_assert_route_points_avoid_land(
-				return_separated,
-				land_entries,
-				"Separated %s -> %s" % [
-					port_ids[second_index],
-					port_ids[first_index],
-				],
-				ROUTE_SAMPLE_SPACING_PX
-			)
 
 
 func _assert_route_points_avoid_land(
