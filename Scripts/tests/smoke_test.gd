@@ -25,6 +25,7 @@ func _run() -> void:
 	assert(not legacy_ship_state.automation_unlocked)
 	assert(not legacy_ship_state.automation_enabled)
 	assert(not legacy_ship_state.awaiting_headquarters_dispatch)
+	assert(legacy_ship_state.headquarters_slot_index == -1)
 	assert(not legacy_ship_state.headquarters_dispatch_active)
 
 	var port_manager := root.get_node("/root/PortManager")
@@ -36,6 +37,14 @@ func _run() -> void:
 	var game_manager := root.get_node("/root/GameManager")
 	var save_manager := root.get_node("/root/SaveManager")
 	var event_bus := root.get_node("/root/EventBus")
+	var expected_fleet_capacities: Array[int] = [
+		2, 3, 4, 5, 6,
+		8, 10, 12, 14, 16,
+		17, 18, 19, 20, 21,
+	]
+	for level_index in range(expected_fleet_capacities.size()):
+		assert(fleet_manager.get_fleet_capacity_for_company_level(level_index + 1) \
+			== expected_fleet_capacities[level_index])
 	var test_save_path := "user://smoke_test_save.json"
 	assert(save_manager.delete_save(test_save_path))
 	assert(not save_manager.loaded_existing_save)
@@ -770,10 +779,10 @@ func _run() -> void:
 		approach_probe_length
 	)), 1.0))
 	var headquarters_delivery_position: Vector2 = headquarters.get_delivery_position(
-		fleet_manager.get_ship_dock_slot_index(starter_ship_id)
+		fleet_manager.get_ship_headquarters_slot_index(starter_ship_id)
 	)
 	var headquarters_approach_position: Vector2 = headquarters.get_delivery_approach_position(
-		fleet_manager.get_ship_dock_slot_index(starter_ship_id)
+		fleet_manager.get_ship_headquarters_slot_index(starter_ship_id)
 	)
 	assert(fleet_manager.is_awaiting_headquarters_dispatch(starter_ship_id))
 	assert(bool(starter_map_ship.get("_hold_initial_position_while_idle")))
@@ -826,8 +835,10 @@ func _run() -> void:
 	assert(starter_route_line.get_remaining_length() < full_route_length)
 	starter_route_line.clear_route()
 	assert(port_manager.get_port_data(&"mersin").dock_slot_offsets.size() == 6)
-	assert(fleet_manager.get_ship_dock_slot_index(starter_ship_id) == 0)
-	assert(fleet_manager.get_ship_dock_position(starter_ship_id) != mersin_map_port.global_position)
+	assert(port_manager.get_dock_slot_count(&"mersin") == 2)
+	assert(fleet_manager.get_ship_dock_slot_index(starter_ship_id) == -1)
+	assert(fleet_manager.get_ship_reserved_dock_port(starter_ship_id) == &"")
+	assert(fleet_manager.get_ship_dock_position(starter_ship_id) == Vector2.ZERO)
 	assert(starter_map_ship.z_index > mersin_map_port.z_index)
 	assert(world.get_viewport().physics_object_picking_sort)
 	assert(world.get_viewport().physics_object_picking_first_only)
@@ -1273,9 +1284,11 @@ func _run() -> void:
 		headquarters_arrival_ship = fleet_manager.get_ship_node(purchased_ship_id)
 		break
 	assert(headquarters_arrival_ship != null)
-	var headquarters_arrival_slot: int = fleet_manager.get_ship_dock_slot_index(
+	var headquarters_arrival_slot: int = fleet_manager.get_ship_headquarters_slot_index(
 		headquarters_arrival_ship_id
 	)
+	assert(headquarters_arrival_slot >= 0)
+	assert(fleet_manager.get_ship_reserved_dock_port(headquarters_arrival_ship_id) == &"")
 	var headquarters_arrival_berth: Vector2 = headquarters.get_delivery_position(
 		headquarters_arrival_slot
 	)
@@ -1330,7 +1343,7 @@ func _run() -> void:
 		assert(fleet_manager.is_awaiting_headquarters_dispatch(ship_id))
 		assert(bool(purchased_ship.get("_hold_initial_position_while_idle")))
 		var purchased_delivery_position: Vector2 = headquarters.get_delivery_position(
-			fleet_manager.get_ship_dock_slot_index(ship_id)
+			fleet_manager.get_ship_headquarters_slot_index(ship_id)
 		)
 		var delivery_transition_deadline := Time.get_ticks_msec() + 3000
 		while bool(purchased_ship.get("_dock_transition_active")) \
@@ -1347,6 +1360,8 @@ func _run() -> void:
 		String(refrigerated_ship_id)
 	]
 	assert(bool(refrigerated_saved_state["awaiting_headquarters_dispatch"]))
+	assert(int(refrigerated_saved_state["headquarters_slot_index"]) \
+		== fleet_manager.get_ship_headquarters_slot_index(refrigerated_ship_id))
 	assert(not bool(refrigerated_saved_state["headquarters_dispatch_active"]))
 	assert(ShipRuntimeState.from_dict(
 		refrigerated_saved_state
@@ -1791,9 +1806,56 @@ func _run() -> void:
 		assert(not fleet_ship_name.is_empty())
 		assert(not fleet_ship_names.has(fleet_ship_name.to_lower()))
 		fleet_ship_names.append(fleet_ship_name.to_lower())
+	var headquarters_dispatch_count := 0
+	while fleet_manager.get_reserved_dock_count(&"mersin") < 2 \
+			and headquarters_dispatch_count < 2:
+		var berth_test_ship_id: StringName = &""
+		for candidate_ship_id in fleet_manager.get_all_ship_ids():
+			if fleet_manager.is_awaiting_headquarters_dispatch(candidate_ship_id):
+				berth_test_ship_id = candidate_ship_id
+				break
+		assert(berth_test_ship_id != &"")
+		assert(fleet_manager.get_ship_reserved_dock_port(berth_test_ship_id) == &"")
+		var headquarters_to_mersin_mission := Mission.new()
+		headquarters_to_mersin_mission.id = \
+			"headquarters_to_mersin_berth_test_%d" % headquarters_dispatch_count
+		headquarters_to_mersin_mission.pickup_port_id = &"izmir"
+		headquarters_to_mersin_mission.delivery_port_id = &"mersin"
+		headquarters_to_mersin_mission.loading_duration_sec = 0.0
+		headquarters_to_mersin_mission.unloading_duration_sec = 0.0
+		assert(fleet_manager.assign_mission(
+			berth_test_ship_id,
+			headquarters_to_mersin_mission
+		))
+		var headquarters_mission_safety := 0
+		while fleet_manager.get_ship_state(berth_test_ship_id) \
+				!= ShipRuntimeState.State.IDLE and headquarters_mission_safety < 6:
+			headquarters_to_mersin_mission.leg_duration_sec = 0.0
+			await process_frame
+			headquarters_mission_safety += 1
+		assert(fleet_manager.get_ship_state(berth_test_ship_id) \
+			== ShipRuntimeState.State.IDLE)
+		assert(fleet_manager.get_ship_current_port(berth_test_ship_id) == &"mersin")
+		headquarters_dispatch_count += 1
+	assert(fleet_manager.get_reserved_dock_count(&"mersin") == 2)
+	var full_port_probe_ship_id: StringName = &""
+	for candidate_ship_id in fleet_manager.get_all_ship_ids():
+		if fleet_manager.is_awaiting_headquarters_dispatch(candidate_ship_id):
+			full_port_probe_ship_id = candidate_ship_id
+			break
+	assert(full_port_probe_ship_id != &"")
+	assert(not fleet_manager.can_reserve_dock_at_port(&"mersin", full_port_probe_ship_id))
+	var full_port_candidates: Array = mission_manager.call(
+		"_build_offer_candidates",
+		fleet_manager.get_ship_current_port(full_port_probe_ship_id),
+		full_port_probe_ship_id
+	)
+	for candidate in full_port_candidates:
+		assert(candidate["destination_id"] != &"mersin")
 	var occupied_mersin_slots: Array[int] = []
 	for docked_ship_id in fleet_manager.get_all_ship_ids():
-		if fleet_manager.get_ship_current_port(docked_ship_id) != &"mersin":
+		if fleet_manager.get_ship_current_port(docked_ship_id) != &"mersin" \
+				or fleet_manager.is_awaiting_headquarters_dispatch(docked_ship_id):
 			continue
 		var dock_slot_index: int = fleet_manager.get_ship_dock_slot_index(docked_ship_id)
 		assert(dock_slot_index >= 0)
@@ -1806,7 +1868,8 @@ func _run() -> void:
 	var departing_ship_id: StringName = &""
 	var replacement_ship_id: StringName = &""
 	for docked_ship_id in fleet_manager.get_all_ship_ids():
-		if fleet_manager.get_ship_current_port(docked_ship_id) != &"mersin":
+		if fleet_manager.get_ship_current_port(docked_ship_id) != &"mersin" \
+				or fleet_manager.is_awaiting_headquarters_dispatch(docked_ship_id):
 			continue
 		var slot_index: int = fleet_manager.get_ship_dock_slot_index(docked_ship_id)
 		if slot_index >= 0 and slot_index < lowest_slot:
@@ -1830,6 +1893,7 @@ func _run() -> void:
 	assert(fleet_manager.get_ship_state(departing_ship_id) \
 		== ShipRuntimeState.State.SAILING_TO_DELIVERY)
 	assert(fleet_manager.get_ship_dock_slot_index(replacement_ship_id) == lowest_slot)
+	assert(fleet_manager.can_reserve_dock_at_port(&"mersin", full_port_probe_ship_id))
 	assert(fleet_manager.purchase_ship(&"refrigerated_freighter", &"mersin") == &"")
 	game_manager.add_money(10000)
 	var money_before_full_fleet_purchase: int = game_manager.money
@@ -1874,6 +1938,7 @@ func _run() -> void:
 	port_unlock_button.pressed.emit()
 	await process_frame
 	assert(port_manager.get_level(&"mersin") == 2)
+	assert(port_manager.get_dock_slot_count(&"mersin") == 4)
 	assert(game_manager.money == money_before_port_upgrade - 450)
 	assert(company_manager.company_value == port_company_value_before_upgrade + 200)
 	assert(is_equal_approx(
@@ -1884,6 +1949,7 @@ func _run() -> void:
 	port_unlock_button.pressed.emit()
 	await process_frame
 	assert(port_manager.get_level(&"mersin") == 3)
+	assert(port_manager.get_dock_slot_count(&"mersin") == 6)
 	assert(is_equal_approx(
 		fleet_manager.get_mission_unloading_duration(&"mersin"),
 		1.8

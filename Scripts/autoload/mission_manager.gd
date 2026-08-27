@@ -192,6 +192,8 @@ func _build_offer_candidates(
 				and not PortManager.has_route_path(ship_port_id, pickup_id):
 			continue
 		for destination_id in _get_destinations(pickup_id):
+			if not FleetManager.can_reserve_dock_at_port(destination_id, ship_id):
+				continue
 			for cargo_type in compatible_cargo_types:
 				candidates.append({
 					"pickup_id": pickup_id,

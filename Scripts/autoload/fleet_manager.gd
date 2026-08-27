@@ -29,7 +29,14 @@ const SAILING_DURATION_SCALE := 10.0
 ## inside its home port.
 const HEADQUARTERS_DISPATCH_DURATION_SEC := 8.0
 const SHIP_RESOURCE_DIR := "res://Resources/ships"
-const BASE_FLEET_CAPACITY := 6
+## Designer-tunable global fleet ceiling for Company Levels 1 through 15.
+## Early growth stays deliberate, Levels 6-10 expand faster alongside
+## automation, and late growth slows again to protect map readability.
+const FLEET_CAPACITY_BY_COMPANY_LEVEL: Array[int] = [
+	2, 3, 4, 5, 6,
+	8, 10, 12, 14, 16,
+	17, 18, 19, 20, 21,
+]
 const MIN_SHIP_NAME_LENGTH := 2
 const MAX_SHIP_NAME_LENGTH := 20
 const SHIP_NAME_POOL: Array[String] = [
@@ -123,7 +130,16 @@ func get_ship_dock_slot_index(ship_id: StringName) -> int:
 	if not _states.has(ship_id) or not _is_ship_docked(ship_id):
 		return -1
 	var runtime: ShipRuntimeState = _states[ship_id]
-	return _reserve_first_free_dock_slot(ship_id, runtime.current_port_id)
+	var expected_port_id := _get_expected_dock_port(runtime)
+	if expected_port_id == &"" or runtime.current_port_id != expected_port_id:
+		return -1
+	return _reserve_first_free_dock_slot(ship_id, expected_port_id)
+
+
+func get_ship_headquarters_slot_index(ship_id: StringName) -> int:
+	if not _states.has(ship_id) or not _states[ship_id].awaiting_headquarters_dispatch:
+		return -1
+	return _states[ship_id].headquarters_slot_index
 
 
 func get_ship_reserved_dock_port(ship_id: StringName) -> StringName:
@@ -155,6 +171,7 @@ func _reserve_first_free_dock_slot(ship_id: StringName, port_id: StringName) -> 
 	if not _states.has(ship_id) or port_id == &"":
 		return -1
 	var slot_count := PortManager.get_dock_slot_count(port_id)
+	var authored_slot_count := PortManager.get_authored_dock_slot_count(port_id)
 	if slot_count <= 0:
 		return -1
 
@@ -166,14 +183,21 @@ func _reserve_first_free_dock_slot(ship_id: StringName, port_id: StringName) -> 
 		var candidate: ShipRuntimeState = _states[candidate_id]
 		if candidate.dock_port_id == port_id \
 				and candidate.dock_slot_index >= 0 \
-				and candidate.dock_slot_index < slot_count:
+				and candidate.dock_slot_index < authored_slot_count:
 			occupied_slots[candidate.dock_slot_index] = true
 
+	# Preserve a valid berth from an older save even if the port's new level
+	# capacity is currently lower. It remains occupied until that ship leaves;
+	# new reservations still use only the unlocked slots below.
 	if runtime.dock_port_id == port_id \
 			and runtime.dock_slot_index >= 0 \
-			and runtime.dock_slot_index < slot_count \
+			and runtime.dock_slot_index < authored_slot_count \
 			and not occupied_slots.has(runtime.dock_slot_index):
 		return runtime.dock_slot_index
+	if occupied_slots.size() >= slot_count:
+		runtime.dock_port_id = &""
+		runtime.dock_slot_index = -1
+		return -1
 
 	for slot_index in range(slot_count):
 		if occupied_slots.has(slot_index):
@@ -186,6 +210,40 @@ func _reserve_first_free_dock_slot(ship_id: StringName, port_id: StringName) -> 
 	runtime.dock_slot_index = -1
 	push_warning("No free dock slot at port '%s' for ship '%s'." % [port_id, ship_id])
 	return -1
+
+
+func can_reserve_dock_at_port(port_id: StringName, ship_id: StringName = &"") -> bool:
+	var slot_count := PortManager.get_dock_slot_count(port_id)
+	if slot_count <= 0:
+		return false
+	if ship_id != &"" and _states.has(ship_id):
+		var runtime: ShipRuntimeState = _states[ship_id]
+		if runtime.dock_port_id == port_id and runtime.dock_slot_index >= 0:
+			return true
+	var occupied_slots := {}
+	var authored_slot_count := PortManager.get_authored_dock_slot_count(port_id)
+	for candidate_id in _states.keys():
+		if candidate_id == ship_id:
+			continue
+		var candidate: ShipRuntimeState = _states[candidate_id]
+		if candidate.dock_port_id == port_id \
+				and candidate.dock_slot_index >= 0 \
+				and candidate.dock_slot_index < authored_slot_count:
+			occupied_slots[candidate.dock_slot_index] = true
+	if occupied_slots.size() >= slot_count:
+		return false
+	for slot_index in range(slot_count):
+		if not occupied_slots.has(slot_index):
+			return true
+	return false
+
+
+func get_reserved_dock_count(port_id: StringName) -> int:
+	var count := 0
+	for runtime: ShipRuntimeState in _states.values():
+		if runtime.dock_port_id == port_id and runtime.dock_slot_index >= 0:
+			count += 1
+	return count
 
 
 func _move_reservation_to_port(ship_id: StringName, port_id: StringName) -> int:
@@ -238,13 +296,10 @@ func _fill_vacated_dock_slot(port_id: StringName, vacated_slot_index: int) -> vo
 
 
 func _get_expected_dock_port(runtime: ShipRuntimeState) -> StringName:
+	if runtime.awaiting_headquarters_dispatch:
+		return &""
 	if runtime.current_mission != null:
-		if runtime.state == ShipRuntimeState.State.SAILING_TO_PICKUP:
-			return &""
-		if runtime.state == ShipRuntimeState.State.LOADING:
-			return &""
-		if runtime.state == ShipRuntimeState.State.SAILING_TO_DELIVERY:
-			return runtime.current_mission.delivery_port_id
+		return runtime.current_mission.delivery_port_id
 	return runtime.current_port_id
 
 
@@ -260,7 +315,7 @@ func _reconcile_dock_reservations() -> void:
 	for ship_id in sorted_ids:
 		var runtime: ShipRuntimeState = _states[ship_id]
 		var expected_port := _get_expected_dock_port(runtime)
-		var slot_count := PortManager.get_dock_slot_count(expected_port)
+		var slot_count := PortManager.get_authored_dock_slot_count(expected_port)
 		if not occupied_by_port.has(expected_port):
 			occupied_by_port[expected_port] = {}
 		var occupied: Dictionary = occupied_by_port[expected_port]
@@ -280,6 +335,36 @@ func _reconcile_dock_reservations() -> void:
 		var runtime: ShipRuntimeState = _states[ship_id]
 		if runtime.dock_slot_index < 0:
 			_reserve_first_free_dock_slot(ship_id, _get_expected_dock_port(runtime))
+
+
+func _reconcile_headquarters_slots() -> void:
+	var occupied_slots := {}
+	var awaiting_ids: Array[StringName] = []
+	for ship_id in _states.keys():
+		var runtime: ShipRuntimeState = _states[ship_id]
+		if not runtime.awaiting_headquarters_dispatch:
+			runtime.headquarters_slot_index = -1
+			continue
+		awaiting_ids.append(ship_id)
+		if runtime.headquarters_slot_index >= 0 \
+				and not occupied_slots.has(runtime.headquarters_slot_index):
+			occupied_slots[runtime.headquarters_slot_index] = true
+		else:
+			runtime.headquarters_slot_index = -1
+	awaiting_ids.sort()
+	for ship_id in awaiting_ids:
+		var runtime: ShipRuntimeState = _states[ship_id]
+		if runtime.headquarters_slot_index >= 0:
+			continue
+		runtime.headquarters_slot_index = _first_free_index(occupied_slots)
+		occupied_slots[runtime.headquarters_slot_index] = true
+
+
+func _first_free_index(occupied_slots: Dictionary) -> int:
+	var slot_index := 0
+	while occupied_slots.has(slot_index):
+		slot_index += 1
+	return slot_index
 
 
 func _is_ship_docked(ship_id: StringName) -> bool:
@@ -490,7 +575,36 @@ func get_owned_model_count(model_id: StringName) -> int:
 
 
 func get_fleet_capacity() -> int:
-	return BASE_FLEET_CAPACITY
+	var company_manager := get_node_or_null("/root/CompanyManager")
+	var company_level := int(company_manager.get("company_level")) \
+		if company_manager != null else 1
+	# Existing saves may already own more ships than the newly introduced
+	# level ceiling. Never remove them or display an impossible over-cap count;
+	# simply block further purchases until progression catches up.
+	return maxi(
+		get_fleet_capacity_for_company_level(company_level),
+		_states.size()
+	)
+
+
+func get_fleet_capacity_for_company_level(company_level: int) -> int:
+	var level_index := clampi(
+		company_level - 1,
+		0,
+		FLEET_CAPACITY_BY_COMPANY_LEVEL.size() - 1
+	)
+	return FLEET_CAPACITY_BY_COMPANY_LEVEL[level_index]
+
+
+func get_next_fleet_capacity_level() -> int:
+	var company_manager := get_node_or_null("/root/CompanyManager")
+	var current_level := int(company_manager.get("company_level")) \
+		if company_manager != null else 1
+	var current_capacity := get_fleet_capacity()
+	for level in range(current_level + 1, FLEET_CAPACITY_BY_COMPANY_LEVEL.size() + 1):
+		if get_fleet_capacity_for_company_level(level) > current_capacity:
+			return level
+	return -1
 
 
 func is_fleet_at_capacity() -> bool:
@@ -528,10 +642,15 @@ func purchase_ship(model_id: StringName, home_port_id: StringName) -> StringName
 	state.ship_name = _generate_unique_ship_name()
 	state.current_port_id = home_port_id
 	state.awaiting_headquarters_dispatch = true
+	var occupied_headquarters_slots := {}
+	for runtime: ShipRuntimeState in _states.values():
+		if runtime.awaiting_headquarters_dispatch \
+				and runtime.headquarters_slot_index >= 0:
+			occupied_headquarters_slots[runtime.headquarters_slot_index] = true
+	state.headquarters_slot_index = _first_free_index(occupied_headquarters_slots)
 	state.state = ShipRuntimeState.State.IDLE
 	_states[ship_id] = state
 	_data[ship_id] = ship_data
-	_reserve_first_free_dock_slot(ship_id, home_port_id)
 	EventBus.ship_purchased.emit(ship_id, ship_data, home_port_id)
 	return ship_id
 
@@ -684,11 +803,17 @@ func assign_mission(ship_id: StringName, mission: Mission) -> bool:
 	if state.state != ShipRuntimeState.State.IDLE:
 		push_warning("Ship '%s' is not idle, cannot assign a new mission." % ship_id)
 		return false
+	if mission == null \
+			or not can_reserve_dock_at_port(mission.delivery_port_id, ship_id):
+		return false
+	if _move_reservation_to_port(ship_id, mission.delivery_port_id) < 0:
+		return false
 
 	var headquarters_dispatch_duration := HEADQUARTERS_DISPATCH_DURATION_SEC \
 		if state.awaiting_headquarters_dispatch else 0.0
 	state.headquarters_dispatch_active = state.awaiting_headquarters_dispatch
 	state.awaiting_headquarters_dispatch = false
+	state.headquarters_slot_index = -1
 	state.current_mission = mission
 	mission.assigned_ship_id = ship_id
 	_start_leg(
@@ -788,15 +913,11 @@ func _start_leg(ship_id: StringName, new_state: ShipRuntimeState.State,
 
 	mission.stage = _state_to_mission_stage(new_state)
 	mission.start_leg(duration, leg_start_unix)
-	# Loading happens at the port center, not in a permanent berth. The ship
-	# releases its berth for both local and remote pickups, then only reserves
-	# a new berth when it starts the loaded delivery leg.
-	var pickup_or_loading_leg := new_state == ShipRuntimeState.State.SAILING_TO_PICKUP \
-		or new_state == ShipRuntimeState.State.LOADING
-	if pickup_or_loading_leg:
-		_release_dock_reservation(ship_id)
-	else:
-		_move_reservation_to_port(ship_id, to_port_id)
+	# The delivery berth is reserved when the mission is accepted and remains
+	# stable throughout pickup/loading. This prevents several ships from being
+	# offered the same final free berth while they are still at sea.
+	if mission != null and state.dock_port_id != mission.delivery_port_id:
+		_move_reservation_to_port(ship_id, mission.delivery_port_id)
 
 	var previous := state.state
 	state.state = new_state
@@ -843,6 +964,7 @@ func apply_save_state(saved: Dictionary) -> void:
 		if ship_data != null:
 			_data[ship_id] = ship_data
 	_assign_missing_ship_names()
+	_reconcile_headquarters_slots()
 	_reconcile_dock_reservations()
 
 

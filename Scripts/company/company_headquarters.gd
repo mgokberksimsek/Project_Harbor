@@ -20,6 +20,9 @@ const DELIVERY_SLOT_OFFSETS: Array[Vector2] = [
 	Vector2(0.0, 90.0),
 	Vector2(140.0, 90.0),
 ]
+const OVERFLOW_SLOT_COLUMNS: Array[float] = [-140.0, 0.0, 140.0]
+const OVERFLOW_SLOT_FIRST_Y := 150.0
+const OVERFLOW_SLOT_ROW_SPACING := 60.0
 const DELIVERY_APPROACH_OFFSET := Vector2(0.0, 180.0)
 
 @onready var _delivery_berth: Marker2D = $DeliveryBerth
@@ -44,12 +47,24 @@ func _ready() -> void:
 
 
 func get_delivery_position(slot_index: int = 0) -> Vector2:
-	var safe_slot_index := clampi(slot_index, 0, DELIVERY_SLOT_OFFSETS.size() - 1)
-	return _delivery_berth.global_position + DELIVERY_SLOT_OFFSETS[safe_slot_index]
+	return _delivery_berth.global_position + _get_delivery_slot_offset(slot_index)
 
 
 func get_delivery_approach_position(slot_index: int = 0) -> Vector2:
 	return get_delivery_position(slot_index) + DELIVERY_APPROACH_OFFSET
+
+
+func _get_delivery_slot_offset(slot_index: int) -> Vector2:
+	var safe_slot_index := maxi(slot_index, 0)
+	if safe_slot_index < DELIVERY_SLOT_OFFSETS.size():
+		return DELIVERY_SLOT_OFFSETS[safe_slot_index]
+	var overflow_index := safe_slot_index - DELIVERY_SLOT_OFFSETS.size()
+	var column_index := overflow_index % OVERFLOW_SLOT_COLUMNS.size()
+	var row_index := overflow_index / OVERFLOW_SLOT_COLUMNS.size()
+	return Vector2(
+		OVERFLOW_SLOT_COLUMNS[column_index],
+		OVERFLOW_SLOT_FIRST_Y + float(row_index) * OVERFLOW_SLOT_ROW_SPACING
+	)
 
 
 func get_visual_tier() -> int:

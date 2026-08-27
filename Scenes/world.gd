@@ -907,13 +907,13 @@ func _spawn_ship(
 
 func _get_headquarters_delivery_position(ship_id: StringName) -> Vector2:
 	return _company_headquarters.get_delivery_position(
-		FleetManager.get_ship_dock_slot_index(ship_id)
+		FleetManager.get_ship_headquarters_slot_index(ship_id)
 	)
 
 
 func _get_headquarters_delivery_approach_position(ship_id: StringName) -> Vector2:
 	return _company_headquarters.get_delivery_approach_position(
-		FleetManager.get_ship_dock_slot_index(ship_id)
+		FleetManager.get_ship_headquarters_slot_index(ship_id)
 	)
 
 
@@ -1022,7 +1022,8 @@ func _show_port_unlock_panel(port_id: StringName) -> void:
 		port_data.base_company_value,
 		port_data.required_company_level,
 		GameManager.money,
-		CompanyManager.company_level
+		CompanyManager.company_level,
+		PortManager.get_dock_slot_count_for_level(port_id, 1)
 	)
 
 
@@ -1049,7 +1050,9 @@ func _show_port_upgrade_panel(port_id: StringName) -> void:
 		company_value,
 		GameManager.money,
 		reward_bonus_percent,
-		handling_reduction_percent
+		handling_reduction_percent,
+		PortManager.get_dock_slot_count_for_level(port_id, current_level),
+		PortManager.get_dock_slot_count_for_level(port_id, benefit_level)
 	)
 
 
@@ -1166,6 +1169,10 @@ func _show_company_progress_panel() -> void:
 
 func _get_next_company_unlocks(next_level: int) -> Array[String]:
 	var unlocks: Array[String] = []
+	if FleetManager.get_fleet_capacity_for_company_level(next_level) \
+			> FleetManager.get_fleet_capacity_for_company_level(next_level - 1):
+		unlocks.append(tr("COMPANY_PANEL_FLEET_CAPACITY") % \
+			FleetManager.get_fleet_capacity_for_company_level(next_level))
 	for port_id in PortManager.get_all_port_ids():
 		if PortManager.is_unlocked(port_id):
 			continue

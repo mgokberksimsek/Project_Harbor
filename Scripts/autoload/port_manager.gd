@@ -15,6 +15,9 @@ extends Node
 ## Keeping visual pixels separate from gameplay distance prevents map scale
 ## changes from inflating every mission's duration and reward.
 const GAMEPLAY_DISTANCE_PER_WORLD_PIXEL := 0.45
+## Each authored port level opens two of its waiting berths. Port resources
+## still define the actual safe water positions and therefore the hard maximum.
+const DOCK_SLOTS_PER_PORT_LEVEL := 2
 
 ## port_id -> PortRuntimeState (persisted: unlocked, level)
 var _states: Dictionary = {}
@@ -106,10 +109,22 @@ func get_dock_position(port_id: StringName, slot_index: int) -> Vector2:
 
 
 func get_dock_slot_count(port_id: StringName) -> int:
+	return get_dock_slot_count_for_level(port_id, get_level(port_id))
+
+
+func get_dock_slot_count_for_level(port_id: StringName, port_level: int) -> int:
 	var port_data := get_port_data(port_id)
 	if port_data == null:
 		return 0
-	return port_data.dock_slot_offsets.size()
+	return mini(
+		port_data.dock_slot_offsets.size(),
+		maxi(port_level, 1) * DOCK_SLOTS_PER_PORT_LEVEL
+	)
+
+
+func get_authored_dock_slot_count(port_id: StringName) -> int:
+	var port_data := get_port_data(port_id)
+	return port_data.dock_slot_offsets.size() if port_data != null else 0
 
 
 func register_sea_route(route: SeaRouteData) -> void:

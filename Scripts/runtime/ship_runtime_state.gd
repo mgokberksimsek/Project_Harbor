@@ -24,6 +24,10 @@ var automation_enabled: bool = false
 ## Newly purchased ships wait at the company headquarters until their first
 ## mission. Older saves omit this field and continue from their saved port.
 var awaiting_headquarters_dispatch: bool = false
+## Independent staging position at headquarters. It is deliberately separate
+## from dock_slot_index so a newly purchased ship does not consume capacity at
+## its home port before taking its first mission.
+var headquarters_slot_index: int = -1
 ## True only during the first pickup leg after leaving headquarters. Persisted
 ## so reopening the game can rebuild that leg from the headquarters berth.
 var headquarters_dispatch_active: bool = false
@@ -56,6 +60,7 @@ func to_dict() -> Dictionary:
 		"automation_unlocked": automation_unlocked,
 		"automation_enabled": automation_enabled,
 		"awaiting_headquarters_dispatch": awaiting_headquarters_dispatch,
+		"headquarters_slot_index": headquarters_slot_index,
 		"headquarters_dispatch_active": headquarters_dispatch_active,
 		"state": state,
 		"current_port_id": String(current_port_id),
@@ -78,6 +83,8 @@ static func from_dict(data: Dictionary) -> ShipRuntimeState:
 	s.awaiting_headquarters_dispatch = bool(
 		data.get("awaiting_headquarters_dispatch", false)
 	)
+	s.headquarters_slot_index = int(data.get("headquarters_slot_index", -1)) \
+		if s.awaiting_headquarters_dispatch else -1
 	s.headquarters_dispatch_active = bool(
 		data.get("headquarters_dispatch_active", false)
 	)

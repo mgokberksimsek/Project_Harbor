@@ -104,10 +104,19 @@ func _refresh() -> void:
 	elif FleetManager.is_fleet_at_capacity():
 		_buy_button.text = tr("SHOP_FLEET_FULL")
 		_buy_button.disabled = true
-		_status.text = tr("SHOP_FLEET_COUNT") % [
-			FleetManager.get_all_ship_ids().size(),
-			FleetManager.get_fleet_capacity(),
-		]
+		var next_capacity_level := FleetManager.get_next_fleet_capacity_level()
+		if next_capacity_level < 0:
+			_status.text = tr("SHOP_FLEET_MAX") % [
+				FleetManager.get_all_ship_ids().size(),
+				FleetManager.get_fleet_capacity(),
+			]
+		else:
+			_status.text = tr("SHOP_FLEET_NEXT_LEVEL") % [
+				FleetManager.get_all_ship_ids().size(),
+				FleetManager.get_fleet_capacity(),
+				next_capacity_level,
+				FleetManager.get_fleet_capacity_for_company_level(next_capacity_level),
+			]
 	else:
 		_buy_button.text = tr("SHOP_BUY") % current_price
 		_buy_button.disabled = not _interaction_enabled or GameManager.money < current_price

@@ -68,7 +68,8 @@ görevlerini alana kadar burada bekler. Oyuncu ilk gemisini
 öğreticinin ilk adımında satın alır; başlangıç gemisi de aynı merkez akışını
 izler. Görev seçildiğinde gemi merkezden yumuşakça ayrılır ve ilk yük limanına
 normal rota hızıyla gider. Bu yalnızca görsel bir teslimat akışıdır; oyuncuya
-ek işlem veya bekleme yüklemez.
+ek işlem veya bekleme yüklemez. Şirket merkezinde bekleyen gemiler herhangi bir
+limanın yanaşma yuvasını tüketmez.
 
 ### 2.6 Şirket büyütme hissi
 
@@ -249,11 +250,15 @@ etkisini `%8` artırır ve yük işlemlerini `%20` hızlandırır. Seviye 3 bu
 değerleri `%16` gelir etkisine ve `%40` işlem hızına çıkarır. Bir görevin iki
 limanındaki gelir çarpanları ortalandığı için bu artış görevin toplam ödülüne
 iki kez uygulanmaz. Her geliştirme Cash harcar ve veri dosyasında tanımlı sabit
-Company Value katkısı sağlar; ayrıca Company Level şartı istemez.
+Company Value katkısı sağlar; ayrıca Company Level şartı istemez. Liman seviyesi
+aynı zamanda bekleme kapasitesini artırır: Seviye 1'de 2, Seviye 2'de 4 ve
+Seviye 3'te 6 gemi yuvası kullanılabilir.
 
 Bir limanda birden fazla gemi bulunduğunda gemiler üst üste binmez. Yeni gelen
 gemi ilk boş yuvaya yerleşir. Daha öndeki bir yuva boşaldığında en sondaki gemi
-o yuvaya yumuşak biçimde geçerek görünümü kompakt tutar.
+o yuvaya yumuşak biçimde geçerek görünümü kompakt tutar. Görev kabul edildiğinde
+teslimat yuvası ayrılır; dolu bir limanı hedefleyen yeni görev teklifi
+oluşturulmaz. Yük almak için liman merkezine uğramak kalıcı yuva tüketmez.
 
 ## 7. Gemiler ve filo yönetimi
 
@@ -298,9 +303,19 @@ gereken Company Level'a ulaşılmadan satın alınamaz. Prototipte Başlangıç 
 Gemisi genel, Soğutmalı Yük Gemisi genel ve soğutmalı, Dökme Yük Gemisi ise
 yalnızca dökme yük sınıfında görev alır.
 
-Filo sonsuza kadar büyümez. Prototipte üst sınır 6 gemidir. Nihai sınır ve bu
-sınırı artırabilecek liman/ofis geliştirmeleri dengeleme aşamasında
-kararlaştırılacaktır.
+Filo kapasitesi Company Level ile otomatik büyür ve ayrıca bir merkez yükseltme
+işlemi istemez. Geçerli, ayarlanabilir kapasite eğrisi şöyledir:
+
+```text
+Company Level 1–5:   2, 3, 4, 5, 6 gemi
+Company Level 6–10:  8, 10, 12, 14, 16 gemi
+Company Level 11–15: 17, 18, 19, 20, 21 gemi
+```
+
+Bu değerler sahip olunması gereken gemi sayısı değil, satın alma üst sınırıdır.
+Artan gemi fiyatları gerçek filo büyüme hızını ayrıca sınırlar. Mevcut bir kayıt
+yeni seviye sınırından fazla gemiye sahipse gemiler silinmez; yalnızca Company
+Level tekrar yeni bir yuva açana kadar satın alma durur.
 
 ### 7.4 Geliştirmeler
 
@@ -712,8 +727,9 @@ veri dosyaları üzerinden tanımlanmalıdır.
 - Kararlı ve sıkışık liman yuvası düzeni.
 - Liman açma, gemi satın alma ve gemi geliştirme ekonomisi.
 - Maliyet, seviye ve Company Value katkısını gösteren onaylı liman açma paneli.
-- Gelir ile yükleme/boşaltma hızını artıran üç seviyeli liman geliştirmeleri.
-- Artan gemi fiyatları ve sınırlı filo/geliştirme seviyeleri.
+- Gelir, yükleme/boşaltma hızı ve `2/4/6` gemi yuvası sağlayan üç seviyeli
+  liman geliştirmeleri.
+- Artan gemi fiyatları ve Company Level ile 2'den 21'e büyüyen filo kapasitesi.
 - Varlık tabanlı Company Value ve kalıcı Company Level ilerlemesi.
 - Filo/liman değer dağılımı ve sonraki seviye açılımlarını gösteren ilerleme paneli.
 - Sürüm kontrollü JSON kayıt, otomatik kayıt ve kayıt sıfırlama.
@@ -753,14 +769,13 @@ Aşağıdaki konular sonraki test ve tasarım oturumlarında kesinleştirilecekt
 - Nihai ödül eğrisi ve ikinci gemiye ulaşma süresi.
 - Nihai Company Value varlık değerleri ve 15 Company Level eşiği.
 - İleride ayrı yakıt tankı ve yakıt satın alma akışına ihtiyaç olup olmadığı.
-- Nihai filo sınırı ve sınırı artırma yöntemi.
 - Liman geliştirme maliyetleri ile gelir/işlem süresi oranlarının nihai dengesi.
 - Oyuncu birden fazla gemiye ulaştıktan sonra bakım veya küçük arıza nedeniyle
   gemilerin geçici olarak kullanılamaması değerlendirilecektir. Sistem önce
   reklamsız ve öngörülebilir bir oynanış mekaniği olarak dengelenecek; oyuncuyu
   çalışır gemisiz bırakmayacak ve sonradan reklam izlemeye zorlayan yapay bir
   cezaya dönüştürülmeyecektir.
-- 6'dan fazla gemi hedeflenirse büyük filo arayüzü.
+- 10+ gemiyi durumuna göre hızlı filtreleyebilen büyük filo arayüzü.
 - Haritanın kesin ölçeği, kamera sınırları ve bölge açılma sırası.
 - Nihai görsel stil, ikon dili, animasyon süresi ve ses yönü.
 - Project Harbor'ın ticari gelir üretmesi hedeflenir. Oyuncunun isteyerek

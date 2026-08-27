@@ -26,6 +26,8 @@ var _current_level := 1
 var _port_level := 1
 var _reward_bonus_percent := 0
 var _handling_reduction_percent := 0
+var _dock_slot_count := 0
+var _next_dock_slot_count := 0
 var _mode := PanelMode.UNLOCK
 
 
@@ -44,7 +46,8 @@ func show_port(
 		company_value: int,
 		required_level: int,
 		current_money: int,
-		current_level: int
+		current_level: int,
+		dock_slot_count: int
 ) -> void:
 	_mode = PanelMode.UNLOCK
 	_port_id = port_id
@@ -55,6 +58,8 @@ func show_port(
 	_required_level = maxi(required_level, 1)
 	_current_money = maxi(current_money, 0)
 	_current_level = maxi(current_level, 1)
+	_dock_slot_count = maxi(dock_slot_count, 0)
+	_next_dock_slot_count = _dock_slot_count
 	_refresh()
 	show()
 
@@ -67,7 +72,9 @@ func show_upgrade_port(
 		company_value: int,
 		current_money: int,
 		reward_bonus_percent: int,
-		handling_reduction_percent: int
+		handling_reduction_percent: int,
+		dock_slot_count: int,
+		next_dock_slot_count: int
 ) -> void:
 	_mode = PanelMode.UPGRADE
 	_port_id = port_id
@@ -78,6 +85,8 @@ func show_upgrade_port(
 	_current_money = maxi(current_money, 0)
 	_reward_bonus_percent = maxi(reward_bonus_percent, 0)
 	_handling_reduction_percent = maxi(handling_reduction_percent, 0)
+	_dock_slot_count = maxi(dock_slot_count, 0)
+	_next_dock_slot_count = maxi(next_dock_slot_count, _dock_slot_count)
 	_refresh()
 	show()
 
@@ -121,7 +130,10 @@ func _refresh() -> void:
 		return
 	_title.text = tr("PORT_UNLOCK_TITLE") % _translated_port_name()
 	_description.text = _translated_description()
-	_level_label.text = tr("PORT_UNLOCK_LEVEL") % [_required_level, _current_level]
+	_level_label.text = "%s · %s" % [
+		tr("PORT_UNLOCK_LEVEL") % [_required_level, _current_level],
+		tr("PORT_BERTH_CAPACITY") % _dock_slot_count,
+	]
 	_cost_label.text = tr("PORT_UNLOCK_COST") % [_unlock_cost, _current_money]
 	_value_label.text = tr("PORT_UNLOCK_VALUE") % _company_value
 	_cancel_button.text = tr("PORT_UNLOCK_CANCEL")
@@ -146,7 +158,10 @@ func _refresh_upgrade() -> void:
 			_reward_bonus_percent,
 			_handling_reduction_percent,
 		]
-		_level_label.text = tr("PORT_UPGRADE_MAX_LEVEL") % _port_level
+		_level_label.text = "%s · %s" % [
+			tr("PORT_UPGRADE_MAX_LEVEL") % _port_level,
+			tr("PORT_BERTH_CAPACITY") % _dock_slot_count,
+		]
 		_cost_label.text = tr("PORT_UPGRADE_COMPLETE")
 		_value_label.text = tr("PORT_UPGRADE_TOTAL_VALUE") % _company_value
 		_unlock_button.text = tr("PORT_UPGRADE_MAX_BUTTON")
@@ -157,7 +172,10 @@ func _refresh_upgrade() -> void:
 		_reward_bonus_percent,
 		_handling_reduction_percent,
 	]
-	_level_label.text = tr("PORT_UPGRADE_LEVEL") % [_port_level, _port_level + 1]
+	_level_label.text = "%s · %s" % [
+		tr("PORT_UPGRADE_LEVEL") % [_port_level, _port_level + 1],
+		tr("PORT_BERTH_UPGRADE") % [_dock_slot_count, _next_dock_slot_count],
+	]
 	_cost_label.text = tr("PORT_UPGRADE_COST") % [_unlock_cost, _current_money]
 	_value_label.text = tr("PORT_UPGRADE_VALUE") % _company_value
 	var money_short := maxi(_unlock_cost - _current_money, 0)
