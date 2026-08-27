@@ -6,5 +6,5 @@
 script = ExtResource("1_route")
 from_port_id = &"girne"
 to_port_id = &"iskenderiye"
-waypoints = PackedVector2Array(4080, 2700, 3820, 2800, 3650, 3020, 3680, 3280, 3850, 3500, 4150, 3630, 4500, 3690, 4800, 3620, 5000, 3520)
+waypoints = PackedVector2Array(4200, 2700, 3820, 2800, 3650, 3020, 3680, 3280, 3850, 3500, 4150, 3630, 4500, 3690, 4800, 3620, 5000, 3520)
 gameplay_distance = 480.0

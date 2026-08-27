@@ -6,5 +6,5 @@
 script = ExtResource("1_route")
 from_port_id = &"batum"
 to_port_id = &"samsun"
-waypoints = PackedVector2Array(5790, 950, 5650, 790, 5450, 720, 5200, 560, 4850, 500, 4500, 420, 4140, 470, 3800, 520, 3500, 620, 3340, 750)
+waypoints = PackedVector2Array(5650, 790, 5450, 720, 5200, 560, 4850, 500, 4500, 420, 4140, 470, 3800, 520, 3500, 620)
 gameplay_distance = 520.0

@@ -94,7 +94,7 @@ func _run() -> void:
 	)
 	assert(mersin_trabzon_port_path == [
 		&"mersin",
-		&"samsun",
+		&"antalya",
 		&"trabzon",
 	])
 	var trabzon_mersin_port_path: Array[StringName] = port_manager.get_route_port_path(
@@ -103,12 +103,12 @@ func _run() -> void:
 	)
 	assert(trabzon_mersin_port_path == [
 		&"trabzon",
-		&"samsun",
+		&"antalya",
 		&"mersin",
 	])
 	assert(is_equal_approx(
 		port_manager.get_distance(&"mersin", &"trabzon"),
-		555.0
+		700.0
 	))
 	_assert_port_centers_are_spaced(port_manager, 320.0)
 	var antalya_data: PortData = port_manager.get_port_data(&"antalya")
@@ -683,10 +683,10 @@ func _run() -> void:
 	assert(connected_route[connected_route.size() - 1].is_equal_approx(
 		port_manager.get_port_node(&"trabzon").global_position
 	))
-	var samsun_port_position: Vector2 = port_manager.get_port_node(&"samsun").global_position
-	var samsun_transit_position: Vector2 = port_manager.get_route_transit_position(&"samsun")
-	assert(connected_route_points.has(samsun_transit_position))
-	assert(not connected_route_points.has(samsun_port_position))
+	var antalya_port_position: Vector2 = port_manager.get_port_node(&"antalya").global_position
+	var antalya_transit_position: Vector2 = port_manager.get_route_transit_position(&"antalya")
+	assert(connected_route_points.has(antalya_transit_position))
+	assert(not connected_route_points.has(antalya_port_position))
 	assert(port_manager.has_sea_route(&"istanbul", &"samsun"))
 	assert(port_manager.get_route_port_path(&"canakkale", &"trabzon") == [
 		&"canakkale",
