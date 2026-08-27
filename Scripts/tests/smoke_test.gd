@@ -1332,6 +1332,11 @@ func _run() -> void:
 		var purchased_delivery_position: Vector2 = headquarters.get_delivery_position(
 			fleet_manager.get_ship_dock_slot_index(ship_id)
 		)
+		var delivery_transition_deadline := Time.get_ticks_msec() + 3000
+		while bool(purchased_ship.get("_dock_transition_active")) \
+				and Time.get_ticks_msec() < delivery_transition_deadline:
+			await process_frame
+		assert(not bool(purchased_ship.get("_dock_transition_active")))
 		assert(purchased_ship.global_position.is_equal_approx(
 			purchased_delivery_position
 		))

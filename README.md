@@ -10,7 +10,7 @@ Purchase your first cargo ship, transport goods between ports, earn money, upgra
 
 - Multiple independently managed ships and missions
 - Random, ship-compatible mission offers
-- Seven data-driven ports across a growing regional network, with level-gated expansion
+- Twelve data-driven ports across a complete regional network, with level-gated expansion
 - Confirmed port-unlock panel showing cost, level, and Company Value gain
 - Compact multi-model ship shop with fleet-wide escalating prices
 - General, refrigerated, and bulk ship specializations with compatible cargo offers
@@ -34,9 +34,9 @@ Purchase your first cargo ship, transport goods between ports, earn money, upgra
 
 ## Roadmap
 
-- Expand the world to 15–20 unlockable ports
+- Balance the 12-port progression, mission durations, operating costs, and rewards
+- Add longer contract variants before expanding offline automation
 - Add more ship models and cargo specializations
-- Balance mission durations, fuel costs, and rewards
 - Replace prototype land, ships, ports, and mission badges with final art
 - Add sound effects and background music to the prepared audio buses
 - Improve large-fleet controls and fleet overview tools
