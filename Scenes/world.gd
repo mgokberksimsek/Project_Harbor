@@ -360,6 +360,11 @@ func _on_offer_accepted(offer_id: String) -> void:
 		_update_tutorial_instruction()
 		_update_tutorial_focus()
 		return
+	var accepted_offer: Mission = null
+	for offer in _mission_offers:
+		if offer.id == offer_id:
+			accepted_offer = offer
+			break
 	_open_mission_port_id = &""
 	EventBus.port_selection_changed.emit(&"")
 	_mission_offer_panel.close_panel()
@@ -367,6 +372,11 @@ func _on_offer_accepted(offer_id: String) -> void:
 		if GameManager.tutorial_step == GameManager.TutorialStep.ACCEPT_MISSION:
 			GameManager.set_tutorial_step(GameManager.TutorialStep.WELCOME_CAPTAIN)
 			_show_tutorial_complete_dialog(false)
+		elif accepted_offer != null \
+				and accepted_offer.is_large_contract() \
+				and not GameManager.large_contract_hint_seen:
+			GameManager.mark_large_contract_hint_seen()
+			_instruction_label.text = tr("INSTRUCTION_LARGE_CONTRACT_STARTED")
 		else:
 			_instruction_label.text = tr("INSTRUCTION_MISSION_STARTED")
 	_update_mission_markers()

@@ -416,6 +416,11 @@ kontrat primi eklenerek, işletme masrafı ise iki ayağın masrafları toplanar
 hesaplanır. Bu, yeni bir görev ekranı oluşturmadan orta süreli hedef ve gemi
 başına otomasyon ustalığı sağlar.
 
+Oyuncu ilk Büyük Kontratını kabul ettiğinde üst bilgi satırı iki teslimatı,
+ödemenin kontrat sonunda yapılacağını ve başlamış kontratın oyun kapalıyken de
+ilerleyeceğini bir kez açıklar. Bu bilgilendirme çevrimdışı yeni görev seçileceği
+anlamına gelmez.
+
 Prototipte başlangıç rotaları yaklaşık yarım dakika sürerken mevcut haritanın
 uzak bölgesel rotaları yaklaşık bir dakikaya yaklaşır. Bu sayılar
 testleri hızlandırmaya devam eder ve nihai denge değildir.

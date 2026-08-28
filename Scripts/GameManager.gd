@@ -14,6 +14,7 @@ enum TutorialStep {
 
 var money: int = 0
 var tutorial_step: TutorialStep = TutorialStep.OPEN_SHIP_SHOP
+var large_contract_hint_seen := false
 
 const AUTOMATION_REQUIRED_COMPANY_LEVEL := 5
 const AUTOMATION_REQUIRED_LARGE_CONTRACTS := 2
@@ -194,16 +195,22 @@ func is_tutorial_completed() -> bool:
 	return tutorial_step == TutorialStep.COMPLETED
 
 
+func mark_large_contract_hint_seen() -> void:
+	large_contract_hint_seen = true
+
+
 func get_save_state() -> Dictionary:
 	return {
 		"money": money,
 		"tutorial_step": tutorial_step,
+		"large_contract_hint_seen": large_contract_hint_seen,
 	}
 
 
 func apply_save_state(saved: Dictionary) -> void:
 	var previous := money
 	money = maxi(int(saved.get("money", 0)), 0)
+	large_contract_hint_seen = bool(saved.get("large_contract_hint_seen", false))
 	_event_bus.money_changed.emit(money, money - previous)
 	var default_tutorial_step := TutorialStep.OPEN_SHIP_SHOP
 	if not saved.is_empty() and not saved.has("tutorial_step"):
@@ -221,6 +228,7 @@ func reset_state() -> void:
 	apply_save_state({
 		"money": _get_starting_cash(),
 		"tutorial_step": TutorialStep.OPEN_SHIP_SHOP,
+		"large_contract_hint_seen": false,
 	})
 
 

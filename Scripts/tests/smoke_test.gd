@@ -1768,7 +1768,13 @@ func _run() -> void:
 	assert(contract_offer_text.contains("BÜYÜK KONTRAT"))
 	assert(contract_offer_text.count("→") == 2)
 	var money_before_first_contract: int = game_manager.money
-	assert(mission_manager.accept_offer(first_contract.id))
+	assert(not game_manager.large_contract_hint_seen)
+	world.call("_on_offer_accepted", first_contract.id)
+	assert(first_contract.assigned_ship_id == starter_ship_id)
+	assert(game_manager.large_contract_hint_seen)
+	assert(bool(game_manager.get_save_state()["large_contract_hint_seen"]))
+	assert(instruction_label.text.contains("2 teslimat"))
+	assert(instruction_label.text.contains("oyun kapalıyken"))
 	for _step in range(8):
 		if first_contract.contract_leg_index == 1:
 			break
