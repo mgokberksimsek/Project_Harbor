@@ -21,6 +21,10 @@ var speed_level: int = 0
 var capacity_level: int = 0
 var automation_unlocked: bool = false
 var automation_enabled: bool = false
+## Lifetime contribution shown in the fleet details. Optional save fields keep
+## older saves compatible without a migration step.
+var completed_mission_count: int = 0
+var total_net_earnings: int = 0
 ## Newly purchased ships wait at the company headquarters until their first
 ## mission. Older saves omit this field and continue from their saved port.
 var awaiting_headquarters_dispatch: bool = false
@@ -59,6 +63,8 @@ func to_dict() -> Dictionary:
 		"capacity_level": capacity_level,
 		"automation_unlocked": automation_unlocked,
 		"automation_enabled": automation_enabled,
+		"completed_mission_count": completed_mission_count,
+		"total_net_earnings": total_net_earnings,
 		"awaiting_headquarters_dispatch": awaiting_headquarters_dispatch,
 		"headquarters_slot_index": headquarters_slot_index,
 		"headquarters_dispatch_active": headquarters_dispatch_active,
@@ -80,6 +86,8 @@ static func from_dict(data: Dictionary) -> ShipRuntimeState:
 	s.automation_unlocked = bool(data.get("automation_unlocked", false))
 	s.automation_enabled = s.automation_unlocked \
 		and bool(data.get("automation_enabled", false))
+	s.completed_mission_count = maxi(int(data.get("completed_mission_count", 0)), 0)
+	s.total_net_earnings = int(data.get("total_net_earnings", 0))
 	s.awaiting_headquarters_dispatch = bool(
 		data.get("awaiting_headquarters_dispatch", false)
 	)

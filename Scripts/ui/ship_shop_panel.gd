@@ -22,6 +22,7 @@ const TUTORIAL_PULSE_SPEED := 4.0
 
 var _ship_data: ShipData
 var _expanded := false
+var _embedded_mode := false
 var _tutorial_focused := false
 var _tutorial_pulse_elapsed := 0.0
 var _default_model_id: StringName
@@ -65,7 +66,17 @@ func set_expanded(expanded: bool) -> void:
 	_expanded = expanded
 	_body.visible = expanded
 	_toggle_button.text = "%s %s" % [tr("SHIP_SHOP_TITLE"), "▼" if expanded else "▶"]
+	if _embedded_mode:
+		visible = expanded
+		return
 	offset_top = offset_bottom - (EXPANDED_HEIGHT if expanded else COLLAPSED_HEIGHT)
+
+
+func set_embedded_mode(enabled: bool) -> void:
+	_embedded_mode = enabled
+	_toggle_button.visible = not enabled
+	if enabled:
+		set_expanded(false)
 
 
 func is_expanded() -> bool:
@@ -76,7 +87,8 @@ func set_interaction_enabled(enabled: bool) -> void:
 	_interaction_enabled = enabled
 	_toggle_button.disabled = not enabled
 	if not enabled:
-		set_expanded(false)
+		if not _embedded_mode:
+			set_expanded(false)
 	_refresh()
 
 

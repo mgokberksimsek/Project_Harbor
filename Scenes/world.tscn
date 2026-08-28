@@ -7,9 +7,7 @@
 [ext_resource type="Resource" uid="uid://bhqlpgs8dbotq" path="res://Resources/Ports/port_izmir.tres" id="5_izmir"]
 [ext_resource type="Resource" uid="uid://d2ajnmsckon5i" path="res://Resources/Ports/port_istanbul.tres" id="6_istanbul"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/MissionOfferPanel.tscn" id="8_mission_offer_panel"]
-[ext_resource type="PackedScene" path="res://Scenes/ui/ShipShopPanel.tscn" id="9_ship_shop"]
 [ext_resource type="PackedScene" path="res://Scenes/ui/SettingsMenu.tscn" id="10_settings"]
-[ext_resource type="PackedScene" path="res://Scenes/ui/FleetStatusPanel.tscn" id="11_fleet_status"]
 [ext_resource type="Script" uid="uid://bis3wmyn8relq" path="res://Scripts/camera/world_camera.gd" id="12_world_camera"]
 [ext_resource type="Script" uid="uid://slwfs8f8ho3y" path="res://Scripts/routes/sea_route_registry.gd" id="13_route_registry"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_mersin_izmir.tres" id="14_route_mersin_izmir"]
@@ -49,6 +47,7 @@
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_girne_iskenderiye.tres" id="48_route_girne_iskenderiye"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_iskenderiye_batum.tres" id="49_route_iskenderiye_batum"]
 [ext_resource type="Resource" path="res://Resources/sea_routes/route_izmir_iskenderiye.tres" id="50_route_izmir_iskenderiye"]
+[ext_resource type="PackedScene" path="res://Scenes/ui/ManagementDock.tscn" id="51_management_dock"]
 
 [node name="World" type="Node2D" unique_id=1405839556]
 script = ExtResource("1_world")
@@ -304,11 +303,6 @@ dialog_text = "Filo güvenli ellerde, ama limanın ışıklarını kapatmak üze
 ok_button_text = "Evet, limanı kapat"
 cancel_button_text = "Bir sefer daha!"
 
-[node name="ShipShopPanel" parent="UI" unique_id=1255476120 instance=ExtResource("9_ship_shop")]
-anchors_preset = 2
-offset_top = -86.0
-offset_right = 192.0
-
 [node name="SettingsMenu" parent="UI" unique_id=506582069 instance=ExtResource("10_settings")]
 
 [node name="PortUnlockPanel" parent="UI" unique_id=1388240783 instance=ExtResource("25_port_unlock")]
@@ -323,11 +317,7 @@ offset_right = 215.1466
 offset_bottom = -43.68213
 scale = Vector2(0.68971443, 1.0532308)
 
-[node name="FleetStatusPanel" parent="UI" unique_id=1221162860 instance=ExtResource("11_fleet_status")]
-offset_left = -182.0
-offset_top = 127.0
-offset_right = -11.0
-offset_bottom = 189.0
+[node name="ManagementDock" parent="UI" instance=ExtResource("51_management_dock")]
 
 [node name="MissionPanel" type="PanelContainer" parent="UI" unique_id=1510682631]
 visible = false

@@ -10,31 +10,64 @@ signal rename_requested(ship_id: StringName)
 @export var start_expanded := false
 
 @onready var _toggle_button: Button = $Margin/VBox/Header/ToggleButton
+@onready var _summary: Label = $Margin/VBox/Header/Summary
 @onready var _info_button: Button = $Margin/VBox/Header/InfoButton
-@onready var _body: VBoxContainer = $Margin/VBox/Body
-@onready var _list: VBoxContainer = $Margin/VBox/Body/Scroll/List
+@onready var _body: HBoxContainer = $Margin/VBox/Body
+@onready var _list_title: Label = $Margin/VBox/Body/ListColumn/ListTitle
+@onready var _list: VBoxContainer = $Margin/VBox/Body/ListColumn/Scroll/List
+@onready var _selected_title: Label = $Margin/VBox/Body/Details/SelectedTitle
+@onready var _selected_state: Label = $Margin/VBox/Body/Details/SelectedState
+@onready var _selected_route: Label = $Margin/VBox/Body/Details/SelectedRoute
+@onready var _selected_cargo: Label = $Margin/VBox/Body/Details/SelectedCargo
+@onready var _progress: ProgressBar = $Margin/VBox/Body/Details/Progress
+@onready var _stats: Label = $Margin/VBox/Body/Details/Stats
+@onready var _speed_button: Button = $Margin/VBox/Body/Details/Actions/SpeedButton
+@onready var _capacity_button: Button = \
+	$Margin/VBox/Body/Details/Actions/CapacityButton
+@onready var _automation_button: Button = \
+	$Margin/VBox/Body/Details/Actions/AutomationButton
+@onready var _rename_button: Button = $Margin/VBox/Body/Details/Actions/RenameButton
 @onready var _help_dialog: AcceptDialog = $HelpDialog
 
 const COLLAPSED_HEIGHT := 56.0
 const EXPANDED_HEIGHT := 290.0
 
 var _cards: Dictionary = {}
+var _entries: Dictionary = {}
+var _selected_ship_id: StringName = &""
+var _fleet_capacity := 0
 var _expanded := false
+var _embedded_mode := false
 var _interaction_enabled := true
 
 
 func _ready() -> void:
 	_toggle_button.pressed.connect(_on_toggle_pressed)
 	_info_button.pressed.connect(_show_help_dialog)
+	_speed_button.pressed.connect(_on_speed_upgrade_pressed)
+	_capacity_button.pressed.connect(_on_capacity_upgrade_pressed)
+	_automation_button.pressed.connect(_on_automation_pressed)
+	_rename_button.pressed.connect(_on_rename_pressed)
 	get_node("/root/EventBus").language_changed.connect(_on_language_changed)
 	_refresh_help_dialog()
 	set_expanded(start_expanded)
+
+
+func set_embedded_mode(enabled: bool) -> void:
+	_embedded_mode = enabled
+	_toggle_button.visible = not enabled
+	_summary.visible = enabled
+	if enabled:
+		set_expanded(false)
 
 
 func set_expanded(expanded: bool) -> void:
 	_expanded = expanded
 	_body.visible = expanded
 	_toggle_button.text = "%s %s" % [tr("FLEET_TITLE"), "▼" if expanded else "▶"]
+	if _embedded_mode:
+		visible = expanded
+		return
 	offset_bottom = offset_top + (EXPANDED_HEIGHT if expanded else COLLAPSED_HEIGHT)
 
 
@@ -48,20 +81,27 @@ func set_interaction_enabled(enabled: bool) -> void:
 	_info_button.disabled = not enabled
 	if not enabled:
 		_help_dialog.hide()
-		set_expanded(false)
-	for card in _cards.values():
-		var button: Button = card["button"]
-		button.disabled = not enabled
+		if not _embedded_mode:
+			set_expanded(false)
 	_refresh_card_interactions()
 
 
-func set_fleet_data(entries: Array, selected_ship_id: StringName) -> void:
+func set_fleet_data(
+		entries: Array,
+		selected_ship_id: StringName,
+		fleet_capacity: int = -1
+) -> void:
+	_selected_ship_id = selected_ship_id
+	if fleet_capacity >= 0:
+		_fleet_capacity = fleet_capacity
 	var active_ids: Array[StringName] = []
+	_entries.clear()
 	for entry in entries:
 		var ship_id := StringName(entry.get("ship_id", ""))
 		if ship_id == &"":
 			continue
 		active_ids.append(ship_id)
+		_entries[ship_id] = entry
 		if not _cards.has(ship_id):
 			_cards[ship_id] = _create_card(ship_id)
 		_update_card(_cards[ship_id], entry, ship_id == selected_ship_id)
@@ -69,163 +109,170 @@ func set_fleet_data(entries: Array, selected_ship_id: StringName) -> void:
 	for ship_id in _cards.keys():
 		if active_ids.has(ship_id):
 			continue
-		var card: VBoxContainer = _cards[ship_id]["root"]
+		var card: Button = _cards[ship_id]
 		card.queue_free()
 		_cards.erase(ship_id)
+	_update_summary(entries)
+	_update_selected_details()
 
 
 func select_ship(ship_id: StringName) -> void:
+	_selected_ship_id = ship_id
 	for card_ship_id in _cards.keys():
-		var button: Button = _cards[card_ship_id]["button"]
+		var button: Button = _cards[card_ship_id]
 		button.modulate = Color("#BDE3FF") if card_ship_id == ship_id else Color.WHITE
+	_update_selected_details()
 
 
-func _create_card(ship_id: StringName) -> Dictionary:
-	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 2)
-	_list.add_child(root)
-
-	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 4)
-	root.add_child(header)
-
+func _create_card(ship_id: StringName) -> Button:
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 68)
+	button.custom_minimum_size = Vector2(0, 54)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	button.pressed.connect(_on_card_pressed.bind(ship_id))
-	header.add_child(button)
-
-	var rename_button := Button.new()
-	rename_button.custom_minimum_size = Vector2(44, 68)
-	rename_button.focus_mode = Control.FOCUS_NONE
-	rename_button.mouse_filter = Control.MOUSE_FILTER_PASS
-	rename_button.text = "✎"
-	rename_button.tooltip_text = tr("SHIP_RENAME_BUTTON")
-	rename_button.pressed.connect(_on_rename_pressed.bind(ship_id))
-	header.add_child(rename_button)
-
-	var progress := ProgressBar.new()
-	progress.custom_minimum_size = Vector2(0, 12)
-	progress.show_percentage = false
-	root.add_child(progress)
-
-	var upgrade_button := Button.new()
-	upgrade_button.custom_minimum_size = Vector2(0, 30)
-	upgrade_button.focus_mode = Control.FOCUS_NONE
-	upgrade_button.mouse_filter = Control.MOUSE_FILTER_PASS
-	upgrade_button.pressed.connect(_on_speed_upgrade_pressed.bind(ship_id))
-	root.add_child(upgrade_button)
-
-	var capacity_button := Button.new()
-	capacity_button.custom_minimum_size = Vector2(0, 30)
-	capacity_button.focus_mode = Control.FOCUS_NONE
-	capacity_button.mouse_filter = Control.MOUSE_FILTER_PASS
-	capacity_button.pressed.connect(_on_capacity_upgrade_pressed.bind(ship_id))
-	root.add_child(capacity_button)
-
-	var automation_button := Button.new()
-	automation_button.custom_minimum_size = Vector2(0, 30)
-	automation_button.focus_mode = Control.FOCUS_NONE
-	automation_button.mouse_filter = Control.MOUSE_FILTER_PASS
-	automation_button.pressed.connect(_on_automation_pressed.bind(ship_id))
-	root.add_child(automation_button)
-
-	return {
-		"root": root,
-		"button": button,
-		"rename_button": rename_button,
-		"progress": progress,
-		"upgrade_button": upgrade_button,
-		"capacity_button": capacity_button,
-		"automation_button": automation_button,
-	}
+	_list.add_child(button)
+	return button
 
 
-func _update_card(card: Dictionary, entry: Dictionary, selected: bool) -> void:
-	var button: Button = card["button"]
-	var progress: ProgressBar = card["progress"]
-	var rename_button: Button = card["rename_button"]
-	var upgrade_button: Button = card["upgrade_button"]
-	var capacity_button: Button = card["capacity_button"]
-	var automation_button: Button = card["automation_button"]
-	button.text = "%s · %s\n%s · %s\n%s · %s" % [
+func _update_card(button: Button, entry: Dictionary, selected: bool) -> void:
+	var remaining_text: String = tr("REMAINING") % _format_duration(
+		float(entry.get("remaining_sec", 0.0))
+	) if bool(entry.get("has_mission", false)) else String(
+		entry.get("state_text", "")
+	)
+	button.text = "%s · %s\n%s" % [
 		entry.get("ship_name", entry.get("ship_id", tr("SHIP_DEFAULT"))),
 		entry.get("model_name", tr("SHIP_DEFAULT")),
-		entry.get("state_text", ""),
+		remaining_text,
+	]
+	button.tooltip_text = "%s · %s" % [
 		entry.get("route_text", ""),
 		entry.get("cargo_text", tr("NO_CARGO")),
-		tr("REMAINING") % _format_duration(float(entry.get("remaining_sec", 0.0))),
 	]
 	button.modulate = Color("#BDE3FF") if selected else Color.WHITE
 	button.disabled = not _interaction_enabled
-	rename_button.disabled = not _interaction_enabled
-	rename_button.tooltip_text = tr("SHIP_RENAME_BUTTON")
-	progress.value = clampf(float(entry.get("progress", 0.0)) * 100.0, 0.0, 100.0)
-	progress.visible = bool(entry.get("has_mission", false))
-	var upgrade_cost := int(entry.get("speed_upgrade_cost", -1))
-	if upgrade_cost < 0:
-		upgrade_button.text = tr("SPEED_MAX") % [
+
+
+func _update_summary(entries: Array) -> void:
+	var idle_count := 0
+	for entry in entries:
+		if not bool(entry.get("has_mission", false)):
+			idle_count += 1
+	_summary.text = tr("FLEET_SUMMARY") % [
+		entries.size(),
+		maxi(_fleet_capacity, entries.size()),
+		idle_count,
+		entries.size() - idle_count,
+	]
+	_list_title.text = tr("FLEET_LIST_TITLE")
+
+
+func _update_selected_details() -> void:
+	var entry: Dictionary = _entries.get(_selected_ship_id, {})
+	if entry.is_empty():
+		_selected_title.text = tr("FLEET_SELECT_HINT")
+		_selected_state.text = ""
+		_selected_route.text = ""
+		_selected_cargo.text = ""
+		_progress.visible = false
+		_stats.text = ""
+		_automation_button.visible = false
+		_set_detail_actions_enabled(false)
+		return
+
+	_selected_title.text = "%s · %s" % [
+		entry.get("ship_name", entry.get("ship_id", tr("SHIP_DEFAULT"))),
+		entry.get("model_name", tr("SHIP_DEFAULT")),
+	]
+	_selected_state.text = entry.get("state_text", "")
+	_selected_route.text = tr("FLEET_CURRENT_ROUTE") % entry.get("route_text", "")
+	_selected_cargo.text = tr("FLEET_CURRENT_CARGO") % entry.get(
+		"cargo_text",
+		tr("NO_CARGO")
+	)
+	_progress.value = clampf(float(entry.get("progress", 0.0)) * 100.0, 0.0, 100.0)
+	_progress.visible = bool(entry.get("has_mission", false))
+	_stats.text = tr("FLEET_LIFETIME_STATS") % [
+		int(entry.get("completed_mission_count", 0)),
+		int(entry.get("total_net_earnings", 0)),
+	]
+	_update_detail_actions(entry)
+
+
+func _update_detail_actions(entry: Dictionary) -> void:
+	var speed_cost := int(entry.get("speed_upgrade_cost", -1))
+	if speed_cost < 0:
+		_speed_button.text = tr("SPEED_MAX") % [
 			int(entry.get("speed_level", 0)),
 			float(entry.get("effective_speed", 0.0)),
 		]
-		upgrade_button.disabled = true
+		_speed_button.disabled = true
 	else:
-		upgrade_button.text = tr("SPEED_UPGRADE") % [
+		_speed_button.text = tr("SPEED_UPGRADE") % [
 			int(entry.get("speed_level", 0)),
 			float(entry.get("effective_speed", 0.0)),
-			upgrade_cost,
+			speed_cost,
 		]
-		upgrade_button.disabled = not _interaction_enabled \
+		_speed_button.disabled = not _interaction_enabled \
 			or not bool(entry.get("can_afford_speed_upgrade", false))
 
 	var capacity_cost := int(entry.get("capacity_upgrade_cost", -1))
 	if capacity_cost < 0:
-		capacity_button.text = tr("CAPACITY_MAX") % [
+		_capacity_button.text = tr("CAPACITY_MAX") % [
 			int(entry.get("capacity_level", 0)),
 			int(entry.get("effective_capacity", 0)),
 		]
-		capacity_button.disabled = true
+		_capacity_button.disabled = true
 	else:
-		capacity_button.text = tr("CAPACITY_UPGRADE") % [
+		_capacity_button.text = tr("CAPACITY_UPGRADE") % [
 			int(entry.get("capacity_level", 0)),
 			int(entry.get("effective_capacity", 0)),
 			capacity_cost,
 		]
-		capacity_button.disabled = not _interaction_enabled \
+		_capacity_button.disabled = not _interaction_enabled \
 			or not bool(entry.get("can_afford_capacity_upgrade", false))
 
-	automation_button.visible = bool(entry.get("automation_visible", false))
-	if not automation_button.visible:
-		automation_button.disabled = true
+	_automation_button.visible = bool(entry.get("automation_visible", false))
+	if not _automation_button.visible:
+		_automation_button.disabled = true
 	elif bool(entry.get("automation_unlocked", false)):
-		automation_button.text = tr(
+		_automation_button.text = tr(
 			"AUTOMATION_ON" if bool(entry.get("automation_enabled", false)) \
 			else "AUTOMATION_OFF"
 		)
-		automation_button.disabled = not _interaction_enabled
+		_automation_button.disabled = not _interaction_enabled
 	elif int(entry.get("company_level", 1)) \
 			< int(entry.get("automation_required_company_level", 1)):
-		automation_button.text = tr("AUTOMATION_LEVEL_REQUIRED") % int(
+		_automation_button.text = tr("AUTOMATION_LEVEL_REQUIRED") % int(
 			entry.get("automation_required_company_level", 1)
 		)
-		automation_button.disabled = true
+		_automation_button.disabled = true
 	elif int(entry.get("total_upgrade_levels", 0)) \
 			< int(entry.get("automation_required_upgrade_levels", 0)):
-		automation_button.text = tr("AUTOMATION_UPGRADES_REQUIRED") % [
+		_automation_button.text = tr("AUTOMATION_UPGRADES_REQUIRED") % [
 			int(entry.get("total_upgrade_levels", 0)),
 			int(entry.get("automation_required_upgrade_levels", 0)),
 		]
-		automation_button.disabled = true
+		_automation_button.disabled = true
 	else:
-		automation_button.text = tr("AUTOMATION_UNLOCK") % int(
+		_automation_button.text = tr("AUTOMATION_UNLOCK") % int(
 			entry.get("automation_unlock_cost", 0)
 		)
-		automation_button.disabled = not _interaction_enabled \
+		_automation_button.disabled = not _interaction_enabled \
 			or not bool(entry.get("can_afford_automation", false))
+
+	_rename_button.text = tr("FLEET_RENAME_ACTION")
+	_rename_button.disabled = not _interaction_enabled
+
+
+func _set_detail_actions_enabled(enabled: bool) -> void:
+	_speed_button.disabled = not enabled
+	_capacity_button.disabled = not enabled
+	_automation_button.disabled = not enabled
+	_rename_button.disabled = not enabled
 
 
 func _on_card_pressed(ship_id: StringName) -> void:
@@ -239,6 +286,10 @@ func _on_toggle_pressed() -> void:
 func _on_language_changed(_locale: String) -> void:
 	set_expanded(_expanded)
 	_refresh_help_dialog()
+	for ship_id in _entries.keys():
+		_update_card(_cards[ship_id], _entries[ship_id], ship_id == _selected_ship_id)
+	_update_summary(_entries.values())
+	_update_selected_details()
 
 
 func _show_help_dialog() -> void:
@@ -256,35 +307,30 @@ func _refresh_help_dialog() -> void:
 	_help_dialog.get_ok_button().text = tr("FLEET_HELP_OK")
 
 
-func _on_speed_upgrade_pressed(ship_id: StringName) -> void:
-	speed_upgrade_requested.emit(ship_id)
+func _on_speed_upgrade_pressed() -> void:
+	if _selected_ship_id != &"":
+		speed_upgrade_requested.emit(_selected_ship_id)
 
 
-func _on_capacity_upgrade_pressed(ship_id: StringName) -> void:
-	capacity_upgrade_requested.emit(ship_id)
+func _on_capacity_upgrade_pressed() -> void:
+	if _selected_ship_id != &"":
+		capacity_upgrade_requested.emit(_selected_ship_id)
 
 
-func _on_automation_pressed(ship_id: StringName) -> void:
-	automation_requested.emit(ship_id)
+func _on_automation_pressed() -> void:
+	if _selected_ship_id != &"":
+		automation_requested.emit(_selected_ship_id)
 
 
-func _on_rename_pressed(ship_id: StringName) -> void:
-	rename_requested.emit(ship_id)
+func _on_rename_pressed() -> void:
+	if _selected_ship_id != &"":
+		rename_requested.emit(_selected_ship_id)
 
 
 func _refresh_card_interactions() -> void:
-	for card in _cards.values():
-		var button: Button = card["button"]
-		var upgrade_button: Button = card["upgrade_button"]
-		var capacity_button: Button = card["capacity_button"]
-		var automation_button: Button = card["automation_button"]
-		var rename_button: Button = card["rename_button"]
+	for button: Button in _cards.values():
 		button.disabled = not _interaction_enabled
-		rename_button.disabled = not _interaction_enabled
-		if not _interaction_enabled:
-			upgrade_button.disabled = true
-			capacity_button.disabled = true
-			automation_button.disabled = true
+	_update_selected_details()
 
 
 func _format_duration(duration_sec: float) -> String:

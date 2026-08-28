@@ -318,10 +318,21 @@ func _run() -> void:
 	var skip_tutorial_button := world.get_node("UI/SkipTutorialButton") as Button
 	var tutorial_complete_dialog := world.get_node("UI/TutorialCompleteDialog") as AcceptDialog
 	assert(skip_tutorial_button.visible)
-	var shop_panel := world.get_node("UI/ShipShopPanel")
+	var management_dock := world.get_node("UI/ManagementDock") as ManagementDock
+	assert(management_dock != null)
+	var shop_panel := management_dock.ship_shop_panel
+	var fleet_panel := management_dock.fleet_panel
+	var shop_tab := management_dock.get_node(
+		"Margin/VBox/Tabs/ShopTabButton"
+	) as Button
+	var fleet_tab := management_dock.get_node(
+		"Margin/VBox/Tabs/FleetTabButton"
+	) as Button
 	assert(shop_panel != null)
+	assert(fleet_panel != null)
 	assert(shop_panel.is_tutorial_focused())
 	assert(not shop_panel.is_expanded())
+	assert(not management_dock.is_expanded())
 	assert(company_label.disabled)
 	assert(debug_level_button.disabled)
 	assert(fleet_manager.get_all_ship_ids().is_empty())
@@ -340,10 +351,10 @@ func _run() -> void:
 	var model_position_label := shop_panel.get_node(
 		"Margin/VBox/Body/ModelSelector/PositionLabel"
 	) as Label
-	var shop_toggle := shop_panel.get_node("Margin/VBox/ToggleButton") as Button
-	assert(not shop_toggle.disabled)
-	shop_toggle.pressed.emit()
+	assert(not shop_tab.disabled)
+	shop_tab.pressed.emit()
 	await process_frame
+	assert(management_dock.is_shop_open())
 	assert(shop_panel.is_expanded())
 	assert(int(game_manager.get("tutorial_step")) == 4)
 	assert(instruction_label.text.contains("ÖĞRETİCİ 2/8"))
@@ -366,7 +377,11 @@ func _run() -> void:
 	var legacy_fleet_save: Dictionary = fleet_manager.get_save_state()
 	var legacy_starter_state: Dictionary = legacy_fleet_save[String(starter_ship_id)]
 	legacy_starter_state.erase("ship_name")
+	legacy_starter_state.erase("completed_mission_count")
+	legacy_starter_state.erase("total_net_earnings")
 	fleet_manager.apply_save_state(legacy_fleet_save)
+	assert(fleet_manager.get_ship_completed_mission_count(starter_ship_id) == 0)
+	assert(fleet_manager.get_ship_total_net_earnings(starter_ship_id) == 0)
 	var starter_generated_name: String = fleet_manager.get_ship_name(starter_ship_id)
 	assert(starter_generated_name.length() >= 2)
 	assert(starter_generated_name.length() <= 20)
@@ -376,7 +391,8 @@ func _run() -> void:
 	assert(instruction_label.text.contains("ÖĞRETİCİ 3/8"))
 	assert(not shop_panel.is_tutorial_focused())
 	assert(not shop_panel.is_expanded())
-	assert(shop_toggle.disabled)
+	assert(not management_dock.is_expanded())
+	assert(shop_tab.disabled)
 	assert(not company_label.disabled)
 	event_bus.ship_tapped.emit(starter_ship_id)
 	event_bus.port_tapped.emit(&"mersin")
@@ -434,8 +450,6 @@ func _run() -> void:
 	)
 	var first_port_mission_range: Vector2i = first_port_balance["mission_range"]
 	assert(first_port_mission_range.x >= 3 and first_port_mission_range.y <= 5)
-	var fleet_panel := world.get_node("UI/FleetStatusPanel")
-	assert(fleet_panel != null)
 	var fleet_info_button := fleet_panel.get_node("Margin/VBox/Header/InfoButton") as Button
 	var fleet_help_dialog := fleet_panel.get_node("HelpDialog") as AcceptDialog
 	assert(fleet_info_button != null)
@@ -454,12 +468,15 @@ func _run() -> void:
 	settings_manager.set_locale("tr")
 	fleet_help_dialog.hide()
 	world.call("_refresh_fleet_panel")
-	var starter_name_card: Dictionary = fleet_panel.get("_cards")[starter_ship_id]
-	var starter_card_button: Button = starter_name_card["button"]
-	var starter_rename_button: Button = starter_name_card["rename_button"]
+	var starter_card_button: Button = fleet_panel.get("_cards")[starter_ship_id]
+	var starter_rename_button := fleet_panel.get_node(
+		"Margin/VBox/Body/Details/Actions/RenameButton"
+	) as Button
 	assert(starter_card_button.text.contains(starter_generated_name))
 	assert(starter_card_button.text.contains("Başlangıç Yük Gemisi"))
-	assert(starter_rename_button.text == "✎")
+	starter_card_button.pressed.emit()
+	await process_frame
+	assert(starter_rename_button.text == "İsim Değiştir")
 	starter_rename_button.pressed.emit()
 	await process_frame
 	var ship_rename_dialog := world.get_node("UI/ShipRenameDialog") as PopupPanel
@@ -507,31 +524,35 @@ func _run() -> void:
 	assert(instruction_label.text.contains("2–20"))
 	rename_cancel_button.pressed.emit()
 	assert(not ship_rename_dialog.visible)
-	var fleet_scroll := fleet_panel.get_node("Margin/VBox/Body/Scroll") as ScrollContainer
+	var fleet_scroll := fleet_panel.get_node(
+		"Margin/VBox/Body/ListColumn/Scroll"
+	) as ScrollContainer
 	assert(fleet_scroll != null)
 	assert(fleet_scroll.scroll_deadzone == 18)
 	var settings_button := settings_menu.get_node("SettingsButton") as Button
-	assert(not fleet_panel.get_global_rect().intersects(settings_button.get_global_rect()))
-	var fleet_toggle := fleet_panel.get_node("Margin/VBox/Header/ToggleButton") as Button
-	assert(not fleet_panel.is_expanded())
-	assert(is_equal_approx(fleet_panel.offset_bottom - fleet_panel.offset_top, 56.0))
-	assert(not fleet_panel.get_node("Margin/VBox/Body").visible)
-	fleet_toggle.pressed.emit()
+	assert(not management_dock.get_global_rect().intersects(settings_button.get_global_rect()))
+	assert(not management_dock.is_expanded())
+	assert(is_equal_approx(management_dock.offset_bottom - management_dock.offset_top, 58.0))
+	fleet_tab.pressed.emit()
+	assert(management_dock.is_fleet_open())
 	assert(fleet_panel.is_expanded())
-	assert(is_equal_approx(fleet_panel.offset_bottom - fleet_panel.offset_top, 290.0))
+	assert(is_equal_approx(management_dock.offset_bottom - management_dock.offset_top, 286.0))
 	assert(fleet_panel.get_node("Margin/VBox/Body").visible)
-	fleet_toggle.pressed.emit()
+	fleet_tab.pressed.emit()
+	assert(not management_dock.is_expanded())
 	assert(not fleet_panel.is_expanded())
 	assert(not shop_panel.is_expanded())
-	assert(is_equal_approx(shop_panel.offset_bottom - shop_panel.offset_top, 56.0))
-	shop_toggle.pressed.emit()
+	shop_tab.pressed.emit()
+	assert(management_dock.is_shop_open())
 	assert(shop_panel.is_expanded())
-	assert(is_equal_approx(shop_panel.offset_bottom - shop_panel.offset_top, 230.0))
 	assert(shop_panel.get_node("Margin/VBox/Body").visible)
-	shop_toggle.pressed.emit()
+	shop_tab.pressed.emit()
+	assert(not management_dock.is_expanded())
 	assert(not shop_panel.is_expanded())
-	fleet_toggle.pressed.emit()
-	shop_toggle.pressed.emit()
+	fleet_tab.pressed.emit()
+	shop_tab.pressed.emit()
+	assert(management_dock.is_fleet_open())
+	assert(management_dock.is_shop_open())
 	assert(fleet_panel.is_expanded())
 	assert(shop_panel.is_expanded())
 	var world_camera := world.get_node("Camera2D")
@@ -542,11 +563,12 @@ func _run() -> void:
 	var mersin_screen_position: Vector2 = get_root().get_viewport().get_canvas_transform() \
 			* mersin_node.global_position
 	world.call("_handle_map_tap", mersin_screen_position)
-	assert(fleet_panel.is_expanded())
+	assert(not management_dock.is_expanded())
+	assert(not fleet_panel.is_expanded())
 	assert(not shop_panel.is_expanded())
 	assert(world.get("_selected_ship_id") == &"selection_probe")
 	world.set("_selected_ship_id", &"")
-	shop_toggle.pressed.emit()
+	shop_tab.pressed.emit()
 	assert(shop_panel.is_expanded())
 	var map_drag_press := InputEventMouseButton.new()
 	map_drag_press.button_index = MOUSE_BUTTON_LEFT
@@ -565,7 +587,7 @@ func _run() -> void:
 	map_drag_release.position = map_drag_motion.position
 	map_drag_release.global_position = map_drag_release.position
 	world_camera.call("_unhandled_input", map_drag_release)
-	assert(fleet_panel.is_expanded())
+	assert(management_dock.is_shop_open())
 	assert(shop_panel.is_expanded())
 	var position_before_inertia: Vector2 = world_camera.position
 	world_camera.call("_process", 0.1)
@@ -576,7 +598,7 @@ func _run() -> void:
 	map_tap_press.position = Vector2(640, 400)
 	map_tap_press.global_position = map_tap_press.position
 	world_camera.call("_unhandled_input", map_tap_press)
-	assert(fleet_panel.is_expanded())
+	assert(management_dock.is_shop_open())
 	assert(shop_panel.is_expanded())
 	var map_tap_jitter := InputEventMouseMotion.new()
 	map_tap_jitter.position = Vector2(658, 400)
@@ -588,6 +610,7 @@ func _run() -> void:
 	map_tap_release.position = map_tap_jitter.position
 	map_tap_release.global_position = map_tap_release.position
 	world_camera.call("_unhandled_input", map_tap_release)
+	assert(not management_dock.is_expanded())
 	assert(not fleet_panel.is_expanded())
 	assert(not shop_panel.is_expanded())
 	world_camera.zoom = Vector2.ONE * 0.65
@@ -1148,7 +1171,9 @@ func _run() -> void:
 	assert(progressed_dash_segments.size() < initial_dash_segments.size())
 	assert(progressed_dash_segments.back()[0].is_equal_approx(initial_dash_segments.back()[0]))
 	assert(progressed_dash_segments.back()[1].is_equal_approx(initial_dash_segments.back()[1]))
-	assert(world.get_node("UI/FleetStatusPanel") is FleetStatusPanel)
+	assert(world.get_node(
+		"UI/ManagementDock/Margin/VBox/Content/FleetStatusPanel"
+	) is FleetStatusPanel)
 	var delivery_state_safety := 0
 	mission.leg_duration_sec = 0.0
 	await process_frame
@@ -1192,6 +1217,16 @@ func _run() -> void:
 	assert(mission.stage == Mission.Stage.COMPLETED)
 	assert(bool(starter_map_ship.get("_dock_transition_active")))
 	assert(game_manager.money == mission.get_net_reward())
+	assert(fleet_manager.get_ship_completed_mission_count(starter_ship_id) == 1)
+	assert(fleet_manager.get_ship_total_net_earnings(starter_ship_id) \
+		== mission.get_net_reward())
+	world.call("_refresh_fleet_panel")
+	fleet_panel.select_ship(starter_ship_id)
+	var fleet_stats_label := fleet_panel.get_node(
+		"Margin/VBox/Body/Details/Stats"
+	) as Label
+	assert(fleet_stats_label.text.contains("1 görev tamamladı"))
+	assert(fleet_stats_label.text.contains("%d ₺" % mission.get_net_reward()))
 	assert(instruction_label.text.contains("Net +%d" % mission.get_net_reward()))
 	assert(instruction_label.text.contains("%d gelir" % mission.reward))
 	assert(instruction_label.text.contains("-%d masraf" % mission.operating_cost))
@@ -1327,7 +1362,7 @@ func _run() -> void:
 		(headquarters.get_node("DeliveryBerth") as Marker2D).position
 	))
 	var shop_buy_button := world.get_node(
-		"UI/ShipShopPanel/Margin/VBox/Body/BuyButton"
+		"UI/ManagementDock/Margin/VBox/Content/ShipShopPanel/Margin/VBox/Body/BuyButton"
 	) as Button
 	assert(shop_buy_button != null)
 	shop_buy_button.text = "Satın Al · 800 ₺"
@@ -1642,8 +1677,16 @@ func _run() -> void:
 	assert(mission_manager.get_active_missions().size() == 2)
 
 	var expected_offline_reward := 0
+	var expected_completed_counts: Dictionary = {}
+	var expected_lifetime_earnings: Dictionary = {}
 	for active_mission in mission_manager.get_active_missions():
 		expected_offline_reward += active_mission.get_net_reward()
+		var assigned_ship_id: StringName = active_mission.assigned_ship_id
+		expected_completed_counts[assigned_ship_id] = \
+			fleet_manager.get_ship_completed_mission_count(assigned_ship_id) + 1
+		expected_lifetime_earnings[assigned_ship_id] = \
+			fleet_manager.get_ship_total_net_earnings(assigned_ship_id) \
+			+ active_mission.get_net_reward()
 		var fleet_mission: Mission = fleet_manager.get_ship_mission(active_mission.assigned_ship_id)
 		fleet_mission.leg_start_unix = Time.get_unix_time_from_system() - 3600
 	var saved_company_value: int = company_manager.company_value
@@ -1666,6 +1709,11 @@ func _run() -> void:
 	assert(fleet_manager.get_ship_speed_level(starter_ship_id) == 1)
 	assert(fleet_manager.get_ship_capacity_level(starter_ship_id) == 1)
 	assert(fleet_manager.get_ship_name(starter_ship_id) == saved_starter_ship_name)
+	for completed_ship_id in expected_completed_counts.keys():
+		assert(fleet_manager.get_ship_completed_mission_count(completed_ship_id) \
+			== expected_completed_counts[completed_ship_id])
+		assert(fleet_manager.get_ship_total_net_earnings(completed_ship_id) \
+			== expected_lifetime_earnings[completed_ship_id])
 	assert(company_manager.company_value == saved_company_value)
 	assert(company_manager.company_level == saved_company_level)
 	assert(company_manager.peak_company_value >= company_manager.company_value)
@@ -1673,9 +1721,11 @@ func _run() -> void:
 
 	# Per-ship automation is a late-game, optional investment. It stays hidden
 	# until the preceding level and never assigns repeated missions offline.
+	event_bus.ship_tapped.emit(starter_ship_id)
 	world.call("_refresh_fleet_panel")
-	var starter_fleet_card: Dictionary = fleet_panel.get("_cards")[starter_ship_id]
-	var automation_button: Button = starter_fleet_card["automation_button"]
+	var automation_button := fleet_panel.get_node(
+		"Margin/VBox/Body/Details/Actions/AutomationButton"
+	) as Button
 	assert(not automation_button.visible)
 	assert(not fleet_manager.is_ship_automation_unlocked(starter_ship_id))
 	assert(not game_manager.try_toggle_ship_automation(starter_ship_id))
@@ -1790,22 +1840,21 @@ func _run() -> void:
 				== stable_mersin_slots[existing_ship_id_string])
 	assert(fleet_manager.get_all_ship_ids().size() == fleet_capacity)
 	world.call("_refresh_fleet_panel")
-	fleet_panel.set_expanded(true)
+	management_dock.open_fleet()
 	await process_frame
 	var fleet_scroll_bar := fleet_scroll.get_v_scroll_bar()
 	assert(fleet_scroll_bar.max_value > fleet_scroll_bar.page)
 	var fleet_cards: Dictionary = fleet_panel.get("_cards")
-	for fleet_card in fleet_cards.values():
-		for button_key in [
-			"button",
-			"rename_button",
-			"upgrade_button",
-			"capacity_button",
-			"automation_button",
-		]:
-			var card_button: Button = fleet_card[button_key]
-			assert(card_button.focus_mode == Control.FOCUS_NONE)
-			assert(card_button.mouse_filter == Control.MOUSE_FILTER_PASS)
+	for card_button: Button in fleet_cards.values():
+		assert(card_button.focus_mode == Control.FOCUS_NONE)
+		assert(card_button.mouse_filter == Control.MOUSE_FILTER_PASS)
+	for action_button: Button in [
+		fleet_panel.get_node("Margin/VBox/Body/Details/Actions/SpeedButton"),
+		fleet_panel.get_node("Margin/VBox/Body/Details/Actions/CapacityButton"),
+		fleet_panel.get_node("Margin/VBox/Body/Details/Actions/AutomationButton"),
+		fleet_panel.get_node("Margin/VBox/Body/Details/Actions/RenameButton"),
+	]:
+		assert(action_button.focus_mode == Control.FOCUS_NONE)
 	var fleet_ship_names: Array[String] = []
 	for named_ship_id in fleet_manager.get_all_ship_ids():
 		var fleet_ship_name: String = fleet_manager.get_ship_name(named_ship_id)

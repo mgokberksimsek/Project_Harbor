@@ -6,7 +6,7 @@
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -350.0
+offset_left = -680.0
 offset_top = 70.0
 offset_right = -24.0
 offset_bottom = 134.0
@@ -35,6 +35,14 @@ size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "Filo Durumu ▶"
 
+[node name="Summary" type="Label" parent="Margin/VBox/Header"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+text = "0/0 gemi · 0 boşta · 0 görevde"
+vertical_alignment = 1
+
 [node name="InfoButton" type="Button" parent="Margin/VBox/Header"]
 custom_minimum_size = Vector2(42, 38)
 layout_mode = 2
@@ -42,21 +50,110 @@ focus_mode = 0
 theme_override_font_sizes/font_size = 20
 text = "?"
 
-[node name="Body" type="VBoxContainer" parent="Margin/VBox"]
+[node name="Body" type="HBoxContainer" parent="Margin/VBox"]
 visible = false
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 10
 
-[node name="Scroll" type="ScrollContainer" parent="Margin/VBox/Body"]
+[node name="ListColumn" type="VBoxContainer" parent="Margin/VBox/Body"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="ListTitle" type="Label" parent="Margin/VBox/Body/ListColumn"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Gemiler"
+
+[node name="Scroll" type="ScrollContainer" parent="Margin/VBox/Body/ListColumn"]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 scroll_deadzone = 18
 
-[node name="List" type="VBoxContainer" parent="Margin/VBox/Body/Scroll"]
+[node name="List" type="VBoxContainer" parent="Margin/VBox/Body/ListColumn/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
+
+[node name="Separator" type="VSeparator" parent="Margin/VBox/Body"]
+layout_mode = 2
+
+[node name="Details" type="VBoxContainer" parent="Margin/VBox/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="SelectedTitle" type="Label" parent="Margin/VBox/Body/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Bir gemi seç"
+text_overrun_behavior = 3
+
+[node name="SelectedState" type="Label" parent="Margin/VBox/Body/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = ""
+
+[node name="SelectedRoute" type="Label" parent="Margin/VBox/Body/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = ""
+text_overrun_behavior = 3
+
+[node name="SelectedCargo" type="Label" parent="Margin/VBox/Body/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = ""
+text_overrun_behavior = 3
+
+[node name="Progress" type="ProgressBar" parent="Margin/VBox/Body/Details"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+show_percentage = false
+
+[node name="Stats" type="Label" parent="Margin/VBox/Body/Details"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.82, 0.36, 1)
+theme_override_font_sizes/font_size = 14
+text = "0 görev · Toplam net: 0 ₺"
+
+[node name="Actions" type="GridContainer" parent="Margin/VBox/Body/Details"]
+layout_mode = 2
+size_flags_vertical = 3
+columns = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 4
+
+[node name="SpeedButton" type="Button" parent="Margin/VBox/Body/Details/Actions"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+text = "Hız"
+
+[node name="CapacityButton" type="Button" parent="Margin/VBox/Body/Details/Actions"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+text = "Kapasite"
+
+[node name="AutomationButton" type="Button" parent="Margin/VBox/Body/Details/Actions"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+text = "Otomatik Görev"
+
+[node name="RenameButton" type="Button" parent="Margin/VBox/Body/Details/Actions"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+text = "İsim Değiştir"
 
 [node name="HelpDialog" type="AcceptDialog" parent="."]
 title = "Filo Durumu"

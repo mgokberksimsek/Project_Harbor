@@ -577,10 +577,12 @@ adımıyla karşılaşmaz.
   sinematik görünüme geçirir. Sinematik görünüm sürüklenmez; yakınlaştırma,
   çift dokunma veya fare tekerleği oyuncuyu normal kameranın en uzak sınırına
   döndürür. Oyuncu buradan yaklaşmaya kesintisiz biçimde devam edebilir.
-- Filo durumu ve gemi satın alma panelleri haritayı kapatmamak için başlangıçta
-  kompakt, kapalı sekmeler halinde durur ve başlıklarına dokunularak açılıp
-  kapanır. UI dışındaki herhangi bir harita dokunuşu iki paneli de kapatır;
-  dokunulan gemi veya limanın normal seçimi devam eder.
+- Filo durumu ve gemi satın alma ekranın altında yan yana duran, tek bir kompakt
+  yönetim çubuğunun iki bağımsız sekmesidir. Oyuncu isterse ikisini birlikte
+  açabilir; bu durumda filo alanı daha geniş kalacak şekilde yan yana görünürler.
+  UI dışındaki gerçek bir harita dokunuşu açık sekmeleri kapatır; dokunulan gemi
+  veya limanın normal seçimi devam eder. Haritayı sürüklemek veya yakınlaştırmak
+  sekmeleri kapatmaz.
 - Üstteki Company Level göstergesine dokunmak değer dağılımını ve sonraki
   seviye hedefini gösteren şirket ilerleme panelini açar.
 
@@ -595,9 +597,11 @@ adımıyla karşılaşmaz.
 
 ### 12.3 Büyük filo kullanılabilirliği
 
-İki gemi mevcut arayüzde anlaşılırdır; daha büyük filolarda okunabilirlik henüz
-doğrulanmamıştır. Üç ila altı gemiyle yapılacak kullanılabilirlik testlerinden
-sonra filtreleme, sıralama, görevde/boşta gruplama veya kompakt filo görünümü
+Filo sekmesi ikiye ayrılır: soldaki kaydırılabilir kompakt liste filoda hızlı
+gezinmeyi, sağdaki ayrıntı alanı seçili geminin rota, kargo, geliştirme ve
+otomatik görev işlemlerini gösterir. Ayrıntı alanında geminin tamamladığı görev
+sayısı ile bugüne kadarki toplam net kazancı da yer alır. Daha büyük filo
+testlerinden sonra yalnızca ihtiyaç görülürse filtreleme veya durum gruplama
 eklenebilir.
 
 Filo paneli başlığındaki isteğe bağlı `?` düğmesi panelin gemi seçimi ve durum

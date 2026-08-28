@@ -516,6 +516,14 @@ func get_ship_total_upgrade_levels(ship_id: StringName) -> int:
 	return get_ship_speed_level(ship_id) + get_ship_capacity_level(ship_id)
 
 
+func get_ship_completed_mission_count(ship_id: StringName) -> int:
+	return _states[ship_id].completed_mission_count if _states.has(ship_id) else 0
+
+
+func get_ship_total_net_earnings(ship_id: StringName) -> int:
+	return _states[ship_id].total_net_earnings if _states.has(ship_id) else 0
+
+
 func is_ship_automation_unlocked(ship_id: StringName) -> bool:
 	return _states.has(ship_id) and _states[ship_id].automation_unlocked
 
@@ -880,6 +888,8 @@ func _advance_state(
 
 		ShipRuntimeState.State.UNLOADING:
 			mission.stage = Mission.Stage.COMPLETED
+			state.completed_mission_count += 1
+			state.total_net_earnings += mission.get_net_reward()
 			state.current_mission = null
 			var previous := state.state
 			state.state = ShipRuntimeState.State.IDLE

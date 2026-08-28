@@ -16,8 +16,11 @@ extends Node2D
 @onready var _ship_rename_save_button: Button = $UI/ShipRenameDialog/Content/Rows/ActionRow/SaveButton
 @onready var _exit_confirmation_dialog: ConfirmationDialog = $UI/ExitConfirmationDialog
 @onready var _mission_offer_panel: MissionOfferPanel = $UI/MissionOfferPanel
-@onready var _fleet_status_panel: FleetStatusPanel = $UI/FleetStatusPanel
-@onready var _ship_shop_panel = $UI/ShipShopPanel
+@onready var _management_dock: ManagementDock = $UI/ManagementDock
+@onready var _fleet_status_panel: FleetStatusPanel = \
+	$UI/ManagementDock/Margin/VBox/Content/FleetStatusPanel
+@onready var _ship_shop_panel = \
+	$UI/ManagementDock/Margin/VBox/Content/ShipShopPanel
 @onready var _port_unlock_panel: PortUnlockPanel = $UI/PortUnlockPanel
 @onready var _company_progress_panel: CompanyProgressPanel = $UI/CompanyProgressPanel
 @onready var _settings_menu: SettingsMenu = $UI/SettingsMenu
@@ -50,7 +53,7 @@ func _handle_map_tap(screen_position: Vector2) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if _is_port_at_screen_position(screen_position):
-		_ship_shop_panel.set_expanded(false)
+		_collapse_management_panels()
 		return
 	if not GameManager.is_tutorial_completed():
 		_update_tutorial_instruction()
@@ -108,8 +111,7 @@ func clear_map_selection() -> void:
 
 
 func _collapse_management_panels() -> void:
-	_fleet_status_panel.set_expanded(false)
-	_ship_shop_panel.set_expanded(false)
+	_management_dock.collapse()
 
 
 func _ready() -> void:
@@ -159,7 +161,7 @@ func _ready() -> void:
 	_company_progress_panel.company_value_info_confirmed.connect(
 		_on_company_value_info_confirmed
 	)
-	_ship_shop_panel.expanded_changed.connect(_on_ship_shop_expanded_changed)
+	_management_dock.shop_opened.connect(_on_ship_shop_expanded)
 	_company_progress_label.pressed.connect(_on_company_progress_pressed)
 	_debug_level_up_button.pressed.connect(_on_debug_level_up_pressed)
 	_debug_money_button.pressed.connect(_on_debug_money_pressed)
@@ -172,6 +174,7 @@ func _ready() -> void:
 	_settings_menu.sound_effects_toggled.connect(SettingsManager.set_sound_effects_enabled)
 	_settings_menu.music_toggled.connect(SettingsManager.set_music_enabled)
 	_settings_menu.locale_selected.connect(SettingsManager.set_locale)
+	_settings_menu.menu_opened.connect(_collapse_management_panels)
 	_settings_menu.new_game_confirmed.connect(_on_new_game_confirmed)
 	_settings_menu.set_preferences(
 		SettingsManager.sound_effects_enabled,
@@ -296,6 +299,7 @@ func _on_company_level_changed(new_level: int, previous_level: int) -> void:
 
 
 func _on_debug_level_up_pressed() -> void:
+	_collapse_management_panels()
 	CompanyManager.debug_advance_level()
 	_update_debug_buttons()
 
@@ -303,6 +307,7 @@ func _on_debug_level_up_pressed() -> void:
 func _on_debug_money_pressed() -> void:
 	if not GameManager.is_tutorial_completed():
 		return
+	_collapse_management_panels()
 	GameManager.add_money(DEBUG_MONEY_AMOUNT)
 
 
@@ -544,6 +549,7 @@ func _on_port_tapped(port_id: StringName) -> void:
 		_update_tutorial_instruction()
 		_update_tutorial_focus()
 		return
+	_collapse_management_panels()
 	_company_progress_panel.close_panel()
 	if not GameManager.is_tutorial_completed() and not PortManager.is_unlocked(port_id):
 		_update_tutorial_instruction()
@@ -966,6 +972,9 @@ func _refresh_fleet_panel() -> void:
 			"remaining_sec": remaining_sec,
 			"progress": progress,
 			"has_mission": has_mission,
+			"completed_mission_count": \
+				FleetManager.get_ship_completed_mission_count(ship_id),
+			"total_net_earnings": FleetManager.get_ship_total_net_earnings(ship_id),
 			"speed_level": FleetManager.get_ship_speed_level(ship_id),
 			"effective_speed": FleetManager.get_ship_effective_speed(ship_id),
 			"speed_upgrade_cost": FleetManager.get_ship_speed_upgrade_cost(ship_id),
@@ -990,10 +999,13 @@ func _refresh_fleet_panel() -> void:
 			"can_afford_automation": \
 				GameManager.money >= GameManager.AUTOMATION_UNLOCK_COST,
 		})
-	_fleet_status_panel.set_fleet_data(entries, _selected_ship_id)
+	var fleet_capacity := FleetManager.get_fleet_capacity()
+	_fleet_status_panel.set_fleet_data(entries, _selected_ship_id, fleet_capacity)
+	_management_dock.set_fleet_count(entries.size(), fleet_capacity)
 
 
 func _show_port_offers(port_id: StringName) -> void:
+	_collapse_management_panels()
 	_port_unlock_panel.close_panel()
 	var matching_offers: Array[Mission] = []
 	for offer in _mission_offers:
@@ -1084,6 +1096,7 @@ func _on_company_progress_pressed() -> void:
 			and GameManager.tutorial_step != GameManager.TutorialStep.READ_COMPANY_VALUE_INFO:
 		_update_tutorial_instruction()
 		return
+	_collapse_management_panels()
 	if _company_progress_panel.is_open():
 		_company_progress_panel.close_panel()
 		return
@@ -1105,8 +1118,8 @@ func _on_company_value_info_confirmed() -> void:
 		GameManager.set_tutorial_step(GameManager.TutorialStep.SELECT_SHIP)
 
 
-func _on_ship_shop_expanded_changed(expanded: bool) -> void:
-	if expanded and GameManager.tutorial_step == GameManager.TutorialStep.OPEN_SHIP_SHOP:
+func _on_ship_shop_expanded() -> void:
+	if GameManager.tutorial_step == GameManager.TutorialStep.OPEN_SHIP_SHOP:
 		GameManager.set_tutorial_step(GameManager.TutorialStep.PURCHASE_SHIP)
 
 
@@ -1209,6 +1222,9 @@ func _update_tutorial_focus() -> void:
 		or GameManager.tutorial_step == GameManager.TutorialStep.PURCHASE_SHIP
 	_ship_shop_panel.set_interaction_enabled(tutorial_completed or shop_step)
 	_fleet_status_panel.set_interaction_enabled(tutorial_completed)
+	_management_dock.set_shop_interaction_enabled(tutorial_completed or shop_step)
+	_management_dock.set_fleet_interaction_enabled(tutorial_completed)
+	_management_dock.set_shop_tutorial_focus(shop_step)
 	_company_progress_label.disabled = not tutorial_completed \
 		and GameManager.tutorial_step != GameManager.TutorialStep.OPEN_COMPANY_PROGRESS \
 		and GameManager.tutorial_step != GameManager.TutorialStep.READ_COMPANY_VALUE_INFO
