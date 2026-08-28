@@ -169,6 +169,12 @@ func _run() -> void:
 	assert(iskenderiye_data.base_unlock_cost == 25000)
 	assert(iskenderiye_data.base_company_value == 11500)
 	assert(iskenderiye_data.get_upgrade_cost(1) == 19000)
+	_audit_full_network_balance(
+		port_manager,
+		fleet_manager,
+		mission_manager,
+		economy_manager
+	)
 	port_manager.apply_save_state({
 		"mersin": {"port_id": "mersin", "unlocked": true, "level": 1},
 		"izmir": {"port_id": "izmir", "unlocked": true, "level": 1},
@@ -2165,3 +2171,149 @@ func _get_mission_balance_for_cost(
 		"operating_cost_range": Vector2i(minimum_operating_cost, maximum_operating_cost),
 		"net_reward_range": Vector2i(minimum_net_reward, maximum_net_reward),
 	}
+
+
+func _audit_full_network_balance(
+		port_manager: Node,
+		fleet_manager: Node,
+		mission_manager: Node,
+		economy_manager: Node
+) -> void:
+	var port_ids: Array[StringName] = port_manager.get_all_port_ids()
+	port_ids.sort()
+	var ship_models: Array[ShipData] = fleet_manager.get_purchasable_ship_models()
+	var fleet_script := fleet_manager.get_script() as Script
+	var fleet_constants: Dictionary = fleet_script.get_script_constant_map()
+	var sailing_duration_scale := float(fleet_constants["SAILING_DURATION_SCALE"])
+	var minimum_sailing_duration := float(fleet_constants["MIN_SAILING_DURATION_SEC"])
+	var loading_duration := float(fleet_constants["LOADING_DURATION_SEC"])
+	var unloading_duration := float(fleet_constants["UNLOADING_DURATION_SEC"])
+	var route_pair_count := 0
+	var scenario_count := 0
+	var late_scenario_count := 0
+	var minimum_net_reward := 2147483647
+	var maximum_net_reward := 0
+	var minimum_duration := INF
+	var maximum_duration := 0.0
+	var minimum_profit_per_minute := INF
+	var maximum_profit_per_minute := 0.0
+	var maximum_cost_ratio := 0.0
+
+	for first_index in range(port_ids.size()):
+		for second_index in range(first_index + 1, port_ids.size()):
+			var pickup_id := port_ids[first_index]
+			var delivery_id := port_ids[second_index]
+			var distance: float = port_manager.get_distance(pickup_id, delivery_id)
+			assert(distance > 0.0)
+			route_pair_count += 1
+			var pickup_data: PortData = port_manager.get_port_data(pickup_id)
+			var delivery_data: PortData = port_manager.get_port_data(delivery_id)
+			var is_late_pair := pickup_data.required_company_level >= 7 \
+					or delivery_data.required_company_level >= 7
+			for ship_data in ship_models:
+				var cargo_types: Array = mission_manager.call(
+					"_get_compatible_cargo_types",
+					ship_data
+				)
+				assert(not cargo_types.is_empty())
+				for cargo_type: CargoTypeData in cargo_types:
+					for cargo_amount in range(1, maxi(ship_data.cargo_capacity, 1) + 1):
+						var gross_reward: int = economy_manager.calculate_mission_reward(
+							pickup_id,
+							delivery_id,
+							cargo_type,
+							cargo_amount
+						)
+						var operating_cost: int = economy_manager.calculate_mission_operating_cost(
+							pickup_id,
+							pickup_id,
+							delivery_id,
+							ship_data
+						)
+						var net_reward := gross_reward - operating_cost
+						assert(net_reward > 0)
+						var sailing_speed: float = economy_manager.calculate_ship_sailing_speed(
+							ship_data.base_speed,
+							cargo_amount
+						)
+						var duration := maxf(
+							distance / sailing_speed * sailing_duration_scale,
+							minimum_sailing_duration
+						) + loading_duration + unloading_duration
+						var profit_per_minute := float(net_reward) / duration * 60.0
+						var cost_ratio := float(operating_cost) / float(gross_reward)
+						minimum_net_reward = mini(minimum_net_reward, net_reward)
+						maximum_net_reward = maxi(maximum_net_reward, net_reward)
+						minimum_duration = minf(minimum_duration, duration)
+						maximum_duration = maxf(maximum_duration, duration)
+						minimum_profit_per_minute = minf(
+							minimum_profit_per_minute,
+							profit_per_minute
+						)
+						maximum_profit_per_minute = maxf(
+							maximum_profit_per_minute,
+							profit_per_minute
+						)
+						maximum_cost_ratio = maxf(maximum_cost_ratio, cost_ratio)
+						scenario_count += 1
+						if is_late_pair:
+							late_scenario_count += 1
+
+	assert(route_pair_count == port_ids.size() * (port_ids.size() - 1) / 2)
+	assert(scenario_count > 0)
+	assert(late_scenario_count > 0)
+	assert(maximum_cost_ratio <= 0.30)
+	assert(maximum_duration > minimum_duration)
+	var report_format := "FULL_NETWORK_BALANCE routes=%d scenarios=%d " \
+			+ "late=%d net=%d-%d duration=%.1f-%.1fs " \
+			+ "profit_per_min=%.1f-%.1f max_cost=%.1f%%"
+	print(report_format % [
+			route_pair_count,
+			scenario_count,
+			late_scenario_count,
+			minimum_net_reward,
+			maximum_net_reward,
+			minimum_duration,
+			maximum_duration,
+			minimum_profit_per_minute,
+			maximum_profit_per_minute,
+			maximum_cost_ratio * 100.0,
+		])
+
+	for origin_id in port_ids:
+		for ship_data in ship_models:
+			var has_profitable_remote_offer := false
+			var cargo_types: Array = mission_manager.call(
+				"_get_compatible_cargo_types",
+				ship_data
+			)
+			for pickup_id in port_ids:
+				if pickup_id == origin_id:
+					continue
+				for delivery_id in port_ids:
+					if delivery_id == pickup_id:
+						continue
+					for cargo_type: CargoTypeData in cargo_types:
+						var gross_reward: int = economy_manager.calculate_mission_reward(
+							pickup_id,
+							delivery_id,
+							cargo_type,
+							1
+						)
+						var operating_cost: int = economy_manager.calculate_mission_operating_cost(
+							origin_id,
+							pickup_id,
+							delivery_id,
+							ship_data
+						)
+						if gross_reward > operating_cost:
+							has_profitable_remote_offer = true
+							break
+					if has_profitable_remote_offer:
+						break
+				if has_profitable_remote_offer:
+					break
+			assert(has_profitable_remote_offer, "%s has no profitable remote offer from %s" % [
+				ship_data.id,
+				origin_id,
+			])
