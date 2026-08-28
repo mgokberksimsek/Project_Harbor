@@ -334,8 +334,8 @@ Level tekrar yeni bir yuva açana kadar satın alma durur.
 ### 7.5 Otomatik görev
 
 - Otomatik görev gemi başına açılır; tüm filoyu tek seferde otomatikleştirmez.
-- İlk sürümde Şirket Seviyesi 7, gemide toplam 4 hız/kapasite geliştirmesi ve
-  tek seferlik 5.000 ₺ yatırım gerekir.
+- İlk sürümde Şirket Seviyesi 5, ilgili gemiyle tamamlanmış 3 görev ve tek
+  seferlik 5.000 ₺ yatırım gerekir. Geliştirme seviyesi otomasyon şartı değildir.
 - Açıldıktan sonra ücretsiz olarak açılıp kapatılabilir.
 - Oyun açıkken boşta kalan gemi, net kazancı pozitif teklifler arasından tahmini
   süre başına en yüksek net kazancı sağlayanı seçer.

@@ -991,10 +991,8 @@ func _refresh_fleet_panel() -> void:
 			"company_level": CompanyManager.company_level,
 			"automation_required_company_level": \
 				GameManager.AUTOMATION_REQUIRED_COMPANY_LEVEL,
-			"total_upgrade_levels": \
-				FleetManager.get_ship_total_upgrade_levels(ship_id),
-			"automation_required_upgrade_levels": \
-				GameManager.AUTOMATION_REQUIRED_TOTAL_UPGRADE_LEVELS,
+			"automation_required_completed_missions": \
+				GameManager.AUTOMATION_REQUIRED_COMPLETED_MISSIONS,
 			"automation_unlock_cost": GameManager.AUTOMATION_UNLOCK_COST,
 			"can_afford_automation": \
 				GameManager.money >= GameManager.AUTOMATION_UNLOCK_COST,

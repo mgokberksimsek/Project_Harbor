@@ -15,8 +15,8 @@ enum TutorialStep {
 var money: int = 0
 var tutorial_step: TutorialStep = TutorialStep.OPEN_SHIP_SHOP
 
-const AUTOMATION_REQUIRED_COMPANY_LEVEL := 7
-const AUTOMATION_REQUIRED_TOTAL_UPGRADE_LEVELS := 4
+const AUTOMATION_REQUIRED_COMPANY_LEVEL := 5
+const AUTOMATION_REQUIRED_COMPLETED_MISSIONS := 3
 const AUTOMATION_UNLOCK_COST := 5000
 
 @onready var _event_bus: Node = get_node("/root/EventBus")
@@ -158,8 +158,8 @@ func try_toggle_ship_automation(ship_id: StringName) -> bool:
 			_company_manager.company_level
 		)
 		return false
-	if _fleet_manager.get_ship_total_upgrade_levels(ship_id) \
-			< AUTOMATION_REQUIRED_TOTAL_UPGRADE_LEVELS:
+	if _fleet_manager.get_ship_completed_mission_count(ship_id) \
+			< AUTOMATION_REQUIRED_COMPLETED_MISSIONS:
 		return false
 	if not spend_money(AUTOMATION_UNLOCK_COST):
 		return false

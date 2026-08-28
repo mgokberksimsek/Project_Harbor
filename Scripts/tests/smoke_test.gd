@@ -1719,31 +1719,46 @@ func _run() -> void:
 	assert(company_manager.peak_company_value >= company_manager.company_value)
 	assert(game_manager.is_tutorial_completed())
 
-	# Per-ship automation is a late-game, optional investment. It stays hidden
-	# until the preceding level and never assigns repeated missions offline.
+	# Per-ship automation becomes visible one level early, then requires three
+	# completed missions on that ship. It never chains new missions offline.
 	event_bus.ship_tapped.emit(starter_ship_id)
 	world.call("_refresh_fleet_panel")
 	var automation_button := fleet_panel.get_node(
 		"Margin/VBox/Body/Details/Actions/AutomationButton"
 	) as Button
-	assert(not automation_button.visible)
 	assert(not fleet_manager.is_ship_automation_unlocked(starter_ship_id))
-	assert(not game_manager.try_toggle_ship_automation(starter_ship_id))
-	while company_manager.company_level < 6:
+	while company_manager.company_level < 4:
 		assert(company_manager.debug_advance_level())
 	world.call("_refresh_fleet_panel")
 	assert(automation_button.visible)
 	assert(automation_button.disabled)
-	assert(automation_button.text.contains("Şirket Sv.7"))
+	assert(automation_button.text.contains("Şirket Sv.5"))
+	assert(not game_manager.try_toggle_ship_automation(starter_ship_id))
 	assert(company_manager.debug_advance_level())
 	world.call("_refresh_fleet_panel")
+	var completed_before_automation: int = \
+		fleet_manager.get_ship_completed_mission_count(starter_ship_id)
+	assert(completed_before_automation == 2)
 	assert(automation_button.disabled)
-	assert(automation_button.text.contains("Geliştirme 2/4"))
-	assert(fleet_manager.upgrade_ship_speed(starter_ship_id))
-	assert(fleet_manager.upgrade_ship_speed(starter_ship_id))
-	assert(fleet_manager.get_ship_total_upgrade_levels(starter_ship_id) == 4)
-	await process_frame
-	await process_frame
+	assert(automation_button.text.contains("Görev 2/3"))
+	assert(not game_manager.try_toggle_ship_automation(starter_ship_id))
+	mission_manager.refresh_offers()
+	var readiness_offer: Mission = null
+	for candidate_offer in mission_manager.get_offers():
+		if candidate_offer.offered_ship_id == starter_ship_id:
+			readiness_offer = candidate_offer
+			break
+	assert(readiness_offer != null)
+	assert(mission_manager.accept_offer(readiness_offer.id))
+	for _step in range(10):
+		if readiness_offer.stage == Mission.Stage.COMPLETED:
+			break
+		readiness_offer.leg_duration_sec = 0.0
+		await process_frame
+		await process_frame
+	assert(readiness_offer.stage == Mission.Stage.COMPLETED)
+	assert(fleet_manager.get_ship_completed_mission_count(starter_ship_id) == 3)
+	assert(fleet_manager.get_ship_total_upgrade_levels(starter_ship_id) == 2)
 	mission_manager.refresh_offers()
 	var expected_auto_offer: Mission = null
 	var expected_profit_rate := -1.0
