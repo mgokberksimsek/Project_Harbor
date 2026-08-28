@@ -243,6 +243,16 @@ func _on_money_changed(new_amount: int, _delta: int) -> void:
 
 
 func _on_mission_completed(mission: Mission) -> void:
+	var ship_id := mission.assigned_ship_id
+	if CompanyManager.company_level >= GameManager.AUTOMATION_REQUIRED_COMPANY_LEVEL \
+			and not FleetManager.is_ship_automation_unlocked(ship_id) \
+			and FleetManager.get_ship_completed_mission_count(ship_id) \
+				== GameManager.AUTOMATION_REQUIRED_COMPLETED_MISSIONS:
+		_instruction_label.text = tr("INSTRUCTION_AUTOMATION_READY") % [
+			_translated_ship_name(ship_id),
+			GameManager.AUTOMATION_UNLOCK_COST,
+		]
+		return
 	_instruction_label.text = tr("INSTRUCTION_MISSION_COMPLETED") % [
 		mission.get_net_reward(),
 		mission.reward,

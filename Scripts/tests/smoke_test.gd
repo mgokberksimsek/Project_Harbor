@@ -1759,6 +1759,8 @@ func _run() -> void:
 	assert(readiness_offer.stage == Mission.Stage.COMPLETED)
 	assert(fleet_manager.get_ship_completed_mission_count(starter_ship_id) == 3)
 	assert(fleet_manager.get_ship_total_upgrade_levels(starter_ship_id) == 2)
+	assert(instruction_label.text.contains("otomatik göreve hazır"))
+	assert(instruction_label.text.contains("5000"))
 	mission_manager.refresh_offers()
 	var expected_auto_offer: Mission = null
 	var expected_profit_rate := -1.0
