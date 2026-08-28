@@ -250,11 +250,11 @@ func _update_detail_actions(entry: Dictionary) -> void:
 			entry.get("automation_required_company_level", 1)
 		)
 		_automation_button.disabled = true
-	elif int(entry.get("completed_mission_count", 0)) \
-			< int(entry.get("automation_required_completed_missions", 0)):
-		_automation_button.text = tr("AUTOMATION_MISSIONS_REQUIRED") % [
-			int(entry.get("completed_mission_count", 0)),
-			int(entry.get("automation_required_completed_missions", 0)),
+	elif int(entry.get("completed_large_contract_count", 0)) \
+			< int(entry.get("automation_required_large_contracts", 0)):
+		_automation_button.text = tr("AUTOMATION_CONTRACTS_REQUIRED") % [
+			int(entry.get("completed_large_contract_count", 0)),
+			int(entry.get("automation_required_large_contracts", 0)),
 		]
 		_automation_button.disabled = true
 	else:

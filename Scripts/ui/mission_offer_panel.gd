@@ -98,9 +98,28 @@ func _format_offer(mission: Mission) -> String:
 	var pickup_data := PortManager.get_port_data(mission.pickup_port_id)
 	var delivery_data := PortManager.get_port_data(mission.delivery_port_id)
 	var cargo_data := MissionManager.get_cargo_type(mission.cargo_type_id)
-	return "%s → %s\n%s ×%d · %s\n%s" % [
+	var route_text := "%s → %s" % [
 		_translate_entity("PORT", mission.pickup_port_id, pickup_data.display_name),
 		_translate_entity("PORT", mission.delivery_port_id, delivery_data.display_name),
+	]
+	var contract_label := ""
+	if mission.is_large_contract():
+		var route_names: PackedStringArray = []
+		for port_id in mission.contract_port_ids:
+			var port_data := PortManager.get_port_data(port_id)
+			if port_data != null:
+				route_names.append(_translate_entity(
+					"PORT",
+					port_id,
+					port_data.display_name
+				))
+		route_text = " → ".join(route_names)
+		contract_label = "%s\n" % [
+			tr("MISSION_LARGE_CONTRACT") % mission.get_delivery_count()
+		]
+	return "%s%s\n%s ×%d · %s\n%s" % [
+		contract_label,
+		route_text,
 		_translate_entity("CARGO", mission.cargo_type_id, cargo_data.display_name),
 		mission.cargo_amount,
 		_format_duration(mission.estimated_duration_sec),

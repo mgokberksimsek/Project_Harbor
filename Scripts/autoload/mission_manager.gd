@@ -7,8 +7,10 @@ extends Node
 
 const CARGO_RESOURCE_DIR := "res://Resources/cargo_types"
 const OFFER_COUNT_PER_SHIP := 3
-const MEDIUM_MISSION_THRESHOLD_SEC := 5.0 * 60.0
-const LONG_MISSION_THRESHOLD_SEC := 45.0 * 60.0
+const MEDIUM_MISSION_THRESHOLD_SEC := 90.0
+const LONG_MISSION_THRESHOLD_SEC := 5.0 * 60.0
+const LARGE_CONTRACT_REQUIRED_COMPANY_LEVEL := 4
+const LARGE_CONTRACT_REWARD_MULTIPLIER := 1.08
 
 var _active_missions: Dictionary = {}
 var _offers: Array[Mission] = []
@@ -28,6 +30,7 @@ func _ready() -> void:
 	EventBus.ship_speed_upgraded.connect(_on_ship_speed_upgraded)
 	EventBus.ship_capacity_upgraded.connect(_on_ship_capacity_upgraded)
 	EventBus.ship_automation_changed.connect(_on_ship_automation_changed)
+	EventBus.company_level_changed.connect(_on_company_level_changed)
 	EventBus.game_loaded.connect(_on_game_loaded)
 	call_deferred("refresh_offers")
 
@@ -82,6 +85,26 @@ func refresh_offers() -> void:
 				candidate["destination_id"],
 				candidate["cargo_type"]
 			))
+
+		if CompanyManager.company_level >= LARGE_CONTRACT_REQUIRED_COMPANY_LEVEL \
+				and _offers_for_ship(ship_id) < OFFER_COUNT_PER_SHIP:
+			var contract_option := _pick_large_contract_option(
+				candidates,
+				ship_port_id,
+				ship_id
+			)
+			if not contract_option.is_empty():
+				var candidate_index := int(contract_option["candidate_index"])
+				var candidate: Dictionary = candidates[candidate_index]
+				candidates.remove_at(candidate_index)
+				_offers.append(_create_large_contract_offer(
+					ship_id,
+					ship_port_id,
+					candidate["pickup_id"],
+					candidate["destination_id"],
+					contract_option["final_destination_id"],
+					candidate["cargo_type"]
+				))
 
 		for _offer_index in range(mini(OFFER_COUNT_PER_SHIP, candidates.size())):
 			if _offers_for_ship(ship_id) >= OFFER_COUNT_PER_SHIP:
@@ -178,6 +201,61 @@ func _create_offer(
 	return mission
 
 
+func _create_large_contract_offer(
+		ship_id: StringName,
+		ship_port_id: StringName,
+		pickup_port_id: StringName,
+		first_delivery_port_id: StringName,
+		final_delivery_port_id: StringName,
+		cargo_type: CargoTypeData
+) -> Mission:
+	var mission := _create_offer(
+		ship_id,
+		ship_port_id,
+		pickup_port_id,
+		first_delivery_port_id,
+		cargo_type
+	)
+	mission.mission_type = Mission.MissionType.LARGE_CONTRACT
+	mission.contract_port_ids.append(pickup_port_id)
+	mission.contract_port_ids.append(first_delivery_port_id)
+	mission.contract_port_ids.append(final_delivery_port_id)
+	var second_reward := EconomyManager.calculate_mission_reward(
+		first_delivery_port_id,
+		final_delivery_port_id,
+		cargo_type,
+		mission.cargo_amount
+	)
+	mission.reward = maxi(roundi(
+		float(mission.reward + second_reward) * LARGE_CONTRACT_REWARD_MULTIPLIER
+	), 1)
+	mission.operating_cost += EconomyManager.calculate_mission_operating_cost(
+		first_delivery_port_id,
+		first_delivery_port_id,
+		final_delivery_port_id,
+		FleetManager.get_ship_data(ship_id)
+	)
+	var second_loading_duration := FleetManager.get_mission_loading_duration(
+		first_delivery_port_id,
+		first_delivery_port_id
+	)
+	var second_unloading_duration := FleetManager.get_mission_unloading_duration(
+		final_delivery_port_id
+	)
+	mission.estimated_duration_sec += FleetManager.estimate_mission_duration(
+		ship_id,
+		first_delivery_port_id,
+		final_delivery_port_id,
+		first_delivery_port_id,
+		second_loading_duration,
+		mission.cargo_amount,
+		second_unloading_duration,
+		false
+	)
+	mission.duration_class = _classify_duration(mission.estimated_duration_sec)
+	return mission
+
+
 func _build_offer_candidates(
 		ship_port_id: StringName,
 		ship_id: StringName
@@ -242,6 +320,49 @@ func _pick_candidate_index(candidates: Array[Dictionary]) -> int:
 		if roll <= 0.0:
 			return index
 	return candidates.size() - 1
+
+
+func _pick_large_contract_option(
+		candidates: Array[Dictionary],
+		ship_port_id: StringName,
+		ship_id: StringName
+) -> Dictionary:
+	var remaining_candidates := candidates.duplicate()
+	var original_indices: Array[int] = []
+	for candidate_index in range(candidates.size()):
+		original_indices.append(candidate_index)
+	while not remaining_candidates.is_empty():
+		var picked_index := _pick_candidate_index(remaining_candidates)
+		var candidate: Dictionary = remaining_candidates[picked_index]
+		var candidate_index := original_indices[picked_index]
+		var pickup_id: StringName = candidate["pickup_id"]
+		var first_delivery_id: StringName = candidate["destination_id"]
+		var best_final_destination_id: StringName = &""
+		var best_route_distance := -1.0
+		for final_destination_id in _get_destinations(first_delivery_id):
+			if final_destination_id == pickup_id \
+					or not FleetManager.can_reserve_dock_at_port(
+						final_destination_id,
+						ship_id
+					):
+				continue
+			var route_distance := PortManager.get_distance(
+				pickup_id,
+				first_delivery_id
+			) + PortManager.get_distance(first_delivery_id, final_destination_id)
+			if ship_port_id != pickup_id:
+				route_distance += PortManager.get_distance(ship_port_id, pickup_id)
+			if route_distance > best_route_distance:
+				best_final_destination_id = final_destination_id
+				best_route_distance = route_distance
+		if best_final_destination_id != &"":
+			return {
+				"candidate_index": candidate_index,
+				"final_destination_id": best_final_destination_id,
+			}
+		remaining_candidates.remove_at(picked_index)
+		original_indices.remove_at(picked_index)
+	return {}
 
 
 func _get_destinations(pickup_port_id: StringName) -> Array[StringName]:
@@ -372,6 +493,12 @@ func _on_ship_automation_changed(
 ) -> void:
 	if enabled:
 		call_deferred("_dispatch_automated_ship", ship_id)
+
+
+func _on_company_level_changed(new_level: int, previous_level: int) -> void:
+	if previous_level < LARGE_CONTRACT_REQUIRED_COMPANY_LEVEL \
+			and new_level >= LARGE_CONTRACT_REQUIRED_COMPANY_LEVEL:
+		call_deferred("refresh_offers")
 
 
 func _on_game_loaded() -> void:

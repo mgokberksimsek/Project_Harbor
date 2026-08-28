@@ -245,9 +245,10 @@ func _on_money_changed(new_amount: int, _delta: int) -> void:
 func _on_mission_completed(mission: Mission) -> void:
 	var ship_id := mission.assigned_ship_id
 	if CompanyManager.company_level >= GameManager.AUTOMATION_REQUIRED_COMPANY_LEVEL \
+			and mission.is_large_contract() \
 			and not FleetManager.is_ship_automation_unlocked(ship_id) \
-			and FleetManager.get_ship_completed_mission_count(ship_id) \
-				== GameManager.AUTOMATION_REQUIRED_COMPLETED_MISSIONS:
+			and FleetManager.get_ship_completed_large_contract_count(ship_id) \
+				== GameManager.AUTOMATION_REQUIRED_LARGE_CONTRACTS:
 		_instruction_label.text = tr("INSTRUCTION_AUTOMATION_READY") % [
 			_translated_ship_name(ship_id),
 			GameManager.AUTOMATION_UNLOCK_COST,
@@ -966,11 +967,16 @@ func _refresh_fleet_panel() -> void:
 		if mission != null:
 			var total_duration := maxf(mission.estimated_duration_sec, 0.001)
 			progress = clampf(1.0 - remaining_sec / total_duration, 0.0, 1.0)
-			route_text = "%s → %s" % [
-				_translated_port_name(mission.pickup_port_id),
-				_translated_port_name(mission.delivery_port_id),
-			]
+			route_text = _get_mission_route_text(mission)
 			cargo_text = tr("CARGO_LABEL") % _translated_cargo_name(mission.cargo_type_id)
+			if mission.is_large_contract():
+				cargo_text = "%s · %s" % [
+					tr("MISSION_CONTRACT_PROGRESS") % [
+						mission.get_completed_delivery_count() + 1,
+						mission.get_delivery_count(),
+					],
+					cargo_text,
+				]
 		entries.append({
 			"ship_id": String(ship_id),
 			"ship_name": FleetManager.get_ship_name(ship_id),
@@ -984,6 +990,8 @@ func _refresh_fleet_panel() -> void:
 			"has_mission": has_mission,
 			"completed_mission_count": \
 				FleetManager.get_ship_completed_mission_count(ship_id),
+			"completed_large_contract_count": \
+				FleetManager.get_ship_completed_large_contract_count(ship_id),
 			"total_net_earnings": FleetManager.get_ship_total_net_earnings(ship_id),
 			"speed_level": FleetManager.get_ship_speed_level(ship_id),
 			"effective_speed": FleetManager.get_ship_effective_speed(ship_id),
@@ -1001,8 +1009,8 @@ func _refresh_fleet_panel() -> void:
 			"company_level": CompanyManager.company_level,
 			"automation_required_company_level": \
 				GameManager.AUTOMATION_REQUIRED_COMPANY_LEVEL,
-			"automation_required_completed_missions": \
-				GameManager.AUTOMATION_REQUIRED_COMPLETED_MISSIONS,
+			"automation_required_large_contracts": \
+				GameManager.AUTOMATION_REQUIRED_LARGE_CONTRACTS,
 			"automation_unlock_cost": GameManager.AUTOMATION_UNLOCK_COST,
 			"can_afford_automation": \
 				GameManager.money >= GameManager.AUTOMATION_UNLOCK_COST,
@@ -1010,6 +1018,20 @@ func _refresh_fleet_panel() -> void:
 	var fleet_capacity := FleetManager.get_fleet_capacity()
 	_fleet_status_panel.set_fleet_data(entries, _selected_ship_id, fleet_capacity)
 	_management_dock.set_fleet_count(entries.size(), fleet_capacity)
+
+
+func _get_mission_route_text(mission: Mission) -> String:
+	if mission == null:
+		return ""
+	if not mission.is_large_contract():
+		return "%s → %s" % [
+			_translated_port_name(mission.pickup_port_id),
+			_translated_port_name(mission.delivery_port_id),
+		]
+	var names: PackedStringArray = []
+	for port_id in mission.contract_port_ids:
+		names.append(_translated_port_name(port_id))
+	return " → ".join(names)
 
 
 func _show_port_offers(port_id: StringName) -> void:

@@ -334,8 +334,10 @@ Level tekrar yeni bir yuva açana kadar satın alma durur.
 ### 7.5 Otomatik görev
 
 - Otomatik görev gemi başına açılır; tüm filoyu tek seferde otomatikleştirmez.
-- İlk sürümde Şirket Seviyesi 5, ilgili gemiyle tamamlanmış 3 görev ve tek
-  seferlik 5.000 ₺ yatırım gerekir. Geliştirme seviyesi otomasyon şartı değildir.
+- İlk sürümde Şirket Seviyesi 5, ilgili gemiyle tamamlanmış 2 Büyük Kontrat ve
+  tek seferlik 5.000 ₺ yatırım gerekir. Geliştirme seviyesi otomasyon şartı
+  değildir. Büyük Kontratlar Şirket Seviyesi 4'te görünmeye başladığı için bu
+  ilerleme otomasyon açılmadan önce kaydedilebilir.
 - Açıldıktan sonra ücretsiz olarak açılıp kapatılabilir.
 - Oyun açıkken boşta kalan gemi, net kazancı pozitif teklifler arasından tahmini
   süre başına en yüksek net kazancı sağlayanı seçer.
@@ -405,6 +407,15 @@ Görevler ileride kısa, orta ve uzun olarak dengelenecektir:
 - **Orta:** Gelişmiş oyuncunun birkaç gemiyi paralel yönetmesi için.
 - **Uzun:** Uygulama kapalıyken de ilerleyen ileri oyun görevleri için.
 
+Şirket Seviyesi 4'ten itibaren her boş geminin teklifleri arasında bir Büyük
+Kontrat bulunabilir. Prototip Büyük Kontratı tek kabulde birbirine bağlı iki
+teslimattan oluşur: gemi ilk teslimat limanında yükü boşaltır, yeni yükü alır ve
+ikinci teslimata oyuncudan yeni komut istemeden devam eder. Ücret yalnızca tüm
+kontrat tamamlandığında ödenir. Toplam brüt ödül iki teslimatın toplamına `%8`
+kontrat primi eklenerek, işletme masrafı ise iki ayağın masrafları toplanarak
+hesaplanır. Bu, yeni bir görev ekranı oluşturmadan orta süreli hedef ve gemi
+başına otomasyon ustalığı sağlar.
+
 Prototipte başlangıç rotaları yaklaşık yarım dakika sürerken mevcut haritanın
 uzak bölgesel rotaları yaklaşık bir dakikaya yaklaşır. Bu sayılar
 testleri hızlandırmaya devam eder ve nihai denge değildir.
@@ -413,15 +424,14 @@ Aynı gemiyle aynı yükü aynı iki liman arasında taşıyan görevin süresi 
 şirket büyüdüğü için artmaz. Şirket ilerlemesi daha uzak bölgeleri ve daha uzun
 görevleri açar; eski kısa rotalar hızlı sefer seçeneği olarak kalır. Mevcut
 bölgesel rotalar açık rota mesafesine göre saniyeler veya birkaç dakika sürer.
-İleride eklenecek uzak yabancı bölgeler ve büyük kontratlar 20–60 dakikalık ve
-daha uzun seferleri taşır.
+İleride eklenecek uzak yabancı bölgeler, Büyük Kontratların 20–60 dakikalık ve
+daha uzun sürümlerini taşır.
 
 Stilize haritadaki görsel mesafe ile oynanış mesafesi rota verisinde ayrılabilir.
 Oynanış mesafesi süreyi, ödülü ve sefer masrafını birlikte etkiler; yalnızca
 süreyi uzatıp uzun rotaları ekonomik olarak değersizleştirmez. İleri aşamada
-aynı rotada çıkabilecek büyük kontratlar daha fazla kargo ve yükleme süresi
-karşılığında daha yüksek ödül sunabilir, ancak ilk süre dengelemesine dahil
-edilmez.
+aynı rota ağındaki Büyük Kontratlar birbirine bağlı teslimatlar ve küçük bir
+kontrat primi karşılığında daha yüksek toplam ödül sunar.
 
 Görev süresi boş konumlanma yolculuğu, yükleme, yüklü teslimat yolculuğu ve
 boşaltmanın toplamıdır. Geminin kaynak verisindeki hız nominal seyir hızıdır.

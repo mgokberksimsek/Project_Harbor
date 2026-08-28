@@ -13,8 +13,22 @@ func _run() -> void:
 	var legacy_mission := Mission.from_dict({"reward": 100})
 	assert(legacy_mission.operating_cost == 0)
 	assert(legacy_mission.get_net_reward() == 100)
+	assert(not legacy_mission.is_large_contract())
 	assert(is_equal_approx(legacy_mission.loading_duration_sec, 1.7))
 	assert(is_equal_approx(legacy_mission.unloading_duration_sec, 1.7))
+	var contract_save_probe := Mission.new()
+	contract_save_probe.mission_type = Mission.MissionType.LARGE_CONTRACT
+	contract_save_probe.contract_port_ids.append(&"mersin")
+	contract_save_probe.contract_port_ids.append(&"izmir")
+	contract_save_probe.contract_port_ids.append(&"antalya")
+	contract_save_probe.contract_leg_index = 1
+	contract_save_probe.pickup_port_id = &"izmir"
+	contract_save_probe.delivery_port_id = &"antalya"
+	var restored_contract := Mission.from_dict(contract_save_probe.to_dict())
+	assert(restored_contract.is_large_contract())
+	assert(restored_contract.get_delivery_count() == 2)
+	assert(restored_contract.contract_leg_index == 1)
+	assert(restored_contract.get_final_delivery_port_id() == &"antalya")
 	var legacy_ship_state := ShipRuntimeState.from_dict({
 		"ship_id": "legacy_ship",
 		"current_port_id": "mersin",
@@ -24,6 +38,7 @@ func _run() -> void:
 	assert(legacy_ship_state.ship_name.is_empty())
 	assert(not legacy_ship_state.automation_unlocked)
 	assert(not legacy_ship_state.automation_enabled)
+	assert(legacy_ship_state.completed_large_contract_count == 0)
 	assert(not legacy_ship_state.awaiting_headquarters_dispatch)
 	assert(legacy_ship_state.headquarters_slot_index == -1)
 	assert(not legacy_ship_state.headquarters_dispatch_active)
@@ -378,9 +393,11 @@ func _run() -> void:
 	var legacy_starter_state: Dictionary = legacy_fleet_save[String(starter_ship_id)]
 	legacy_starter_state.erase("ship_name")
 	legacy_starter_state.erase("completed_mission_count")
+	legacy_starter_state.erase("completed_large_contract_count")
 	legacy_starter_state.erase("total_net_earnings")
 	fleet_manager.apply_save_state(legacy_fleet_save)
 	assert(fleet_manager.get_ship_completed_mission_count(starter_ship_id) == 0)
+	assert(fleet_manager.get_ship_completed_large_contract_count(starter_ship_id) == 0)
 	assert(fleet_manager.get_ship_total_net_earnings(starter_ship_id) == 0)
 	var starter_generated_name: String = fleet_manager.get_ship_name(starter_ship_id)
 	assert(starter_generated_name.length() >= 2)
@@ -1719,8 +1736,8 @@ func _run() -> void:
 	assert(company_manager.peak_company_value >= company_manager.company_value)
 	assert(game_manager.is_tutorial_completed())
 
-	# Per-ship automation becomes visible one level early, then requires three
-	# completed missions on that ship. It never chains new missions offline.
+	# Large Contracts appear one level before Auto Dispatch. Completing two
+	# with the same ship demonstrates enough manual mastery to unlock automation.
 	event_bus.ship_tapped.emit(starter_ship_id)
 	world.call("_refresh_fleet_panel")
 	var automation_button := fleet_panel.get_node(
@@ -1729,35 +1746,71 @@ func _run() -> void:
 	assert(not fleet_manager.is_ship_automation_unlocked(starter_ship_id))
 	while company_manager.company_level < 4:
 		assert(company_manager.debug_advance_level())
+	mission_manager.refresh_offers()
 	world.call("_refresh_fleet_panel")
 	assert(automation_button.visible)
 	assert(automation_button.disabled)
 	assert(automation_button.text.contains("Şirket Sv.5"))
 	assert(not game_manager.try_toggle_ship_automation(starter_ship_id))
-	assert(company_manager.debug_advance_level())
-	world.call("_refresh_fleet_panel")
-	var completed_before_automation: int = \
-		fleet_manager.get_ship_completed_mission_count(starter_ship_id)
-	assert(completed_before_automation == 2)
-	assert(automation_button.disabled)
-	assert(automation_button.text.contains("Görev 2/3"))
-	assert(not game_manager.try_toggle_ship_automation(starter_ship_id))
-	mission_manager.refresh_offers()
-	var readiness_offer: Mission = null
+	var first_contract: Mission = null
 	for candidate_offer in mission_manager.get_offers():
-		if candidate_offer.offered_ship_id == starter_ship_id:
-			readiness_offer = candidate_offer
+		if candidate_offer.offered_ship_id == starter_ship_id \
+				and candidate_offer.is_large_contract():
+			first_contract = candidate_offer
 			break
-	assert(readiness_offer != null)
-	assert(mission_manager.accept_offer(readiness_offer.id))
-	for _step in range(10):
-		if readiness_offer.stage == Mission.Stage.COMPLETED:
+	assert(first_contract != null)
+	assert(first_contract.get_delivery_count() == 2)
+	assert(first_contract.estimated_duration_sec > 0.0)
+	var contract_offer_text: String = mission_offer_panel.call(
+		"_format_offer",
+		first_contract
+	)
+	assert(contract_offer_text.contains("BÜYÜK KONTRAT"))
+	assert(contract_offer_text.count("→") == 2)
+	var money_before_first_contract: int = game_manager.money
+	assert(mission_manager.accept_offer(first_contract.id))
+	for _step in range(8):
+		if first_contract.contract_leg_index == 1:
 			break
-		readiness_offer.leg_duration_sec = 0.0
+		first_contract.leg_duration_sec = 0.0
 		await process_frame
 		await process_frame
-	assert(readiness_offer.stage == Mission.Stage.COMPLETED)
-	assert(fleet_manager.get_ship_completed_mission_count(starter_ship_id) == 3)
+	assert(first_contract.contract_leg_index == 1)
+	assert(first_contract.stage == Mission.Stage.LOADING)
+	assert(first_contract.pickup_port_id == first_contract.contract_port_ids[1])
+	assert(first_contract.delivery_port_id == first_contract.contract_port_ids[2])
+	assert(game_manager.money == money_before_first_contract)
+	assert(fleet_manager.get_ship_completed_large_contract_count(starter_ship_id) == 0)
+	for _step in range(8):
+		if first_contract.stage == Mission.Stage.COMPLETED:
+			break
+		first_contract.leg_duration_sec = 0.0
+		await process_frame
+		await process_frame
+	assert(first_contract.stage == Mission.Stage.COMPLETED)
+	assert(game_manager.money == money_before_first_contract + first_contract.get_net_reward())
+	assert(fleet_manager.get_ship_completed_large_contract_count(starter_ship_id) == 1)
+	assert(company_manager.debug_advance_level())
+	mission_manager.refresh_offers()
+	world.call("_refresh_fleet_panel")
+	assert(automation_button.disabled)
+	assert(automation_button.text.contains("Büyük Kontrat 1/2"))
+	assert(not game_manager.try_toggle_ship_automation(starter_ship_id))
+	var readiness_contract: Mission = null
+	for candidate_offer in mission_manager.get_offers():
+		if candidate_offer.offered_ship_id == starter_ship_id \
+				and candidate_offer.is_large_contract():
+			readiness_contract = candidate_offer
+			break
+	assert(readiness_contract != null)
+	assert(mission_manager.accept_offer(readiness_contract.id))
+	var offline_contract_time := Time.get_unix_time_from_system() \
+		+ readiness_contract.estimated_duration_sec + 60.0
+	fleet_manager.apply_offline_progress(offline_contract_time)
+	await process_frame
+	await process_frame
+	assert(readiness_contract.stage == Mission.Stage.COMPLETED)
+	assert(fleet_manager.get_ship_completed_large_contract_count(starter_ship_id) == 2)
 	assert(fleet_manager.get_ship_total_upgrade_levels(starter_ship_id) == 2)
 	assert(instruction_label.text.contains("otomatik göreve hazır"))
 	assert(instruction_label.text.contains("5000"))
@@ -1787,7 +1840,7 @@ func _run() -> void:
 	var first_auto_mission: Mission = fleet_manager.get_ship_mission(starter_ship_id)
 	assert(first_auto_mission == expected_auto_offer)
 
-	for _step in range(8):
+	for _step in range(12):
 		if fleet_manager.get_ship_mission(starter_ship_id) != first_auto_mission:
 			break
 		first_auto_mission.leg_duration_sec = 0.0
@@ -1801,7 +1854,7 @@ func _run() -> void:
 	assert(second_auto_mission != first_auto_mission)
 	automation_button.pressed.emit()
 	assert(not fleet_manager.is_ship_automation_enabled(starter_ship_id))
-	for _step in range(8):
+	for _step in range(12):
 		if fleet_manager.get_ship_mission(starter_ship_id) != second_auto_mission:
 			break
 		second_auto_mission.leg_duration_sec = 0.0

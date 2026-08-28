@@ -27,6 +27,11 @@ enum DurationClass {
 	LONG,
 }
 
+enum MissionType {
+	STANDARD,
+	LARGE_CONTRACT,
+}
+
 var id: String
 ## Port where the offered ship was waiting when this mission was generated.
 ## This distinguishes a local pickup from an empty repositioning leg.
@@ -44,6 +49,13 @@ var loading_duration_sec: float = 3.0
 ## Time spent handling cargo at the delivery port before moving to a berth.
 var unloading_duration_sec: float = 3.0
 var duration_class: DurationClass = DurationClass.SHORT
+var mission_type: MissionType = MissionType.STANDARD
+## Large contracts reuse the normal pickup/delivery state machine for each
+## linked delivery. The active pair is mirrored in pickup_port_id and
+## delivery_port_id; this full itinerary preserves the complete contract for
+## UI, save/load and the next delivery transition.
+var contract_port_ids: Array[StringName] = []
+var contract_leg_index: int = 0
 var stage: Stage = Stage.AWAITING_PICKUP
 
 ## Ship selected for this offer. This makes multi-ship offers explicit and
@@ -94,7 +106,52 @@ func get_net_reward() -> int:
 	return reward - operating_cost
 
 
+func is_large_contract() -> bool:
+	return mission_type == MissionType.LARGE_CONTRACT \
+		and contract_port_ids.size() >= 3
+
+
+func get_delivery_count() -> int:
+	return contract_port_ids.size() - 1 if is_large_contract() else 1
+
+
+func get_completed_delivery_count() -> int:
+	if stage == Stage.COMPLETED:
+		return get_delivery_count()
+	return clampi(contract_leg_index, 0, get_delivery_count() - 1)
+
+
+func get_final_delivery_port_id() -> StringName:
+	return contract_port_ids.back() if is_large_contract() else delivery_port_id
+
+
+func has_next_contract_delivery() -> bool:
+	return is_large_contract() \
+		and contract_leg_index + 2 < contract_port_ids.size()
+
+
+func advance_to_next_contract_delivery() -> bool:
+	if not has_next_contract_delivery():
+		return false
+	contract_leg_index += 1
+	pickup_port_id = contract_port_ids[contract_leg_index]
+	delivery_port_id = contract_port_ids[contract_leg_index + 1]
+	return true
+
+
+func get_future_contract_port_ids() -> Array[StringName]:
+	var future: Array[StringName] = []
+	if not has_next_contract_delivery():
+		return future
+	for index in range(contract_leg_index + 1, contract_port_ids.size()):
+		future.append(contract_port_ids[index])
+	return future
+
+
 func to_dict() -> Dictionary:
+	var saved_contract_ports: Array[String] = []
+	for port_id in contract_port_ids:
+		saved_contract_ports.append(String(port_id))
 	return {
 		"id": id,
 		"origin_port_id": String(origin_port_id),
@@ -108,6 +165,9 @@ func to_dict() -> Dictionary:
 		"loading_duration_sec": loading_duration_sec,
 		"unloading_duration_sec": unloading_duration_sec,
 		"duration_class": duration_class,
+		"mission_type": mission_type,
+		"contract_port_ids": saved_contract_ports,
+		"contract_leg_index": contract_leg_index,
 		"stage": stage,
 		"offered_ship_id": String(offered_ship_id),
 		"assigned_ship_id": String(assigned_ship_id),
@@ -133,6 +193,19 @@ static func from_dict(data: Dictionary) -> Mission:
 		0.0
 	)
 	mission.duration_class = data.get("duration_class", DurationClass.SHORT) as DurationClass
+	mission.mission_type = data.get("mission_type", MissionType.STANDARD) as MissionType
+	for port_id in data.get("contract_port_ids", []):
+		var parsed_port_id := StringName(port_id)
+		if parsed_port_id != &"":
+			mission.contract_port_ids.append(parsed_port_id)
+	mission.contract_leg_index = clampi(
+		int(data.get("contract_leg_index", 0)),
+		0,
+		maxi(mission.contract_port_ids.size() - 2, 0)
+	)
+	if mission.mission_type == MissionType.LARGE_CONTRACT \
+			and mission.contract_port_ids.size() < 3:
+		mission.mission_type = MissionType.STANDARD
 	mission.stage = data.get("stage", Stage.AWAITING_PICKUP) as Stage
 	mission.offered_ship_id = StringName(data.get("offered_ship_id", ""))
 	mission.assigned_ship_id = StringName(data.get("assigned_ship_id", ""))

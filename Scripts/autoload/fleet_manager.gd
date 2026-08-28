@@ -299,7 +299,7 @@ func _get_expected_dock_port(runtime: ShipRuntimeState) -> StringName:
 	if runtime.awaiting_headquarters_dispatch:
 		return &""
 	if runtime.current_mission != null:
-		return runtime.current_mission.delivery_port_id
+		return runtime.current_mission.get_final_delivery_port_id()
 	return runtime.current_port_id
 
 
@@ -520,6 +520,10 @@ func get_ship_completed_mission_count(ship_id: StringName) -> int:
 	return _states[ship_id].completed_mission_count if _states.has(ship_id) else 0
 
 
+func get_ship_completed_large_contract_count(ship_id: StringName) -> int:
+	return _states[ship_id].completed_large_contract_count if _states.has(ship_id) else 0
+
+
 func get_ship_total_net_earnings(ship_id: StringName) -> int:
 	return _states[ship_id].total_net_earnings if _states.has(ship_id) else 0
 
@@ -679,6 +683,10 @@ func get_ship_mission_remaining_sec(ship_id: StringName, unix_time: float = -1.0
 		mission.leg_start_unix + mission.leg_duration_sec - now,
 		0.0
 	)
+	var future_contract_duration := _estimate_future_contract_duration(
+		ship_id,
+		mission
+	)
 	match runtime.state:
 		ShipRuntimeState.State.SAILING_TO_PICKUP:
 			return current_leg_remaining + estimate_mission_duration(
@@ -689,7 +697,7 @@ func get_ship_mission_remaining_sec(ship_id: StringName, unix_time: float = -1.0
 				mission.loading_duration_sec,
 				mission.cargo_amount,
 				mission.unloading_duration_sec
-			)
+			) + future_contract_duration
 		ShipRuntimeState.State.LOADING:
 			return current_leg_remaining + maxf(
 				estimate_mission_duration(
@@ -703,11 +711,12 @@ func get_ship_mission_remaining_sec(ship_id: StringName, unix_time: float = -1.0
 				)
 				- mission.loading_duration_sec,
 				0.0
-			)
+			) + future_contract_duration
 		ShipRuntimeState.State.SAILING_TO_DELIVERY:
-			return current_leg_remaining + mission.unloading_duration_sec
+			return current_leg_remaining + mission.unloading_duration_sec \
+				+ future_contract_duration
 		ShipRuntimeState.State.UNLOADING:
-			return current_leg_remaining
+			return current_leg_remaining + future_contract_duration
 		_:
 			return 0.0
 
@@ -719,7 +728,8 @@ func estimate_mission_duration(
 		origin_port_id: StringName = &"",
 		loading_duration_sec: float = -1.0,
 		cargo_amount: int = 1,
-		unloading_duration_sec: float = -1.0
+		unloading_duration_sec: float = -1.0,
+		include_headquarters_dispatch := true
 ) -> float:
 	var ship_data: ShipData = get_ship_data(ship_id)
 	if ship_data == null:
@@ -751,12 +761,34 @@ func estimate_mission_duration(
 		maxi(cargo_amount, 1)
 	)
 	var headquarters_dispatch_duration := HEADQUARTERS_DISPATCH_DURATION_SEC \
-		if is_awaiting_headquarters_dispatch(ship_id) else 0.0
+		if include_headquarters_dispatch \
+			and is_awaiting_headquarters_dispatch(ship_id) else 0.0
 	return headquarters_dispatch_duration \
 		+ pickup_sailing_duration \
 		+ actual_loading_duration \
 		+ delivery_sailing_duration \
 		+ actual_unloading_duration
+
+
+func _estimate_future_contract_duration(ship_id: StringName, mission: Mission) -> float:
+	if mission == null or not mission.has_next_contract_delivery():
+		return 0.0
+	var future_ports := mission.get_future_contract_port_ids()
+	var duration := 0.0
+	for index in range(future_ports.size() - 1):
+		var pickup_id := future_ports[index]
+		var delivery_id := future_ports[index + 1]
+		duration += estimate_mission_duration(
+			ship_id,
+			pickup_id,
+			delivery_id,
+			pickup_id,
+			get_mission_loading_duration(pickup_id, pickup_id),
+			mission.cargo_amount,
+			get_mission_unloading_duration(delivery_id),
+			false
+		)
+	return duration
 
 
 func get_mission_loading_duration(
@@ -811,10 +843,12 @@ func assign_mission(ship_id: StringName, mission: Mission) -> bool:
 	if state.state != ShipRuntimeState.State.IDLE:
 		push_warning("Ship '%s' is not idle, cannot assign a new mission." % ship_id)
 		return false
+	var final_delivery_port_id := mission.get_final_delivery_port_id() \
+		if mission != null else &""
 	if mission == null \
-			or not can_reserve_dock_at_port(mission.delivery_port_id, ship_id):
+			or not can_reserve_dock_at_port(final_delivery_port_id, ship_id):
 		return false
-	if _move_reservation_to_port(ship_id, mission.delivery_port_id) < 0:
+	if _move_reservation_to_port(ship_id, final_delivery_port_id) < 0:
 		return false
 
 	var headquarters_dispatch_duration := HEADQUARTERS_DISPATCH_DURATION_SEC \
@@ -887,8 +921,27 @@ func _advance_state(
 				unloading_duration, next_leg_start_unix)
 
 		ShipRuntimeState.State.UNLOADING:
+			if mission.advance_to_next_contract_delivery():
+				mission.loading_duration_sec = get_mission_loading_duration(
+					state.current_port_id,
+					mission.pickup_port_id
+				)
+				mission.unloading_duration_sec = get_mission_unloading_duration(
+					mission.delivery_port_id
+				)
+				_start_leg(
+					ship_id,
+					ShipRuntimeState.State.LOADING,
+					mission.pickup_port_id,
+					mission.pickup_port_id,
+					mission.loading_duration_sec,
+					next_leg_start_unix
+				)
+				return
 			mission.stage = Mission.Stage.COMPLETED
 			state.completed_mission_count += 1
+			if mission.is_large_contract():
+				state.completed_large_contract_count += 1
 			state.total_net_earnings += mission.get_net_reward()
 			state.current_mission = null
 			var previous := state.state
@@ -926,8 +979,10 @@ func _start_leg(ship_id: StringName, new_state: ShipRuntimeState.State,
 	# The delivery berth is reserved when the mission is accepted and remains
 	# stable throughout pickup/loading. This prevents several ships from being
 	# offered the same final free berth while they are still at sea.
-	if mission != null and state.dock_port_id != mission.delivery_port_id:
-		_move_reservation_to_port(ship_id, mission.delivery_port_id)
+	var final_delivery_port_id := mission.get_final_delivery_port_id() \
+		if mission != null else &""
+	if mission != null and state.dock_port_id != final_delivery_port_id:
+		_move_reservation_to_port(ship_id, final_delivery_port_id)
 
 	var previous := state.state
 	state.state = new_state

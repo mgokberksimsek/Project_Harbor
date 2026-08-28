@@ -190,6 +190,7 @@ func _restore_runtime_visual_state() -> bool:
 				return false
 			global_position = pickup_port.global_position
 			_sailing_route_points = _build_delivery_route(mission)
+			_build_delivery_mission_preview(mission)
 			_snap_heading_to_route(0.0)
 			_departure_start_rotation = _icon.rotation
 			_departure_turn_initialized = false
@@ -424,6 +425,7 @@ func _on_ship_state_changed(changed_ship_id: StringName, previous_state: int, ne
 				global_position = _sailing_route_points[_sailing_route_points.size() - 1]
 			_clear_mission_preview()
 			_sailing_route_points = _build_delivery_route(mission)
+			_build_delivery_mission_preview(mission)
 			_departure_turn_initialized = false
 			_preparing_departure_heading = true
 		elif new_state == ShipRuntimeState.State.SAILING_TO_DELIVERY:
@@ -599,8 +601,35 @@ func _build_remote_mission_preview(mission: Mission) -> void:
 	# duplicate segment at the transfer point.
 	for point_index in range(1, delivery_points.size()):
 		_mission_preview_route_points.append(delivery_points[point_index])
+	_append_future_contract_routes(mission, _mission_preview_route_points)
 	_preview_pickup_route_length = _get_polyline_length(_sailing_route_points)
 	_preview_total_route_length = _get_polyline_length(_mission_preview_route_points)
+
+
+func _build_delivery_mission_preview(mission: Mission) -> void:
+	if mission == null or not mission.has_next_contract_delivery() \
+			or _sailing_route_points.size() < 2:
+		return
+	_mission_preview_route_points = _sailing_route_points.duplicate()
+	_append_future_contract_routes(mission, _mission_preview_route_points)
+	_preview_pickup_route_length = _get_polyline_length(_sailing_route_points)
+	_preview_total_route_length = _get_polyline_length(_mission_preview_route_points)
+
+
+func _append_future_contract_routes(
+		mission: Mission,
+		points: PackedVector2Array
+) -> void:
+	if mission == null:
+		return
+	var future_ports := mission.get_future_contract_port_ids()
+	for port_index in range(future_ports.size() - 1):
+		var next_route := PortManager.get_smoothed_route_points(
+			future_ports[port_index],
+			future_ports[port_index + 1]
+		)
+		for point_index in range(1, next_route.size()):
+			points.append(next_route[point_index])
 
 
 func _clear_mission_preview() -> void:
@@ -672,15 +701,35 @@ func _update_route_visual(state: ShipRuntimeState.State) -> void:
 		_route_line.clear_route()
 		return
 	if state == ShipRuntimeState.State.LOADING:
+		var loading_progress := _get_local_loading_route_progress(mission)
+		if not _mission_preview_route_points.is_empty():
+			loading_progress = _scale_current_route_progress_to_preview(
+				loading_progress
+			)
 		_route_line.set_route(
-			_sailing_route_points,
-			_get_local_loading_route_progress(mission),
+			_mission_preview_route_points \
+				if not _mission_preview_route_points.is_empty() \
+				else _sailing_route_points,
+			loading_progress,
 			_is_selected
 		)
 	elif state == ShipRuntimeState.State.SAILING_TO_DELIVERY:
+		if mission.has_next_contract_delivery() \
+				and _mission_preview_route_points.is_empty():
+			_build_delivery_mission_preview(mission)
+		var delivery_progress := _get_visual_sailing_progress(
+			mission,
+			_sailing_route_points
+		)
+		if not _mission_preview_route_points.is_empty():
+			delivery_progress = _scale_current_route_progress_to_preview(
+				delivery_progress
+			)
 		_route_line.set_route(
-			_sailing_route_points,
-			_get_visual_sailing_progress(mission, _sailing_route_points),
+			_mission_preview_route_points \
+				if not _mission_preview_route_points.is_empty() \
+				else _sailing_route_points,
+			delivery_progress,
 			_is_selected
 		)
 	elif state == ShipRuntimeState.State.SAILING_TO_PICKUP:
@@ -700,6 +749,12 @@ func _update_route_visual(state: ShipRuntimeState.State) -> void:
 		)
 	else:
 		_route_line.clear_route()
+
+
+func _scale_current_route_progress_to_preview(progress: float) -> float:
+	if _preview_total_route_length <= 0.001:
+		return progress
+	return progress * _preview_pickup_route_length / _preview_total_route_length
 
 
 func _get_local_loading_route_progress(mission: Mission) -> float:
