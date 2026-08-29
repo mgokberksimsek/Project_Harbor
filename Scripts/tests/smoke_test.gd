@@ -787,7 +787,13 @@ func _run() -> void:
 		"_get_hidden_reverse_overlap_segments",
 		doubled_back_route
 	)
-	assert(hidden_overlap_segments == [true, true, false, false])
+	assert(hidden_overlap_segments == [false, false, true, true])
+	var hidden_overlap_segments_after_outbound: Array = route_line.call(
+		"_get_hidden_reverse_overlap_segments",
+		doubled_back_route,
+		0.6
+	)
+	assert(hidden_overlap_segments_after_outbound == [true, true, false, false])
 	route_line.set_route(doubled_back_route, 0.0, true)
 	var visible_doubled_back_length := 0.0
 	for dash_segment in route_line.get_visible_dash_segments():
@@ -1103,6 +1109,10 @@ func _run() -> void:
 	assert(pickup_highlight.visible)
 	assert(world.get_node("UI/MissionOfferPanel").visible)
 	assert(world.get_node("UI/MissionOfferPanel").is_tutorial_focused())
+	assert(
+		mission_offer_panel.get_global_rect().end.y \
+			<= management_dock.get_global_rect().position.y
+	)
 	var first_offer_button := world.get_node(
 		"UI/MissionOfferPanel/Margin/VBox/Cards/Offer1"
 	) as Button

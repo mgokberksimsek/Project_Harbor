@@ -312,9 +312,9 @@ cancel_button_text = "Bir sefer daha!"
 [node name="MissionOfferPanel" parent="UI" unique_id=843648461 instance=ExtResource("8_mission_offer_panel")]
 visible = true
 offset_left = 756.0
-offset_top = -188.0
+offset_top = -268.0
 offset_right = 215.1466
-offset_bottom = -43.68213
+offset_bottom = -123.68213
 scale = Vector2(0.68971443, 1.0532308)
 
 [node name="ManagementDock" parent="UI" instance=ExtResource("51_management_dock")]

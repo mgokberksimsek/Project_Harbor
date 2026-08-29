@@ -31,10 +31,11 @@ func set_route(
 ) -> void:
 	if _route_points != points:
 		_route_points = points
-		_hidden_reverse_segments = _get_hidden_reverse_overlap_segments(
-			_route_points
-		)
 	_progress = clampf(progress, 0.0, 1.0)
+	_hidden_reverse_segments = _get_hidden_reverse_overlap_segments(
+		_route_points,
+		_progress
+	)
 	_highlighted = highlighted
 	visible = _route_points.size() >= 2 and _progress < 1.0
 	queue_redraw()
@@ -116,11 +117,19 @@ func get_visible_dash_segments() -> Array[PackedVector2Array]:
 
 
 func _get_hidden_reverse_overlap_segments(
-		points: PackedVector2Array
+		points: PackedVector2Array,
+		progress: float = 0.0
 ) -> Array[bool]:
 	var hidden_segments: Array[bool] = []
 	hidden_segments.resize(maxi(points.size() - 1, 0))
 	hidden_segments.fill(false)
+	var total_length := _get_polyline_length(points)
+	var consumed_length := total_length * clampf(progress, 0.0, 1.0)
+	var segment_end_distances: Array[float] = []
+	var route_distance := 0.0
+	for point_index in range(points.size() - 1):
+		route_distance += points[point_index].distance_to(points[point_index + 1])
+		segment_end_distances.append(route_distance)
 	for segment_index in range(hidden_segments.size()):
 		var segment_start := points[segment_index]
 		var segment_end := points[segment_index + 1]
@@ -129,8 +138,6 @@ func _get_hidden_reverse_overlap_segments(
 			continue
 		segment_direction = segment_direction.normalized()
 		var segment_midpoint := (segment_start + segment_end) * 0.5
-		# Prefer the later occurrence. During the pickup leg this keeps a shared
-		# corridor visible because the ship still needs to traverse it again.
 		for later_index in range(segment_index + 1, hidden_segments.size()):
 			var later_start := points[later_index]
 			var later_end := points[later_index + 1]
@@ -148,7 +155,13 @@ func _get_hidden_reverse_overlap_segments(
 			if segment_midpoint.distance_to(closest_point) \
 					> REVERSE_OVERLAP_TOLERANCE_PX:
 				continue
-			hidden_segments[segment_index] = true
+			# While the ship is approaching or traversing the earlier occurrence,
+			# keep that current corridor visible and hide the future return. Once
+			# the earlier occurrence has been consumed, preserve the later one.
+			if consumed_length < segment_end_distances[segment_index] - 0.001:
+				hidden_segments[later_index] = true
+			else:
+				hidden_segments[segment_index] = true
 			break
 	return hidden_segments
 
