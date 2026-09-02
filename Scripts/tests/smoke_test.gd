@@ -1699,6 +1699,32 @@ func _run() -> void:
 		resumed_icon.rotation + resumed_ship_data.sprite_forward_angle_rad
 	)
 	assert(resumed_forward.dot(resumed_tangent.normalized()) > 0.98)
+	# A cold start creates the scene's starter ship before SaveManager applies
+	# its saved runtime state. Loading must rebuild that existing node's route
+	# instead of treating its stale scene position as the route origin.
+	assert(save_manager.save_game(test_save_path))
+	var invalid_preload_position := Vector2(-5000.0, -5000.0)
+	resumed_ship.global_position = invalid_preload_position
+	resumed_ship.set("_sailing_route_points", PackedVector2Array())
+	assert(save_manager.load_game(test_save_path))
+	resumed_mission = fleet_manager.get_ship_mission(resumed_ship_id)
+	assert(resumed_mission != null)
+	resumed_route = resumed_ship.get("_sailing_route_points")
+	assert(resumed_route.size() >= 2)
+	resumed_progress = resumed_mission.get_leg_progress()
+	resumed_visual_progress = resumed_ship.call(
+		"calculate_visual_sailing_progress",
+		resumed_progress,
+		resumed_mission.leg_duration_sec,
+		resumed_ship.call("_get_polyline_length", resumed_route)
+	)
+	expected_resume_position = resumed_ship.call(
+		"_get_position_along_points",
+		resumed_route,
+		resumed_visual_progress
+	)
+	assert(resumed_ship.global_position.distance_to(expected_resume_position) < 2.0)
+	assert(resumed_ship.global_position.distance_to(invalid_preload_position) > 1000.0)
 	var remaining_offers: Array = mission_manager.get_offers()
 	var second_multi_offer: Mission = null
 	for offer in remaining_offers:

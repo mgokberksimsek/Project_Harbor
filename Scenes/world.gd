@@ -849,7 +849,12 @@ func _on_game_loaded() -> void:
 					_get_headquarters_delivery_position(existing_ship_id)
 				)
 			else:
+				if FleetManager.is_headquarters_dispatch_active(existing_ship_id):
+					existing_ship.set_initial_world_position(
+						_get_headquarters_delivery_position(existing_ship_id)
+					)
 				existing_ship.clear_initial_world_position_override()
+				existing_ship.restore_runtime_visual_state()
 	for ship_id in FleetManager.get_all_ship_ids():
 		if FleetManager.get_ship_node(ship_id) != null:
 			continue

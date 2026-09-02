@@ -78,7 +78,7 @@ func _ready() -> void:
 	EventBus.language_changed.connect(_on_language_changed)
 	input_event.connect(_on_input_event)
 
-	if not _restore_runtime_visual_state():
+	if not restore_runtime_visual_state():
 		call_deferred("_snap_to_home_port")
 	_refresh_visuals()
 
@@ -143,7 +143,7 @@ func clear_initial_world_position_override() -> void:
 		_snap_to_home_port()
 
 
-func _restore_runtime_visual_state() -> bool:
+func restore_runtime_visual_state() -> bool:
 	var state := FleetManager.get_ship_state(ship_id)
 	var mission := FleetManager.get_ship_mission(ship_id)
 	if mission == null:
