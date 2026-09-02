@@ -23,4 +23,4 @@ unlocked_by_default = false
 base_company_value = 1400
 speed_upgrade_company_value = 180
 capacity_upgrade_company_value = 220
-required_company_level = 3
+required_company_level = 6

@@ -303,6 +303,12 @@ gereken Company Level'a ulaşılmadan satın alınamaz. Prototipte Başlangıç 
 Gemisi genel, Soğutmalı Yük Gemisi genel ve soğutmalı, Dökme Yük Gemisi ise
 yalnızca dökme yük sınıfında görev alır.
 
+Erken oyunda yalnızca Başlangıç ve Soğutmalı Yük Gemileri kullanılabilir.
+Dökme Yük Gemisi Company Level 6'da, normal ilerlemede Samsun açıldıktan sonraki
+uzun bölgesel görev döneminde satın alınabilir hale gelir. Model mağazada daha
+önceden kilitli olarak görülebilir. Eski kayıtlarda daha düşük seviyede satın
+alınmış bir Dökme Yük Gemisi korunur ve normal biçimde çalışmaya devam eder.
+
 Filo kapasitesi Company Level ile otomatik büyür ve ayrıca bir merkez yükseltme
 işlemi istemez. Geçerli, ayarlanabilir kapasite eğrisi şöyledir:
 

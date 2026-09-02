@@ -454,7 +454,7 @@ func _run() -> void:
 	assert(model_position_label.text == "2 / 3")
 	next_model_button.pressed.emit()
 	assert((shop_panel.get_node("Margin/VBox/Body/Title") as Label).text.contains("Dökme"))
-	assert(tutorial_buy_button.text.contains("Sv. 3"))
+	assert(tutorial_buy_button.text.contains("Sv. 6"))
 	assert(tutorial_buy_button.disabled)
 	previous_model_button.pressed.emit()
 	assert((shop_panel.get_node("Margin/VBox/Body/Title") as Label).text.contains("Soğutmalı"))
@@ -1453,16 +1453,14 @@ func _run() -> void:
 	assert(company_manager.company_value == 3400)
 	assert(company_manager.company_level == 3)
 	assert(next_goal_label.visible)
-	assert(next_goal_label.text.contains("Dökme"))
+	assert(next_goal_label.text.contains("İstanbul"))
+	assert(next_goal_label.text.contains("Sv. 4"))
+	assert(next_goal_label.text.contains("3400 / 4800 CV"))
 	var bulk_purchase_price: int = fleet_manager.get_ship_purchase_price(&"bulk_carrier")
 	assert(bulk_purchase_price == 3840)
-	assert(next_goal_label.text.contains("0 / %d" % bulk_purchase_price))
-	settings_manager.set_locale("en")
-	assert(next_goal_label.text.contains("Buy Bulk Carrier"))
-	settings_manager.set_locale("tr")
 	var bulk_model: ShipData = fleet_manager.get_ship_model(&"bulk_carrier")
 	assert(bulk_model != null)
-	assert(bulk_model.required_company_level == 3)
+	assert(bulk_model.required_company_level == 6)
 	assert(bulk_model.purchase_cost == 1500)
 	assert(bulk_model.base_company_value == 1400)
 	assert(bulk_model.can_carry(grain_cargo))
@@ -1471,10 +1469,19 @@ func _run() -> void:
 	assert(model_position_label.text == "3 / 3")
 	assert((shop_panel.get_node("Margin/VBox/Body/Title") as Label).text.contains("Dökme"))
 	game_manager.add_money(bulk_purchase_price)
+	assert(tutorial_buy_button.disabled)
+	assert(not game_manager.try_purchase_ship(&"bulk_carrier", &"mersin"))
+	assert(game_manager.money == bulk_purchase_price)
+	# The remaining assertions exercise bulk cargo, save and mission behavior.
+	# Temporarily expose the model inside this test without changing the natural
+	# early-game progression that is asserted above.
+	bulk_model.required_company_level = company_manager.company_level
+	shop_panel.call("_refresh")
 	assert(not tutorial_buy_button.disabled)
 	tutorial_buy_button.pressed.emit()
 	await process_frame
 	await process_frame
+	bulk_model.required_company_level = 6
 	assert(fleet_manager.get_owned_model_count(&"bulk_carrier") == 1)
 	assert(fleet_manager.get_all_ship_ids().size() == 3)
 	assert(game_manager.money == 0)

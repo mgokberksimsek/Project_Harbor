@@ -1,6 +1,6 @@
 # Project Harbor — Ana Proje Özeti ve Geliştirme Planı
 
-> Son güncelleme: 29 Ağustos 2026  
+> Son güncelleme: 2 Eylül 2026
 > Proje durumu: Oynanabilir Android prototipi  
 > Motor: Godot 4.7.1  
 > Öncelikli platform: Android, yatay mobil  
@@ -262,7 +262,13 @@ Güncel gemi prototipleri:
 |---|---:|---:|---:|---|
 | Başlangıç Yük Gemisi | `500 ₺` | 1 | 1 | Genel |
 | Soğutmalı Yük Gemisi | `800 ₺` | 2 | 2 | Genel + soğutmalı |
-| Dökme Yük Gemisi | `1.500 ₺` | 3 | 3 | Dökme yük |
+| Dökme Yük Gemisi | `1.500 ₺` | 6 | 3 | Dökme yük |
+
+Erken oyunda yalnızca Başlangıç ve Soğutmalı Yük Gemileri kullanılabilir.
+Dökme Yük Gemisi Level 6'da, normal ilerlemede Samsun sonrası uzun bölgesel
+görev dönemine açılır. Böylece üç ana sınıf korunurken bütün filo çeşitliliği
+ilk yarım saatte tüketilmez. Daha eski kayıtlarda sahip olunan Dökme Yük
+Gemileri korunur.
 
 ### 3.10 Gemi geliştirmeleri
 
