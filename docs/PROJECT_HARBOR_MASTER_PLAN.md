@@ -211,6 +211,10 @@ Boşta
 - Birleşik rotalar bağlantı limanlarının merkezine uğramaz; açık deniz geçiş
   noktalarını kullanır.
 - Rotalar kara poligonlarının içinden geçmemeleri için otomatik test edilir.
+- **İleride değerlendirilecek:** Büyük kontratların ara limanındaki boşaltma ve
+  yeniden yükleme sırasında, tamamlanmış bölüm silinirken sıradaki rota ayağının
+  görünür veya hafif soluk tutulması. Mevcut davranış oynanışı etkilemez; bu konu
+  yalnızca kontrat devamlılığını daha anlaşılır kılacak görsel bir iyileştirmedir.
 
 ### 3.7 Limanlar ve yanaşma yuvaları
 
