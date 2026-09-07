@@ -599,8 +599,10 @@ adımıyla karşılaşmaz.
   çift dokunma veya fare tekerleği oyuncuyu normal kameranın en uzak sınırına
   döndürür. Oyuncu buradan yaklaşmaya kesintisiz biçimde devam edebilir.
 - Filo durumu ve gemi satın alma ekranın altında yan yana duran, tek bir kompakt
-  yönetim çubuğunun iki bağımsız sekmesidir. Oyuncu isterse ikisini birlikte
-  açabilir; bu durumda filo alanı daha geniş kalacak şekilde yan yana görünürler.
+  yönetim çubuğunun iki sekmesidir. Aynı anda yalnızca bir sekme açılır;
+  çubuk açık içeriğe göre boyutlanır ve haritanın yanlarını görünür bırakır.
+  Kamera, alt panelin kapladığı alanı hesaba katar; en güneydeki limana
+  kaydırarak ulaşılabilir ve bütün harita görünümünde liman panel altında kalmaz.
   UI dışındaki gerçek bir harita dokunuşu açık sekmeleri kapatır; dokunulan gemi
   veya limanın normal seçimi devam eder. Haritayı sürüklemek veya yakınlaştırmak
   sekmeleri kapatmaz.

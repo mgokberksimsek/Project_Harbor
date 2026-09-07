@@ -553,7 +553,10 @@ func _run() -> void:
 	fleet_tab.pressed.emit()
 	assert(management_dock.is_fleet_open())
 	assert(fleet_panel.is_expanded())
-	assert(is_equal_approx(management_dock.offset_bottom - management_dock.offset_top, 286.0))
+	await process_frame
+	await process_frame
+	assert(management_dock.size.x < 1100.0)
+	assert(management_dock.size.y < 330.0)
 	assert(fleet_panel.get_node("Margin/VBox/Body").visible)
 	fleet_tab.pressed.emit()
 	assert(not management_dock.is_expanded())
@@ -568,12 +571,33 @@ func _run() -> void:
 	assert(not shop_panel.is_expanded())
 	fleet_tab.pressed.emit()
 	shop_tab.pressed.emit()
-	assert(management_dock.is_fleet_open())
+	assert(not management_dock.is_fleet_open())
 	assert(management_dock.is_shop_open())
-	assert(fleet_panel.is_expanded())
+	assert(not fleet_panel.is_expanded())
 	assert(shop_panel.is_expanded())
 	var world_camera := world.get_node("Camera2D")
 	assert(world_camera != null)
+	var camera_before_dock_probe: Vector2 = world_camera.position
+	for dock_mode in range(3):
+		management_dock.collapse()
+		if dock_mode == 1:
+			management_dock.open_fleet()
+		elif dock_mode == 2:
+			management_dock.open_shop()
+		await process_frame
+		await process_frame
+		await process_frame
+		if dock_mode != 1:
+			assert(management_dock.size.x < 600.0)
+		for edge_zoom in [0.4, 0.65, 1.3]:
+			world_camera.zoom_at_screen_position(edge_zoom, Vector2(640, 360))
+			world_camera.pan_by_screen_delta(Vector2(-100000, -100000))
+			world_camera.force_update_scroll()
+			var southern_port: Vector2 = root.get_canvas_transform() \
+					* port_manager.get_port_node(&"iskenderiye").global_position
+			assert(southern_port.y + 48.0 <= management_dock.position.y)
+	world_camera.zoom_at_screen_position(0.65, Vector2(640, 360))
+	world_camera.position = camera_before_dock_probe
 	world.set("_selected_ship_id", &"selection_probe")
 	var mersin_node := port_manager.get_port_node(&"mersin") as Node2D
 	assert(mersin_node != null)
@@ -643,7 +667,10 @@ func _run() -> void:
 	assert(bool(world_camera.get("_cinematic_overview_active")))
 	assert(world_camera.limit_left < 0)
 	assert(world_camera.zoom.x < WorldCamera.MIN_ZOOM)
-	assert(world_camera.position.is_equal_approx(WorldCamera.WORLD_SIZE * 0.5))
+	world_camera.force_update_scroll()
+	var overview_south: Vector2 = root.get_canvas_transform() \
+			* port_manager.get_port_node(&"iskenderiye").global_position
+	assert(overview_south.y + 48.0 <= management_dock.position.y)
 	var cinematic_visible_size: Vector2 = get_root().get_viewport().get_visible_rect().size \
 		/ world_camera.zoom.x
 	assert(cinematic_visible_size.x >= WorldCamera.WORLD_SIZE.x)

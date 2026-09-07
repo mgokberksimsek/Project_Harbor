@@ -12,7 +12,8 @@ signal shop_opened()
 @onready var _shop_tab_button: Button = $Margin/VBox/Tabs/ShopTabButton
 
 const COLLAPSED_HEIGHT := 58.0
-const EXPANDED_HEIGHT := 286.0
+const COMPACT_WIDTH := 440.0
+const FLEET_WIDTH := 820.0
 const TUTORIAL_PULSE_SPEED := 4.0
 
 var _fleet_open := false
@@ -31,6 +32,8 @@ func _ready() -> void:
 	_fleet_tab_button.pressed.connect(_on_fleet_tab_pressed)
 	_shop_tab_button.pressed.connect(_on_shop_tab_pressed)
 	get_node("/root/EventBus").language_changed.connect(_on_language_changed)
+	minimum_size_changed.connect(_update_layout.call_deferred)
+	get_viewport().size_changed.connect(_update_layout.call_deferred)
 	_refresh_open_panels()
 	_refresh_tab_text()
 
@@ -74,6 +77,7 @@ func is_shop_open() -> bool:
 func open_fleet() -> void:
 	if _fleet_interaction_enabled:
 		_fleet_open = true
+		_shop_open = false
 		_refresh_open_panels()
 
 
@@ -81,6 +85,7 @@ func open_shop() -> void:
 	if _shop_interaction_enabled:
 		var was_open := _shop_open
 		_shop_open = true
+		_fleet_open = false
 		_refresh_open_panels()
 		if not was_open:
 			shop_opened.emit()
@@ -122,15 +127,24 @@ func _refresh_open_panels() -> void:
 	ship_shop_panel.set_expanded(_shop_open)
 	_fleet_tab_button.button_pressed = _fleet_open
 	_shop_tab_button.button_pressed = _shop_open
-	offset_top = offset_bottom - (
-		EXPANDED_HEIGHT if is_expanded() else COLLAPSED_HEIGHT
-	)
+	_update_layout.call_deferred()
+
+
+func _update_layout() -> void:
+	var available_width := get_viewport_rect().size.x - 48.0
+	var target_width := FLEET_WIDTH if _fleet_open else COMPACT_WIDTH
+	var panel_width := minf(maxf(target_width, get_combined_minimum_size().x), available_width)
+	offset_left = -panel_width * 0.5
+	offset_right = panel_width * 0.5
+	offset_top = offset_bottom - maxf(COLLAPSED_HEIGHT, get_combined_minimum_size().y)
 
 
 func _on_fleet_tab_pressed() -> void:
 	if not _fleet_interaction_enabled:
 		return
 	_fleet_open = not _fleet_open
+	if _fleet_open:
+		_shop_open = false
 	_refresh_open_panels()
 
 
@@ -139,6 +153,8 @@ func _on_shop_tab_pressed() -> void:
 		return
 	var opening := not _shop_open
 	_shop_open = opening
+	if opening:
+		_fleet_open = false
 	_refresh_open_panels()
 	if opening:
 		shop_opened.emit()

@@ -37,6 +37,7 @@ var _zoom_tween: Tween = null
 var _cinematic_overview_active := false
 var _cinematic_exit_in_progress := false
 var _cinematic_zoom_pull := 0.0
+var _bottom_obstruction := 0.0
 
 
 func _ready() -> void:
@@ -49,7 +50,21 @@ func _apply_normal_camera_limits() -> void:
 	limit_left = 0
 	limit_top = 0
 	limit_right = int(WORLD_SIZE.x)
-	limit_bottom = int(WORLD_SIZE.y)
+	limit_bottom = ceili(WORLD_SIZE.y + _bottom_obstruction / maxf(zoom.x, 0.001))
+
+
+func set_bottom_obstruction(height: float) -> void:
+	_bottom_obstruction = maxf(height, 0.0)
+	if _cinematic_overview_active:
+		_stop_zoom_animation()
+		_animate_camera_to(
+			_get_cinematic_overview_zoom(),
+			_get_cinematic_overview_position(),
+			CINEMATIC_ZOOM_DURATION_SEC
+		)
+	elif not _is_cinematic_camera_locked():
+		_apply_normal_camera_limits()
+		position = _clamp_camera_position(position)
 
 
 func _apply_cinematic_camera_limits() -> void:
@@ -103,6 +118,7 @@ func zoom_at_screen_position(target_zoom: float, screen_position: Vector2) -> vo
 	var viewport_center := get_viewport_rect().size * 0.5
 	var world_anchor := position + (screen_position - viewport_center) / zoom.x
 	zoom = Vector2.ONE * clamped_zoom
+	_apply_normal_camera_limits()
 	position = world_anchor - (screen_position - viewport_center) / zoom.x
 	position = _clamp_camera_position(position)
 
@@ -364,7 +380,7 @@ func _enter_cinematic_overview() -> void:
 	_apply_cinematic_camera_limits()
 	_animate_camera_to(
 		_get_cinematic_overview_zoom(),
-		WORLD_SIZE * 0.5,
+		_get_cinematic_overview_position(),
 		CINEMATIC_ZOOM_DURATION_SEC
 	)
 
@@ -420,6 +436,8 @@ func _apply_camera_transition(
 		target_position: Vector2
 ) -> void:
 	zoom = Vector2.ONE * lerpf(start_zoom, target_zoom, progress)
+	if not _is_cinematic_camera_locked():
+		_apply_normal_camera_limits()
 	position = start_position.lerp(target_position, progress)
 
 
@@ -427,9 +445,14 @@ func _get_cinematic_overview_zoom() -> float:
 	var viewport_size := get_viewport_rect().size
 	var fit_zoom := minf(
 		viewport_size.x / WORLD_SIZE.x,
-		viewport_size.y / WORLD_SIZE.y
+		maxf(viewport_size.y - _bottom_obstruction, 1.0) / WORLD_SIZE.y
 	) * CINEMATIC_VIEW_PADDING
 	return clampf(fit_zoom, 0.05, MIN_ZOOM - 0.05)
+
+
+func _get_cinematic_overview_position() -> Vector2:
+	return WORLD_SIZE * 0.5 + Vector2(0.0, _bottom_obstruction * 0.5) \
+		/ _get_cinematic_overview_zoom()
 
 
 func _finish_cinematic_exit() -> void:
@@ -451,6 +474,7 @@ func _clamp_camera_position_for_zoom(candidate: Vector2, zoom_value: float) -> V
 	var half_visible := get_viewport_rect().size * 0.5 / maxf(zoom_value, 0.001)
 	var minimum := half_visible
 	var maximum := WORLD_SIZE - half_visible
+	maximum.y += _bottom_obstruction / maxf(zoom_value, 0.001)
 	return Vector2(
 		clampf(candidate.x, minimum.x, maximum.x),
 		clampf(candidate.y, minimum.y, maximum.y)

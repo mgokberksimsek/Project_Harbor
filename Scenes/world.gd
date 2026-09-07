@@ -122,6 +122,8 @@ func _ready() -> void:
 	get_viewport().physics_object_picking_sort = true
 	get_viewport().physics_object_picking_first_only = true
 	_world_camera.map_tapped.connect(_handle_map_tap)
+	_management_dock.item_rect_changed.connect(_update_map_bottom_obstruction)
+	_update_map_bottom_obstruction.call_deferred()
 
 	EventBus.money_changed.connect(_on_money_changed)
 	EventBus.company_value_changed.connect(_on_company_value_changed)
@@ -192,6 +194,12 @@ func _ready() -> void:
 		_instruction_label.text = tr("INSTRUCTION_SELECT_SHIP_LONG")
 	_on_mission_offers_updated(MissionManager.get_offers())
 	_refresh_fleet_panel()
+
+
+func _update_map_bottom_obstruction() -> void:
+	_world_camera.set_bottom_obstruction(
+		get_viewport_rect().size.y - _management_dock.position.y + MAP_PORT_TAP_RADIUS_PX
+	)
 
 
 func _process(delta: float) -> void:
