@@ -128,10 +128,11 @@ Başlangıç limanları birbirine görece yakın tutulur. Amaç oyuncuya kısa s
 ilk hareketi, yüklemeyi, teslimatı ve ödülü göstermektir.
 
 Prototip denge hedefinde ilk genişleme limanı mevcut başlangıç görevleriyle
-3–4 görevde, ikinci gemi de genişleyen rota havuzuyla sonraki 3–4 görevde
-alınabilmelidir. Böylece öğreticiden iki gemili filoya geçiş toplam 6–8 görev
-bandında kalır. Bu bant otomatik denge testinde veri ve ödül formüllerinden
-hesaplanır; nihai gerçek zaman süreleri daha sonraki oynanış testinde belirlenir.
+3–5 görevde, Soğutmalı Yük Gemisi olan ikinci gemi de genişleyen rota havuzuyla
+sonraki 4–8 görevde alınabilmelidir. Böylece öğreticiden iki gemili filoya geçiş
+toplam 7–13 görev bandında kalır. Bu bant otomatik denge testinde veri ve ödül
+formüllerinden hesaplanır; nihai gerçek zaman süreleri daha sonraki oynanış
+testinde belirlenir.
 
 ### 5.2 İlerleme katmanları
 
