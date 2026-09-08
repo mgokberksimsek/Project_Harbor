@@ -5,7 +5,7 @@ oyuncu kuralları için [`GDD.md`](GDD.md) esas alınır. Ölçümler
 `tools/economy_balance_audit.mjs` ile mevcut `.tres` verilerinden ve çalışan
 ekonomi formüllerinden yeniden üretilebilir.
 
-## 7 Eylül 2026 — Erken ve orta oyun temel ölçümü
+## 8 Eylül 2026 — Karesel gemi fiyatı sonrası temel ölçüm
 
 ### Kapsam ve yöntem
 
@@ -42,11 +42,11 @@ uzak görev daha yüksek toplam ödeme sunarken eski kısa rotayı verimsiz kıl
 | Hedef | Ölçülen en iyi / medyan / en kötü | Geçerli hedef | Sonuç |
 |---|---:|---:|---|
 | Antalya, `750 ₺` | 3 / 4 / 4 görev | 3–5 görev | Geçti |
-| Soğutmalı ikinci gemi, `1.280 ₺` | 5 / 6 / 7 görev | 4–8 görev | Geçti |
+| Soğutmalı ikinci gemi, `1.340 ₺` | 6 / 6 / 8 görev | 4–8 görev | Geçti |
 
-GDD'nin başlangıç bölümündeki eski 3–4 görevlik ikinci gemi ifadesi güncel
-fiyat ve otomatik testle çeliştiği için 4–8 görev olarak düzeltildi. Oynanış
-fiyatı veya ödül formülü değiştirilmedi.
+Global filo fiyat çarpanı `1 + 0,55n + 0,12n²` olarak uygulanır. İkinci gemi
+hedefi 4–8 görev bandında kalırken fiyatlar filo büyüklüğüyle artmaya devam eder;
+eski `1,6ⁿ` eğrisinin geç oyundaki erişilemez değerleri oluşmaz.
 
 ### Yatırım geri dönüşleri
 
@@ -91,29 +91,30 @@ sınırı verdi:
 | Kilometre taşı | Toplam süre | Company Level | CV | Filo |
 |---|---:|---:|---:|---:|
 | Antalya | 1,5 dk | 2 | 1.400 | 1 |
-| Soğutmalı ikinci gemi | 3,9 dk | 3 | 2.600 | 2 |
-| Çanakkale | 5,3 dk | 3 | 3.400 | 2 |
-| İstanbul | 9,4 dk | 4 | 6.000 | 3 |
-| Samsun | 14,5 dk | 5 | 10.170 | 3 |
-| İlk Dökme Yük Gemisi | 21,7 dk | 6 | 14.610 | 5 |
-| Trabzon | 23,6 dk | 6 | 17.610 | 5 |
-| Pire | 29,3 dk | 7 | 24.960 | 5 |
-| Varna | 38,0 dk | 8 | 35.580 | 5 |
+| Soğutmalı ikinci gemi | 4,0 dk | 3 | 2.600 | 2 |
+| Çanakkale | 5,4 dk | 3 | 3.400 | 2 |
+| İstanbul | 9,5 dk | 4 | 6.000 | 3 |
+| Samsun | 14,4 dk | 5 | 10.270 | 4 |
+| İlk Dökme Yük Gemisi | 20,4 dk | 6 | 14.610 | 5 |
+| Trabzon | 22,4 dk | 6 | 17.610 | 5 |
+| Pire | 28,0 dk | 7 | 24.960 | 5 |
+| Varna | 37,5 dk | 8 | 36.330 | 6 |
 
 Bu sonuç normal oyuncu süresi değildir. Yerel görevlerin ortalama gelirini
 kesintisiz nakit akışı sayar; uzak yük alımını, üç teklif örneklemesini,
 panellerde geçen zamanı, gemi boşta kalmasını ve farklı yatırım tercihlerini
-hesaba katmaz. Yine de Level 8 için `38 dk` alt sınırı, orta oyunun prototip
+hesaba katmaz. Yine de Level 8 için `37,5 dk` alt sınırı, orta oyunun prototip
 sürelerle sıkışma riski taşıdığını gösterir. Daha gerçekçi teklif ve olay
 simülasyonu da benzer sonuç verirse önce mevcut süre, ödül ve yatırım değerleri
 ayarlanacaktır; yeni ekonomi sistemi eklenmeyecektir.
 
 ### Karar ve sonraki ölçüm
 
-Bu temel taramada ekonomi verisi veya formül değişikliği gerektiren ölçülmüş bir
-sorun bulunmadı. Kesintisiz büyüme alt sınırı ise orta oyunun fazla hızlı olma
-riskini ortaya çıkardı, fakat iyimser varsayımları nedeniyle tek başına veri
-değişikliğini haklı çıkarmıyor. Sonraki denge adımı üç gerçek teklif örneklemesi,
+Gemi fiyatları global filo büyüklüğüne bağlı karesel eğriye geçirildi; üç modelin
+taban fiyatı korunurken saf üstel artış kaldırıldı. Kesintisiz büyüme alt sınırı
+orta oyunun hızlı olma riskini göstermeyi sürdürüyor, fakat iyimser varsayımları
+nedeniyle tek başına başka bir veri değişikliğini haklı çıkarmıyor. Sonraki denge
+adımı üç gerçek teklif örneklemesi,
 uzak yük alımı, eş zamanlı görev bitişleri ve oyuncu karar gecikmesini içeren
 çoklu koşuyla Company Level 6–8 zaman dağılımını ölçmektir. Nihai süre kararı
 ayrıca Android cihaz oturumuyla doğrulanmalıdır.
@@ -140,8 +141,9 @@ Oyuncu mesajında Samsun'un da bu sonraki bölümde açıldığı belirtildi; ba
 tablosunda Samsun zaten açık göründüğü için bu ayrıntı sonraki cihaz kaydıyla
 tekrar doğrulanmalıdır.
 
-Başlangıç Cash'i düşüldüğünde, yalnızca iki yeni otomasyon (`10.000 ₺`), en
-ucuz olası beşinci gemi (`3.280 ₺`) ve Trabzon (`6.500 ₺`) bile 15 dakikada en
+O oturumda geçerli filo geneli fiyat formülüne göre başlangıç Cash'i
+düşüldüğünde, yalnızca iki yeni otomasyon (`10.000 ₺`), en ucuz olası beşinci
+gemi (`3.280 ₺`) ve Trabzon (`6.500 ₺`) bile 15 dakikada en
 az `13.453 ₺` yeni gelir gerektirir. Bu, bildirilen gemi/liman geliştirmeleri
 hariç filo genelinde en az yaklaşık `897 ₺/dk` gerçek nakit üretimidir. Alınan
 gemi daha pahalı bir modelse gerçek alt sınır daha yüksektir.

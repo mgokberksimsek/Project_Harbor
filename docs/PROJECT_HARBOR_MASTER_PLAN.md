@@ -252,9 +252,10 @@ işlemini açar; rutin görev verme akışına yeni menü eklenmez.
 
 - Üç veri odaklı ana gemi sınıfı bulunur.
 - Herhangi bir sınıftan gemi almak bütün gemi modellerinin fiyatını artırır.
-- Güncel formül: `Taban fiyat × 1,6 ^ sahip olunan toplam gemi sayısı`.
+- Güncel global filo çarpanı: `1 + 0,55n + 0,12n²`; `n` toplam gemi sayısıdır.
 - Sonuç en yakın `10 ₺`'ye yuvarlanır.
-- Böylece oyuncu farklı sınıfları sırayla alarak fiyat artışını atlayamaz.
+- Karesel eğri ucuz gemi spamini sınırlar, fakat eski saf üstel formül gibi geç
+  oyunda fiyatları erişilemez seviyelere taşımaz.
 - Satın alma için yeterli Cash ve geminin gerekli Company Level'ı gerekir.
 - Filo kapasitesi de Company Level ile sınırlandırılır.
 - Yeni alınan gemi şirket merkezinin açık deniz tarafında belirir ve merkezin

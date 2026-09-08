@@ -289,11 +289,12 @@ rotasına çıkar, mevcut limanın merkezine gereksiz yere uğramaz.
 
 ### 7.3 Satın alma ve filo sınırı
 
-Filoya alınan her yeni gemi, modelinden bağımsız olarak mağazadaki bütün gemi
-fiyatlarını artırır. Mevcut prototip formülü her modelin taban fiyatını toplam
-sahip olunan gemi sayısı için `1,6` katsayısıyla büyütür ve fiyatı en yakın
-10'a yuvarlar. Böylece oyuncu sürekli farklı modeller alarak fiyat artışını
-atlayamaz.
+Filoya alınan her gemi, modelinden bağımsız olarak mağazadaki bütün gemi
+fiyatlarını artırır. Filo büyüklüğü `n` için çarpan
+`1 + 0,55n + 0,12n²` olarak hesaplanır ve modelin taban fiyatına uygulanarak
+sonuç en yakın 10'a yuvarlanır. Global filo büyüklüğü ucuz model spamini
+engellerken karesel eğri, eski saf üstel formülün geç oyundaki fiyat patlamasını
+önler. Filo boşken her modelin hesaplanan fiyatı taban fiyatına tam eşittir.
 
 Bir gemi modelinin satın alınabilmesi için gereken Company Level'a ulaşılmış
 olmalı ve güncel Cash fiyatı ayrıca ödenmelidir.
@@ -522,9 +523,9 @@ kademe ise o bölgedeki görevlerin ölçülü gelir primini belirler.
 
 Mevcut erken oyun ödülleri ve masrafları, 750 TL'lik ilk limana yaklaşık 3–5
 görevde ulaşılacak şekilde dengelenir. Başlangıç gemisi satın alındıktan sonra
-filo geneli fiyat artışıyla 1.280 TL olan ikinci gemi yaklaşık 4–8 görevlik bir
-sonraki hedeftir. Nihai görev süreleri ve sefer masrafı oranları mobil oynanış
-testlerinde birlikte yeniden değerlendirilir.
+global karesel fiyat artışıyla 1.340 TL olan ikinci gemi yaklaşık 4–8 görevlik
+bir sonraki hedeftir. Nihai görev süreleri ve sefer masrafı oranları mobil
+oynanış testlerinde birlikte yeniden değerlendirilir.
 
 ### 10.2 Giderler
 

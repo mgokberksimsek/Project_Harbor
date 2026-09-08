@@ -8,6 +8,19 @@ function read(file) {
   return fs.readFileSync(path.join(root, file), "utf8");
 }
 
+function gdscriptNumber(text, key) {
+  const match = text.match(new RegExp(`^const ${key} := ([0-9.]+)$`, "m"));
+  assert(match, `Missing GDScript numeric constant: ${key}`);
+  return Number(match[1]);
+}
+
+const economySource = read("Scripts/autoload/economy_manager.gd");
+const shipPriceLinearGrowth = gdscriptNumber(economySource, "SHIP_PRICE_LINEAR_GROWTH");
+const shipPriceQuadraticGrowth = gdscriptNumber(
+  economySource,
+  "SHIP_PRICE_QUADRATIC_GROWTH",
+);
+
 function number(text, key, fallback = 0) {
   const match = text.match(new RegExp(`^${key} = ([0-9.]+)$`, "m"));
   return match ? Number(match[1]) : fallback;
@@ -160,6 +173,14 @@ function percentile(values, ratio) {
   return ordered[Math.round((ordered.length - 1) * ratio)];
 }
 
+function shipPurchasePrice(baseCost, ownedShipCount) {
+  const safeCount = Math.max(ownedShipCount, 0);
+  const multiplier = 1
+    + shipPriceLinearGrowth * safeCount
+    + shipPriceQuadraticGrowth * safeCount ** 2;
+  return Math.max(Math.round(baseCost * multiplier / 10) * 10, baseCost);
+}
+
 function summarize(values, digits = 0) {
   const format = (value) => Number(value).toFixed(digits);
   return `${format(Math.min(...values))}/${format(percentile(values, 0.5))}/${format(Math.max(...values))}`;
@@ -229,7 +250,7 @@ for (const pickup of earlyPorts) {
   }
 }
 const afterAntalyaNet = afterAntalyaStarter.map((item) => item.net);
-const secondShipPrice = Math.round(refrigerated.purchaseCost * 1.6 / 10) * 10;
+const secondShipPrice = shipPurchasePrice(refrigerated.purchaseCost, 1);
 const secondShipMissions = [
   Math.ceil(secondShipPrice / Math.max(...afterAntalyaNet)),
   Math.ceil(secondShipPrice / percentile(afterAntalyaNet, 0.5)),
@@ -237,6 +258,26 @@ const secondShipMissions = [
 ];
 assert(secondShipMissions[0] >= 4 && secondShipMissions[2] <= 8, "Second ship must take 4-8 post-Antalya missions");
 console.log(`EARLY_TARGET second ship ${secondShipPrice}: best/median/worst missions=${secondShipMissions.join("/")}`);
+
+console.log("\nSHIP_PRICE_CURVE global owned fleet => starter/refrigerated/bulk");
+const priceCurveModels = ["starter_freighter", "refrigerated_freighter", "bulk_carrier"]
+  .map((modelId) => ships.find((ship) => ship.id === modelId));
+for (const ownedShipCount of [0, 1, 2, 3, 4, 5, 7, 10, 15]) {
+  const prices = priceCurveModels.map(
+    (ship) => shipPurchasePrice(ship.purchaseCost, ownedShipCount),
+  );
+  console.log(`${String(ownedShipCount).padStart(2)} ships => ${prices.join("/")}`);
+}
+assert(
+  priceCurveModels.every(
+    (ship) => shipPurchasePrice(ship.purchaseCost, 0) === ship.purchaseCost,
+  ),
+  "Every first ship price must equal its base cost",
+);
+assert(
+  secondShipPrice >= 1200 && secondShipPrice <= 1400,
+  "Second ship price must remain near 1300",
+);
 
 console.log("\nUPGRADE_PAYBACK at Antalya stage, continuous local missions");
 for (const ship of ships.filter((item) => item.requiredLevel <= 2)) {
@@ -376,7 +417,7 @@ function pay(cost) {
 }
 
 function purchaseShip(model, useStartingCash = false) {
-  const price = Math.round(model.purchaseCost * 1.6 ** progression.fleet.length / 10) * 10;
+  const price = shipPurchasePrice(model.purchaseCost, progression.fleet.length);
   if (!useStartingCash) pay(price);
   progression.fleet.push({ model, speedLevel: 0, capacityLevel: 0 });
   progression.companyValue += model.companyValue;
@@ -395,7 +436,7 @@ function progressionInvestmentCandidates() {
   const candidates = [];
   if (progression.fleet.length < fleetCapacity[level - 1]) {
     for (const model of ships.filter((ship) => ship.requiredLevel <= level)) {
-      const cost = Math.round(model.purchaseCost * 1.6 ** progression.fleet.length / 10) * 10;
+      const cost = shipPurchasePrice(model.purchaseCost, progression.fleet.length);
       candidates.push({
         name: `buy ${model.id}`,
         cost,

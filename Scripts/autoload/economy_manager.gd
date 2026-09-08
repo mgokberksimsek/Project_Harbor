@@ -2,7 +2,8 @@ extends Node
 ## Stateless economy formulas. This manager calculates values but owns no
 ## player state, which keeps balancing changes isolated and testable.
 
-const SHIP_PRICE_GROWTH := 1.6
+const SHIP_PRICE_LINEAR_GROWTH := 0.55
+const SHIP_PRICE_QUADRATIC_GROWTH := 0.12
 const SHIP_SPEED_PER_LEVEL := 0.15
 const EMPTY_SHIP_SPEED_MULTIPLIER := 1.10
 const LOADED_SPEED_PENALTY_PER_CARGO_UNIT := 0.05
@@ -83,10 +84,15 @@ func calculate_mission_operating_cost(
 	return maxi(roundi(fuel_used * FUEL_UNIT_PRICE), 0)
 
 
+# The previous exponential curve made later ships unreachable. Global quadratic
+# growth keeps every fleet purchase meaningful without exploding in late game.
 func calculate_ship_purchase_price(base_cost: int, owned_ship_count: int) -> int:
 	var safe_base_cost := maxi(base_cost, 0)
 	var safe_owned_count := maxi(owned_ship_count, 0)
-	var raw_price := safe_base_cost * pow(SHIP_PRICE_GROWTH, safe_owned_count)
+	var fleet_multiplier := 1.0 \
+		+ SHIP_PRICE_LINEAR_GROWTH * safe_owned_count \
+		+ SHIP_PRICE_QUADRATIC_GROWTH * pow(safe_owned_count, 2)
+	var raw_price := safe_base_cost * fleet_multiplier
 	return maxi(roundi(raw_price / 10.0) * 10, safe_base_cost)
 
 

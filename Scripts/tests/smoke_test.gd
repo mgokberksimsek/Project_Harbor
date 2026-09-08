@@ -52,6 +52,15 @@ func _run() -> void:
 	var game_manager := root.get_node("/root/GameManager")
 	var save_manager := root.get_node("/root/SaveManager")
 	var event_bus := root.get_node("/root/EventBus")
+	var price_curve_ship_counts: Array[int] = [0, 1, 2, 3, 4, 5, 7, 10, 15]
+	var expected_starter_prices: Array[int] = [
+		500, 840, 1290, 1870, 2560, 3380, 5370, 9250, 18130,
+	]
+	for price_index in range(price_curve_ship_counts.size()):
+		assert(economy_manager.calculate_ship_purchase_price(
+			500,
+			price_curve_ship_counts[price_index]
+		) == expected_starter_prices[price_index])
 	var expected_fleet_capacities: Array[int] = [
 		2, 3, 4, 5, 6,
 		8, 10, 12, 14, 16,
@@ -385,9 +394,9 @@ func _run() -> void:
 	assert(fleet_manager.get_all_ship_ids().size() == 1)
 	var starter_ship_id: StringName = fleet_manager.get_all_ship_ids()[0]
 	assert(fleet_manager.get_ship_data(starter_ship_id).id == starter_model.id)
-	assert(fleet_manager.get_ship_purchase_price(&"starter_freighter") == 800)
-	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 1280)
-	assert(fleet_manager.get_ship_purchase_price(&"bulk_carrier") == 2400)
+	assert(fleet_manager.get_ship_purchase_price(&"starter_freighter") == 840)
+	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 1340)
+	assert(fleet_manager.get_ship_purchase_price(&"bulk_carrier") == 2510)
 	assert(not fleet_manager.get_ship_name(starter_ship_id).is_empty())
 	var legacy_fleet_save: Dictionary = fleet_manager.get_save_state()
 	var legacy_starter_state: Dictionary = legacy_fleet_save[String(starter_ship_id)]
@@ -1316,7 +1325,7 @@ func _run() -> void:
 	var refrigerated_purchase_price: int = fleet_manager.get_ship_purchase_price(
 		&"refrigerated_freighter"
 	)
-	assert(refrigerated_purchase_price == 1280)
+	assert(refrigerated_purchase_price == 1340)
 	assert(next_goal_label.text.contains("0 / %d" % refrigerated_purchase_price))
 	var second_ship_balance := _get_mission_balance_for_cost(
 		mission_manager,
@@ -1399,9 +1408,9 @@ func _run() -> void:
 		headquarters_arrival_berth
 	) <= headquarters_arrival_approach.distance_to(headquarters_arrival_berth))
 	assert(fleet_manager.get_owned_model_count(&"refrigerated_freighter") == 1)
-	assert(fleet_manager.get_ship_purchase_price(&"starter_freighter") == 1280)
-	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 2050)
-	assert(fleet_manager.get_ship_purchase_price(&"bulk_carrier") == 3840)
+	assert(fleet_manager.get_ship_purchase_price(&"starter_freighter") == 1290)
+	assert(fleet_manager.get_ship_purchase_price(&"refrigerated_freighter") == 2060)
+	assert(fleet_manager.get_ship_purchase_price(&"bulk_carrier") == 3870)
 	assert(next_goal_label.visible)
 	assert(next_goal_label.text.contains("Çanakkale"))
 	assert(next_goal_label.text.contains("0 / 1500"))
@@ -1422,8 +1431,8 @@ func _run() -> void:
 	shop_buy_button.text = "Satın Al · 800 ₺"
 	event_bus.game_loaded.emit()
 	await process_frame
-	assert(shop_buy_button.text.contains("2050"))
-	assert(shop_buy_button.disabled == (game_manager.money < 2050))
+	assert(shop_buy_button.text.contains("2060"))
+	assert(shop_buy_button.disabled == (game_manager.money < 2060))
 
 	var refrigerated_ship_found := false
 	var refrigerated_ship_id: StringName = &""
@@ -1484,7 +1493,7 @@ func _run() -> void:
 	assert(next_goal_label.text.contains("Sv. 4"))
 	assert(next_goal_label.text.contains("3400 / 4800 CV"))
 	var bulk_purchase_price: int = fleet_manager.get_ship_purchase_price(&"bulk_carrier")
-	assert(bulk_purchase_price == 3840)
+	assert(bulk_purchase_price == 3870)
 	var bulk_model: ShipData = fleet_manager.get_ship_model(&"bulk_carrier")
 	assert(bulk_model != null)
 	assert(bulk_model.required_company_level == 6)
@@ -1510,6 +1519,7 @@ func _run() -> void:
 	await process_frame
 	bulk_model.required_company_level = 6
 	assert(fleet_manager.get_owned_model_count(&"bulk_carrier") == 1)
+	assert(fleet_manager.get_ship_purchase_price(&"bulk_carrier") == 5600)
 	assert(fleet_manager.get_all_ship_ids().size() == 3)
 	assert(game_manager.money == 0)
 	assert(company_manager.company_value == 4800)
