@@ -2,7 +2,7 @@
 
 > Son güncelleme: 2 Eylül 2026
 > Proje durumu: Oynanabilir Android prototipi  
-> Motor: Godot 4.7.1  
+> Motor: Godot 4.7.2
 > Öncelikli platform: Android, yatay mobil  
 > Tür: 2D filo ve liman yönetimi / tycoon  
 > Oyun modu: Tek oyunculu
@@ -912,7 +912,7 @@ Her yeni özellikte şu sıra korunur:
 1. Özelliğin oyuncuya ve ekonomiye katkısı değerlendirilir.
 2. Mevcut sistemlerden hangisinin davranışı sahiplenmesi gerektiği belirlenir.
 3. En az dosyaya dokunan küçük, oynanabilir ilk sürüm yapılır.
-4. Godot 4.7.1 sözdizimi, sinyaller, null güvenliği ve kayıt uyumu test edilir.
+4. Godot 4.7.2 sözdizimi, sinyaller, null güvenliği ve kayıt uyumu test edilir.
 5. Görsel/dokunmatik değişiklik Android cihazda denenir.
 6. Kalıcı oyuncu kararıysa GDD güncellenir.
 7. Değişiklik anlamlı tek commit halinde kaydedilip istenirse push edilir.

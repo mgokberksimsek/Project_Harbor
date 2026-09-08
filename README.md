@@ -29,7 +29,7 @@ Purchase your first cargo ship, transport goods between ports, earn money, upgra
 
 ## Tech Stack
 
-- Godot 4.7.1
+- Godot 4.7.2
 - GDScript
 
 ## Roadmap
@@ -44,7 +44,7 @@ Purchase your first cargo ship, transport goods between ports, earn money, upgra
 
 ## Running the Project
 
-Open `project.godot` with Godot 4.7.1 or newer and run the main scene.
+Open `project.godot` with Godot 4.7.2 or newer and run the main scene.
 
 ## License
 

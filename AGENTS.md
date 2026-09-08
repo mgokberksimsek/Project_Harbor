@@ -105,7 +105,7 @@ For a requested feature:
 3. State the files and existing behavior that will change when the impact is
    non-trivial.
 4. Implement the smallest playable version.
-5. Validate Godot 4.7.1 syntax, runtime errors, null safety, signal wiring,
+5. Validate Godot 4.7.2 syntax, runtime errors, null safety, signal wiring,
    save/load compatibility, existing gameplay and relevant mobile behavior.
 6. Briefly report what changed and what was tested.
 
@@ -120,4 +120,3 @@ change. Do not interrupt progress for small, reversible implementation details.
 - Do not turn implementation details or temporary test values into GDD rules.
 - Group changes into meaningful commits. Remind the user when a coherent change
   is ready for commit/push, but do not commit or push without their request.
-
