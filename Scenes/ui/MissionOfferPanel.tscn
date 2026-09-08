@@ -9,7 +9,7 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 250.0
-offset_top = -145.0
+offset_top = -170.0
 offset_right = -24.0
 offset_bottom = -10.0
 grow_horizontal = 2
@@ -49,22 +49,205 @@ size_flags_vertical = 3
 theme_override_constants/separation = 8
 
 [node name="Offer1" type="Button" parent="Margin/VBox/Cards"]
-custom_minimum_size = Vector2(220, 82)
+custom_minimum_size = Vector2(220, 106)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 14
 text = "Görev bekleniyor..."
+
+[node name="CardMargin" type="MarginContainer" parent="Margin/VBox/Cards/Offer1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 7
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 7
+theme_override_constants/margin_bottom = 4
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Cards/Offer1/CardMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Contract" type="Label" parent="Margin/VBox/Cards/Offer1/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.32, 1)
+theme_override_font_sizes/font_size = 11
+text = "BÜYÜK KONTRAT"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Route" type="Label" parent="Margin/VBox/Cards/Offer1/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 14
+text = "Mersin → İzmir"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Cargo" type="Label" parent="Margin/VBox/Cards/Offer1/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.78, 0.86, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Konteyner ×1 · 24 sn"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="NetReward" type="Label" parent="Margin/VBox/Cards/Offer1/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.48, 1, 0.58, 1)
+theme_override_font_sizes/font_size = 19
+text = "Net Kazanç: +610 ₺"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="FinancialDetails" type="Label" parent="Margin/VBox/Cards/Offer1/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.68, 0.72, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Gelir: 720 ₺ • Sefer Masrafı: 110 ₺"
+horizontal_alignment = 1
+text_overrun_behavior = 3
 
 [node name="Offer2" type="Button" parent="Margin/VBox/Cards"]
-custom_minimum_size = Vector2(220, 82)
+custom_minimum_size = Vector2(220, 106)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 14
 text = "Görev bekleniyor..."
 
+[node name="CardMargin" type="MarginContainer" parent="Margin/VBox/Cards/Offer2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 7
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 7
+theme_override_constants/margin_bottom = 4
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Cards/Offer2/CardMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Contract" type="Label" parent="Margin/VBox/Cards/Offer2/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.32, 1)
+theme_override_font_sizes/font_size = 11
+text = "BÜYÜK KONTRAT"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Route" type="Label" parent="Margin/VBox/Cards/Offer2/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 14
+text = "Mersin → İzmir"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Cargo" type="Label" parent="Margin/VBox/Cards/Offer2/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.78, 0.86, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Konteyner ×1 · 24 sn"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="NetReward" type="Label" parent="Margin/VBox/Cards/Offer2/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.48, 1, 0.58, 1)
+theme_override_font_sizes/font_size = 19
+text = "Net Kazanç: +610 ₺"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="FinancialDetails" type="Label" parent="Margin/VBox/Cards/Offer2/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.68, 0.72, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Gelir: 720 ₺ • Sefer Masrafı: 110 ₺"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
 [node name="Offer3" type="Button" parent="Margin/VBox/Cards"]
-custom_minimum_size = Vector2(220, 82)
+custom_minimum_size = Vector2(220, 106)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 14
 text = "Görev bekleniyor..."
+
+[node name="CardMargin" type="MarginContainer" parent="Margin/VBox/Cards/Offer3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 7
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 7
+theme_override_constants/margin_bottom = 4
+
+[node name="VBox" type="VBoxContainer" parent="Margin/VBox/Cards/Offer3/CardMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Contract" type="Label" parent="Margin/VBox/Cards/Offer3/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.32, 1)
+theme_override_font_sizes/font_size = 11
+text = "BÜYÜK KONTRAT"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Route" type="Label" parent="Margin/VBox/Cards/Offer3/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 14
+text = "Mersin → İzmir"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Cargo" type="Label" parent="Margin/VBox/Cards/Offer3/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.78, 0.86, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Konteyner ×1 · 24 sn"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="NetReward" type="Label" parent="Margin/VBox/Cards/Offer3/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.48, 1, 0.58, 1)
+theme_override_font_sizes/font_size = 19
+text = "Net Kazanç: +610 ₺"
+horizontal_alignment = 1
+text_overrun_behavior = 3
+
+[node name="FinancialDetails" type="Label" parent="Margin/VBox/Cards/Offer3/CardMargin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.68, 0.72, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Gelir: 720 ₺ • Sefer Masrafı: 110 ₺"
+horizontal_alignment = 1
+text_overrun_behavior = 3

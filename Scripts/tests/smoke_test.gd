@@ -337,6 +337,18 @@ func _run() -> void:
 	assert(not company_panel.visible)
 	var instruction_label := world.get_node("UI/InstructionLabel") as Label
 	assert(instruction_label != null)
+	var mission_result_toast := world.get_node("UI/MissionResultToast") as PanelContainer
+	var mission_result_income_value := world.get_node(
+		"UI/MissionResultToast/Margin/VBox/IncomeRow/Value"
+	) as Label
+	var mission_result_cost_value := world.get_node(
+		"UI/MissionResultToast/Margin/VBox/CostRow/Value"
+	) as Label
+	var mission_result_net_value := world.get_node(
+		"UI/MissionResultToast/Margin/VBox/NetRow/Value"
+	) as Label
+	assert(mission_result_toast != null)
+	assert(not mission_result_toast.visible)
 	assert(int(game_manager.get("tutorial_step")) == 7)
 	assert(instruction_label.text.contains("ÖĞRETİCİ 1/8"))
 	var skip_tutorial_button := world.get_node("UI/SkipTutorialButton") as Button
@@ -1055,7 +1067,29 @@ func _run() -> void:
 	assert(local_offer != null)
 	var mission_offer_panel: Node = world.get_node("UI/MissionOfferPanel")
 	var local_offer_text: String = mission_offer_panel.call("_format_offer", local_offer)
-	assert(local_offer_text.contains("NET +%d ₺" % local_offer.get_net_reward()))
+	assert(local_offer_text.contains(
+		"Net Kazanç: +%d ₺" % local_offer.get_net_reward()
+	))
+	assert(local_offer_text.contains("Gelir: %d ₺" % local_offer.reward))
+	assert(local_offer_text.contains(
+		"Sefer Masrafı: %d ₺" % local_offer.operating_cost
+	))
+	var zero_cost_offer := Mission.new()
+	zero_cost_offer.pickup_port_id = local_offer.pickup_port_id
+	zero_cost_offer.delivery_port_id = local_offer.delivery_port_id
+	zero_cost_offer.cargo_type_id = local_offer.cargo_type_id
+	zero_cost_offer.reward = 100
+	zero_cost_offer.operating_cost = 0
+	var zero_cost_offer_text: String = mission_offer_panel.call(
+		"_format_offer",
+		zero_cost_offer
+	)
+	assert(zero_cost_offer_text.contains("Net Kazanç: +100 ₺"))
+	assert(zero_cost_offer_text.contains("Sefer Masrafı: 0 ₺"))
+	world.call("_show_mission_result", zero_cost_offer)
+	assert(mission_result_toast.visible)
+	assert(mission_result_cost_value.text == "0 ₺")
+	mission_result_toast.hide()
 	var local_pickup_route: PackedVector2Array = starter_map_ship.call(
 		"_build_delivery_route",
 		local_offer
@@ -1152,12 +1186,21 @@ func _run() -> void:
 	var first_offer_button := world.get_node(
 		"UI/MissionOfferPanel/Margin/VBox/Cards/Offer1"
 	) as Button
-	assert(first_offer_button.text.contains("Brüt"))
-	assert(first_offer_button.text.contains("Masraf"))
-	assert(first_offer_button.text.contains("NET"))
+	var first_offer_net_label := first_offer_button.get_node(
+		"CardMargin/VBox/NetReward"
+	) as Label
+	var first_offer_details_label := first_offer_button.get_node(
+		"CardMargin/VBox/FinancialDetails"
+	) as Label
+	assert(first_offer_net_label.text.contains("Net Kazanç"))
+	assert(first_offer_details_label.text.contains("Gelir"))
+	assert(first_offer_details_label.text.contains("Sefer Masrafı"))
+	assert(first_offer_net_label.get_theme_font_size("font_size") \
+		> first_offer_details_label.get_theme_font_size("font_size"))
 	settings_manager.set_locale("en")
-	assert(first_offer_button.text.contains("Gross"))
-	assert(first_offer_button.text.contains("Cost"))
+	assert(first_offer_net_label.text.contains("Net Earnings"))
+	assert(first_offer_details_label.text.contains("Income"))
+	assert(first_offer_details_label.text.contains("Voyage Cost"))
 	settings_manager.set_locale("tr")
 
 	world.call("_on_offer_accepted", first_offer.id)
@@ -1290,9 +1333,17 @@ func _run() -> void:
 	) as Label
 	assert(fleet_stats_label.text.contains("1 görev tamamladı"))
 	assert(fleet_stats_label.text.contains("%d ₺" % mission.get_net_reward()))
-	assert(instruction_label.text.contains("Net +%d" % mission.get_net_reward()))
-	assert(instruction_label.text.contains("%d gelir" % mission.reward))
-	assert(instruction_label.text.contains("-%d masraf" % mission.operating_cost))
+	assert(instruction_label.text.contains(
+		"Net Kazanç +%d" % mission.get_net_reward()
+	))
+	assert(mission_result_toast.visible)
+	assert(mission_result_income_value.text == "+%d ₺" % mission.reward)
+	assert(mission_result_cost_value.text == "−%d ₺" % mission.operating_cost)
+	assert(mission_result_net_value.text == "+%d ₺" % mission.get_net_reward())
+	assert(mission_result_net_value.get_theme_font_size("font_size") \
+		> mission_result_income_value.get_theme_font_size("font_size"))
+	assert(mission_result_toast.get_global_rect().end.x \
+		<= world.get_viewport_rect().size.x)
 	await process_frame
 	assert(next_goal_label.text.contains("%d / 750" % mission.get_net_reward()))
 	assert(mission_manager.get_offers().size() == 3)
@@ -1876,6 +1927,10 @@ func _run() -> void:
 	assert(first_contract.stage == Mission.Stage.COMPLETED)
 	assert(game_manager.money == money_before_first_contract + first_contract.get_net_reward())
 	assert(fleet_manager.get_ship_completed_large_contract_count(starter_ship_id) == 1)
+	assert(mission_result_toast.visible)
+	assert(mission_result_income_value.text == "+%d ₺" % first_contract.reward)
+	assert(mission_result_cost_value.text == "−%d ₺" % first_contract.operating_cost)
+	assert(mission_result_net_value.text == "+%d ₺" % first_contract.get_net_reward())
 	assert(company_manager.debug_advance_level())
 	mission_manager.refresh_offers()
 	world.call("_refresh_fleet_panel")

@@ -11,6 +11,36 @@ signal dismissed()
 	$Margin/VBox/Cards/Offer2,
 	$Margin/VBox/Cards/Offer3,
 ]
+@onready var _card_contents: Array[Control] = [
+	$Margin/VBox/Cards/Offer1/CardMargin,
+	$Margin/VBox/Cards/Offer2/CardMargin,
+	$Margin/VBox/Cards/Offer3/CardMargin,
+]
+@onready var _contract_labels: Array[Label] = [
+	$Margin/VBox/Cards/Offer1/CardMargin/VBox/Contract,
+	$Margin/VBox/Cards/Offer2/CardMargin/VBox/Contract,
+	$Margin/VBox/Cards/Offer3/CardMargin/VBox/Contract,
+]
+@onready var _route_labels: Array[Label] = [
+	$Margin/VBox/Cards/Offer1/CardMargin/VBox/Route,
+	$Margin/VBox/Cards/Offer2/CardMargin/VBox/Route,
+	$Margin/VBox/Cards/Offer3/CardMargin/VBox/Route,
+]
+@onready var _cargo_labels: Array[Label] = [
+	$Margin/VBox/Cards/Offer1/CardMargin/VBox/Cargo,
+	$Margin/VBox/Cards/Offer2/CardMargin/VBox/Cargo,
+	$Margin/VBox/Cards/Offer3/CardMargin/VBox/Cargo,
+]
+@onready var _net_reward_labels: Array[Label] = [
+	$Margin/VBox/Cards/Offer1/CardMargin/VBox/NetReward,
+	$Margin/VBox/Cards/Offer2/CardMargin/VBox/NetReward,
+	$Margin/VBox/Cards/Offer3/CardMargin/VBox/NetReward,
+]
+@onready var _financial_detail_labels: Array[Label] = [
+	$Margin/VBox/Cards/Offer1/CardMargin/VBox/FinancialDetails,
+	$Margin/VBox/Cards/Offer2/CardMargin/VBox/FinancialDetails,
+	$Margin/VBox/Cards/Offer3/CardMargin/VBox/FinancialDetails,
+]
 
 var _offers: Array[Mission] = []
 var _tutorial_focused := false
@@ -61,7 +91,11 @@ func set_offers(offers: Array, has_idle_ship: bool) -> void:
 		var has_offer := index < _offers.size()
 		button.disabled = not has_idle_ship or not has_offer
 		button.modulate = Color.WHITE if not button.disabled else Color(1.0, 1.0, 1.0, 0.5)
-		button.text = _format_offer(_offers[index]) if has_offer else tr("MISSION_WAITING")
+		button.text = "" if has_offer else tr("MISSION_WAITING")
+		_card_contents[index].visible = has_offer
+		button.tooltip_text = _format_offer(_offers[index]) if has_offer else ""
+		if has_offer:
+			_populate_offer_card(index, _offers[index])
 
 
 func set_tutorial_focus(enabled: bool) -> void:
@@ -95,6 +129,28 @@ func _on_close_pressed() -> void:
 
 
 func _format_offer(mission: Mission) -> String:
+	var display := _get_offer_display(mission)
+	var contract_text: String = display["contract"]
+	return "%s%s\n%s\n%s\n%s" % [
+		("%s\n" % contract_text) if not contract_text.is_empty() else "",
+		display["route"],
+		display["cargo"],
+		display["net_reward"],
+		display["financial_details"],
+	]
+
+
+func _populate_offer_card(index: int, mission: Mission) -> void:
+	var display := _get_offer_display(mission)
+	_contract_labels[index].text = display["contract"]
+	_contract_labels[index].visible = not _contract_labels[index].text.is_empty()
+	_route_labels[index].text = display["route"]
+	_cargo_labels[index].text = display["cargo"]
+	_net_reward_labels[index].text = display["net_reward"]
+	_financial_detail_labels[index].text = display["financial_details"]
+
+
+func _get_offer_display(mission: Mission) -> Dictionary:
 	var pickup_data := PortManager.get_port_data(mission.pickup_port_id)
 	var delivery_data := PortManager.get_port_data(mission.delivery_port_id)
 	var cargo_data := MissionManager.get_cargo_type(mission.cargo_type_id)
@@ -114,21 +170,21 @@ func _format_offer(mission: Mission) -> String:
 					port_data.display_name
 				))
 		route_text = " → ".join(route_names)
-		contract_label = "%s\n" % [
-			tr("MISSION_LARGE_CONTRACT") % mission.get_delivery_count()
-		]
-	return "%s%s\n%s ×%d · %s\n%s" % [
-		contract_label,
-		route_text,
-		_translate_entity("CARGO", mission.cargo_type_id, cargo_data.display_name),
-		mission.cargo_amount,
-		_format_duration(mission.estimated_duration_sec),
-		tr("MISSION_FINANCIALS") % [
-			mission.get_net_reward(),
+		contract_label = tr("MISSION_LARGE_CONTRACT") % mission.get_delivery_count()
+	return {
+		"contract": contract_label,
+		"route": route_text,
+		"cargo": "%s ×%d · %s" % [
+			_translate_entity("CARGO", mission.cargo_type_id, cargo_data.display_name),
+			mission.cargo_amount,
+			_format_duration(mission.estimated_duration_sec),
+		],
+		"net_reward": tr("MISSION_NET_REWARD") % mission.get_net_reward(),
+		"financial_details": tr("MISSION_FINANCIAL_DETAILS") % [
 			mission.reward,
 			mission.operating_cost,
 		],
-	]
+	}
 
 
 func _format_duration(duration_sec: float) -> String:

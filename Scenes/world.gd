@@ -6,6 +6,20 @@ extends Node2D
 @onready var _debug_money_button: Button = $UI/DebugMoneyButton
 @onready var _next_goal_label: Label = $UI/NextGoalLabel
 @onready var _instruction_label: Label = $UI/InstructionLabel
+@onready var _mission_result_toast: PanelContainer = $UI/MissionResultToast
+@onready var _mission_result_title: Label = $UI/MissionResultToast/Margin/VBox/Title
+@onready var _mission_result_income_name: Label = \
+	$UI/MissionResultToast/Margin/VBox/IncomeRow/Name
+@onready var _mission_result_income_value: Label = \
+	$UI/MissionResultToast/Margin/VBox/IncomeRow/Value
+@onready var _mission_result_cost_name: Label = \
+	$UI/MissionResultToast/Margin/VBox/CostRow/Name
+@onready var _mission_result_cost_value: Label = \
+	$UI/MissionResultToast/Margin/VBox/CostRow/Value
+@onready var _mission_result_net_name: Label = \
+	$UI/MissionResultToast/Margin/VBox/NetRow/Name
+@onready var _mission_result_net_value: Label = \
+	$UI/MissionResultToast/Margin/VBox/NetRow/Value
 @onready var _skip_tutorial_button: Button = $UI/SkipTutorialButton
 @onready var _tutorial_complete_dialog: AcceptDialog = $UI/TutorialCompleteDialog
 @onready var _offline_summary_dialog: AcceptDialog = $UI/OfflineSummaryDialog
@@ -36,6 +50,8 @@ var _offline_completed_missions := 0
 var _offline_earned_cash := 0
 var _renaming_ship_id: StringName = &""
 var _ship_rename_error_key := ""
+var _mission_result_mission: Mission
+var _mission_result_tween: Tween
 
 const MAP_SHIP_TAP_RADIUS_PX := 48.0
 const MAP_PORT_TAP_RADIUS_PX := 48.0
@@ -43,6 +59,8 @@ const TUTORIAL_PULSE_SPEED := 4.0
 const DEBUG_MONEY_AMOUNT := 10000
 const SHIP_RENAME_DIALOG_SIZE := Vector2i(300, 114)
 const SHIP_RENAME_DIALOG_TOP_MARGIN := 16
+const MISSION_RESULT_HOLD_SEC := 3.0
+const MISSION_RESULT_FADE_SEC := 0.3
 
 var _company_progress_tutorial_elapsed := 0.0
 
@@ -251,6 +269,7 @@ func _on_money_changed(new_amount: int, _delta: int) -> void:
 
 
 func _on_mission_completed(mission: Mission) -> void:
+	_show_mission_result(mission)
 	var ship_id := mission.assigned_ship_id
 	if CompanyManager.company_level >= GameManager.AUTOMATION_REQUIRED_COMPANY_LEVEL \
 			and mission.is_large_contract() \
@@ -264,9 +283,44 @@ func _on_mission_completed(mission: Mission) -> void:
 		return
 	_instruction_label.text = tr("INSTRUCTION_MISSION_COMPLETED") % [
 		mission.get_net_reward(),
-		mission.reward,
-		mission.operating_cost,
 	]
+
+
+func _show_mission_result(mission: Mission) -> void:
+	_mission_result_mission = mission
+	_refresh_mission_result()
+	if _mission_result_tween != null and _mission_result_tween.is_valid():
+		_mission_result_tween.kill()
+	_mission_result_toast.modulate = Color.WHITE
+	_mission_result_toast.show()
+	_mission_result_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_mission_result_tween.tween_interval(MISSION_RESULT_HOLD_SEC)
+	_mission_result_tween.tween_property(
+		_mission_result_toast,
+		"modulate:a",
+		0.0,
+		MISSION_RESULT_FADE_SEC
+	)
+	_mission_result_tween.tween_callback(_mission_result_toast.hide)
+
+
+func _refresh_mission_result() -> void:
+	if _mission_result_mission == null:
+		return
+	_mission_result_title.text = tr("MISSION_RESULT_TITLE")
+	_mission_result_income_name.text = tr("MISSION_RESULT_INCOME")
+	_mission_result_cost_name.text = tr("MISSION_RESULT_COST")
+	_mission_result_net_name.text = tr("MISSION_RESULT_NET")
+	_mission_result_income_value.text = "+%d ₺" % _mission_result_mission.reward
+	_mission_result_cost_value.text = _format_cost_amount(
+		_mission_result_mission.operating_cost
+	)
+	var net_reward := _mission_result_mission.get_net_reward()
+	_mission_result_net_value.text = ("+%d ₺" if net_reward > 0 else "%d ₺") % net_reward
+
+
+func _format_cost_amount(operating_cost: int) -> String:
+	return "−%d ₺" % operating_cost if operating_cost > 0 else "0 ₺"
 
 
 func _on_company_value_changed(_new_value: int, _delta: int) -> void:
@@ -285,6 +339,7 @@ func _on_tutorial_step_changed(_new_step: int, _previous_step: int) -> void:
 
 func _on_language_changed(_locale: String) -> void:
 	_configure_exit_confirmation_dialog()
+	_refresh_mission_result()
 	_update_company_progress()
 	_update_debug_buttons()
 	_update_next_goal()

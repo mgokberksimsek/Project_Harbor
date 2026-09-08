@@ -394,8 +394,11 @@ Her görev kartı en az şu bilgileri göstermelidir:
 - Teslimat limanı.
 - Kargo türü ve miktarı.
 - Tahmini toplam süre.
-- Brüt ödül.
-- Tahmini sefer masrafı ve net kazanç.
+- Ana finansal bilgi olarak net kazanç.
+- Destekleyici detay olarak brüt gelir ve tahmini sefer masrafı.
+
+Görev tamamlandığında akışı durdurmayan kısa bir sonuç bildirimi gelir, sefer
+masrafı ve net kazanç dağılımını gösterir; net kazanç yine ana sonuçtur.
 
 ### 8.3 Görev seçme akışı
 
