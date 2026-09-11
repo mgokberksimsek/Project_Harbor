@@ -61,6 +61,7 @@ func reset_game() -> bool:
 		push_error("Could not reload the main scene after resetting the game.")
 		return false
 	await get_tree().process_frame
+	EventBus.fresh_game_started.emit()
 	MissionManager.refresh_offers()
 	EventBus.game_loaded.emit()
 	return true
@@ -122,6 +123,7 @@ func load_game(path: String = SAVE_PATH) -> bool:
 func _load_or_start() -> void:
 	if not load_game():
 		loaded_existing_save = false
+		EventBus.fresh_game_started.emit()
 		EventBus.game_loaded.emit()
 
 

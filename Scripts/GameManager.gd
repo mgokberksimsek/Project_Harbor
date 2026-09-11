@@ -30,6 +30,29 @@ func _ready() -> void:
 	money = _get_starting_cash()
 	_event_bus.mission_completed.connect(_on_mission_completed)
 	_event_bus.ship_purchased.connect(_on_ship_purchased)
+	_install_progression_playtest_logger()
+
+
+func _install_progression_playtest_logger() -> void:
+	# The logger script is not even loaded by release builds. Headless tests can
+	# explicitly opt out so their isolated user:// fixtures stay clean.
+	if not OS.is_debug_build():
+		return
+	var arguments := OS.get_cmdline_user_args()
+	if arguments.has("--disable-playtest-logger"):
+		return
+	var logger_script := load(
+		"res://Scripts/debug/progression_playtest_logger.gd"
+	) as Script
+	if logger_script == null:
+		push_error("Could not load the progression playtest logger.")
+		return
+	var logger := logger_script.new() as Node
+	if logger == null:
+		push_error("Could not create the progression playtest logger.")
+		return
+	logger.name = "ProgressionPlaytestLogger"
+	add_child(logger)
 
 
 func add_money(amount: int) -> void:

@@ -63,6 +63,7 @@ signal language_changed(locale: String)
 signal sound_effects_setting_changed(enabled: bool)
 signal music_setting_changed(enabled: bool)
 signal tutorial_step_changed(new_step: int, previous_step: int)
+signal fresh_game_started()
 signal game_loaded()
 signal game_saved()
 signal offline_progress_applied(

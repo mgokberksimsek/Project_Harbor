@@ -4,6 +4,7 @@
 .export/
 /android/
 /build/
+/playtests/
 
 # Local handoff/test archives
 /ProjectHarbor-Claude-files.zip
