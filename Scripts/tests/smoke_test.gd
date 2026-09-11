@@ -512,6 +512,8 @@ func _run() -> void:
 	) as Button
 	assert(starter_card_button.text.contains(starter_generated_name))
 	assert(starter_card_button.text.contains("Başlangıç Yük Gemisi"))
+	assert(starter_card_button.text.begins_with("● "))
+	assert(starter_card_button.modulate == FleetStatusPanel.IDLE_CARD_COLOR)
 	starter_card_button.pressed.emit()
 	await process_frame
 	assert(starter_rename_button.text == "İsim Değiştir")
@@ -610,7 +612,7 @@ func _run() -> void:
 		await process_frame
 		if dock_mode != 1:
 			assert(management_dock.size.x < 600.0)
-		for edge_zoom in [0.4, 0.65, 1.3]:
+		for edge_zoom in [WorldCamera.MIN_ZOOM, 0.65, 1.3]:
 			world_camera.zoom_at_screen_position(edge_zoom, Vector2(640, 360))
 			world_camera.pan_by_screen_delta(Vector2(-100000, -100000))
 			world_camera.force_update_scroll()
@@ -630,6 +632,12 @@ func _run() -> void:
 	assert(not shop_panel.is_expanded())
 	assert(world.get("_selected_ship_id") == &"selection_probe")
 	world.set("_selected_ship_id", &"")
+	world.call("_handle_map_tap", mersin_screen_position + Vector2(45.0, 0.0))
+	assert(port_unlock_panel.is_open_for(&"mersin"))
+	management_dock.open_fleet()
+	assert(not port_unlock_panel.visible)
+	assert(management_dock.is_fleet_open())
+	management_dock.collapse()
 	shop_tab.pressed.emit()
 	assert(shop_panel.is_expanded())
 	var map_drag_press := InputEventMouseButton.new()
@@ -654,6 +662,19 @@ func _run() -> void:
 	var position_before_inertia: Vector2 = world_camera.position
 	world_camera.call("_process", 0.1)
 	assert(world_camera.position != position_before_inertia)
+	var fast_velocity := Vector2(1800.0, 0.0)
+	var stale_release_velocity: Vector2 = world_camera.call(
+		"calculate_release_pan_velocity",
+		fast_velocity,
+		WorldCamera.PAN_RELEASE_IDLE_STOP_SEC + 0.01
+	)
+	assert(stale_release_velocity.is_zero_approx())
+	var immediate_release_velocity: Vector2 = world_camera.call(
+		"calculate_release_pan_velocity",
+		fast_velocity,
+		0.0
+	)
+	assert(immediate_release_velocity.is_equal_approx(fast_velocity))
 	var map_tap_press := InputEventMouseButton.new()
 	map_tap_press.button_index = MOUSE_BUTTON_LEFT
 	map_tap_press.pressed = true
@@ -680,7 +701,8 @@ func _run() -> void:
 	var double_tap_position := Vector2(760, 420)
 	var viewport_center: Vector2 = get_root().get_viewport().get_visible_rect().size * 0.5
 	world_camera.zoom_at_screen_position(0.10, viewport_center)
-	assert(is_equal_approx(world_camera.zoom.x, 0.40))
+	assert(is_equal_approx(world_camera.zoom.x, WorldCamera.MIN_ZOOM))
+	assert(is_equal_approx(WorldCamera.MIN_ZOOM, 0.35))
 	world_camera.zoom_at_screen_position(0.65, viewport_center)
 	assert(is_equal_approx(world_camera.zoom.x, 0.65))
 	world_camera.call("_enter_cinematic_overview")
@@ -727,7 +749,8 @@ func _run() -> void:
 	double_tap_release.global_position = double_tap_position
 	world_camera.call("_unhandled_input", double_tap_release)
 	await create_timer(0.35).timeout
-	assert(is_equal_approx(world_camera.zoom.x, 1.0))
+	assert(is_equal_approx(world_camera.zoom.x, WorldCamera.DOUBLE_TAP_NEAR_ZOOM))
+	assert(is_equal_approx(WorldCamera.DOUBLE_TAP_NEAR_ZOOM, 0.85))
 	var zoom_anchor_after: Vector2 = world_camera.position \
 			+ (double_tap_position - viewport_center) / world_camera.zoom.x
 	assert(zoom_anchor_after.distance_to(zoom_anchor_before) < 0.5)
@@ -743,7 +766,8 @@ func _run() -> void:
 	touch_double_tap_release.position = double_tap_position
 	world_camera.call("_unhandled_input", touch_double_tap_release)
 	await create_timer(0.35).timeout
-	assert(is_equal_approx(world_camera.zoom.x, 0.65))
+	assert(is_equal_approx(world_camera.zoom.x, WorldCamera.DOUBLE_TAP_OVERVIEW_ZOOM))
+	assert(is_equal_approx(WorldCamera.DOUBLE_TAP_OVERVIEW_ZOOM, 0.50))
 	var emulated_mouse_double_tap := InputEventMouseButton.new()
 	emulated_mouse_double_tap.device = InputEvent.DEVICE_ID_EMULATION
 	emulated_mouse_double_tap.button_index = MOUSE_BUTTON_LEFT
@@ -752,7 +776,7 @@ func _run() -> void:
 	emulated_mouse_double_tap.position = double_tap_position
 	world_camera.call("_unhandled_input", emulated_mouse_double_tap)
 	await create_timer(0.05).timeout
-	assert(is_equal_approx(world_camera.zoom.x, 0.65))
+	assert(is_equal_approx(world_camera.zoom.x, WorldCamera.DOUBLE_TAP_OVERVIEW_ZOOM))
 	game_manager.set_tutorial_step(GameManager.TutorialStep.SELECT_SHIP)
 	await process_frame
 	assert(skip_tutorial_button.visible)
@@ -848,6 +872,38 @@ func _run() -> void:
 		visible_doubled_back_length += dash_segment[0].distance_to(dash_segment[1])
 	assert(visible_doubled_back_length > 0.0)
 	assert(visible_doubled_back_length < 200.0)
+	# Regression for the reported Samsun -> İstanbul -> Trabzon contract. Its
+	# second leg reverses much of the first leg, so the remaining route must stay
+	# visible even when the first delivery is almost complete.
+	var samsun_istanbul_route: Array = port_manager.get_smoothed_route_points(
+		&"samsun",
+		&"istanbul"
+	)
+	var istanbul_trabzon_route: Array = port_manager.get_smoothed_route_points(
+		&"istanbul",
+		&"trabzon"
+	)
+	assert(samsun_istanbul_route.size() >= 2)
+	assert(istanbul_trabzon_route.size() >= 2)
+	var reported_contract_route: Array = samsun_istanbul_route.duplicate()
+	for point_index in range(1, istanbul_trabzon_route.size()):
+		reported_contract_route.append(istanbul_trabzon_route[point_index])
+	var reported_first_leg_length: float = route_line.call(
+		"_get_polyline_length",
+		samsun_istanbul_route
+	)
+	var reported_total_length: float = route_line.call(
+		"_get_polyline_length",
+		reported_contract_route
+	)
+	assert(reported_total_length > reported_first_leg_length)
+	for current_leg_progress in [0.0, 0.25, 0.5, 0.75, 0.95, 1.0]:
+		var preview_progress: float = current_leg_progress \
+			* reported_first_leg_length / reported_total_length
+		route_line.set_route(reported_contract_route, preview_progress, true)
+		assert(route_line.visible)
+		assert(not route_line.get_visible_dash_segments().is_empty())
+	route_line.clear_route()
 	var approach_probe_duration := 10.0 * 60.0
 	var approach_probe_length := 1000.0
 	# Match the authored Ship approach values without loading the Ship class
@@ -1355,6 +1411,8 @@ func _run() -> void:
 	assert(not port_manager.is_unlocked(&"antalya"))
 	assert(port_unlock_panel.visible)
 	assert(port_unlock_panel.is_open_for(&"antalya"))
+	assert(port_unlock_panel.get_global_rect().end.y \
+		<= management_dock.get_global_rect().position.y)
 	assert(port_unlock_panel.get_node("Margin/VBox/CompanyValue").text.contains("+500 CV"))
 	var port_unlock_button := port_unlock_panel.get_node(
 		"Margin/VBox/Buttons/UnlockButton"
@@ -1575,6 +1633,7 @@ func _run() -> void:
 	assert(game_manager.money == 0)
 	assert(company_manager.company_value == 4800)
 	assert(company_manager.company_level == 4)
+	assert(instruction_label.text.contains("Büyük Kontratlar açıldı"))
 	assert(next_goal_label.text.contains("İstanbul"))
 	assert(next_goal_label.text.contains("0 / 2600"))
 	var bulk_ship_id: StringName = &""
@@ -1866,6 +1925,11 @@ func _run() -> void:
 	assert(company_manager.company_level == saved_company_level)
 	assert(company_manager.peak_company_value >= company_manager.company_value)
 	assert(game_manager.is_tutorial_completed())
+	# Loading rebuilds map ship nodes, so route regressions below must use the
+	# current visual instance rather than the pre-load reference.
+	starter_map_ship = fleet_manager.get_ship_node(starter_ship_id) as Area2D
+	assert(starter_map_ship != null)
+	starter_route_line = starter_map_ship.get_node("RouteLine") as ShipRouteLine
 
 	# Large Contracts appear one level before Auto Dispatch. Completing two
 	# with the same ship demonstrates enough manual mastery to unlock automation.
@@ -1906,12 +1970,25 @@ func _run() -> void:
 	assert(bool(game_manager.get_save_state()["large_contract_hint_seen"]))
 	assert(instruction_label.text.contains("2 teslimat"))
 	assert(instruction_label.text.contains("oyun kapalıyken"))
-	for _step in range(8):
-		if first_contract.contract_leg_index == 1:
-			break
+	var first_contract_transition_safety := 0
+	while fleet_manager.get_ship_state(starter_ship_id) \
+			!= ShipRuntimeState.State.UNLOADING \
+			and first_contract_transition_safety < 6:
 		first_contract.leg_duration_sec = 0.0
 		await process_frame
-		await process_frame
+		first_contract_transition_safety += 1
+	assert(fleet_manager.get_ship_state(starter_ship_id) \
+		== ShipRuntimeState.State.UNLOADING)
+	assert(first_contract.contract_leg_index == 0)
+	starter_map_ship.call("_update_route_visual", ShipRuntimeState.State.UNLOADING)
+	var unloading_route_debug: Dictionary = starter_map_ship.call(
+		"get_route_visual_debug_state"
+	)
+	assert(bool(unloading_route_debug["route_visible"]))
+	assert(int(unloading_route_debug["route_point_count"]) >= 2)
+	assert(float(unloading_route_debug["remaining_route_length"]) > 0.0)
+	first_contract.leg_duration_sec = 0.0
+	await process_frame
 	assert(first_contract.contract_leg_index == 1)
 	assert(first_contract.stage == Mission.Stage.LOADING)
 	assert(first_contract.pickup_port_id == first_contract.contract_port_ids[1])
@@ -1927,6 +2004,8 @@ func _run() -> void:
 	assert(first_contract.stage == Mission.Stage.COMPLETED)
 	assert(game_manager.money == money_before_first_contract + first_contract.get_net_reward())
 	assert(fleet_manager.get_ship_completed_large_contract_count(starter_ship_id) == 1)
+	starter_map_ship.call("_update_route_visual", ShipRuntimeState.State.IDLE)
+	assert(not starter_route_line.visible)
 	assert(mission_result_toast.visible)
 	assert(mission_result_income_value.text == "+%d ₺" % first_contract.reward)
 	assert(mission_result_cost_value.text == "−%d ₺" % first_contract.operating_cost)

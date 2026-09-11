@@ -10,6 +10,7 @@ extends Area2D
 @onready var _mission_badge: Button = $MissionBadge
 
 const LOCKED_TINT := Color(0.35, 0.35, 0.35)
+const BASE_VISUAL_SCALE_MULTIPLIER := 1.08
 const SELECTED_SCALE_MULTIPLIER := 1.05
 const SELECTION_SCALE_TWEEN_SEC := 0.16
 const TUTORIAL_PULSE_SPEED := 4.0
@@ -28,6 +29,7 @@ func _ready() -> void:
 
 	if port_data.icon != null:
 		_icon.texture = port_data.icon
+	_icon.scale *= BASE_VISUAL_SCALE_MULTIPLIER
 	_base_icon_scale = _icon.scale
 	_selection_outline.texture = _icon.texture
 	_name_label.text = _translated_name()
@@ -67,11 +69,12 @@ func _on_language_changed(_locale: String) -> void:
 	_refresh_visuals()
 
 
-func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+func _on_input_event(viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	var touch_pressed: bool = event is InputEventScreenTouch and event.pressed
 	var mouse_pressed: bool = event is InputEventMouseButton and event.pressed
 	if touch_pressed or mouse_pressed:
 		EventBus.port_tapped.emit(port_data.id)
+		viewport.set_input_as_handled()
 
 
 func _on_mission_badge_pressed() -> void:

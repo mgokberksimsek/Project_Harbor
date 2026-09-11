@@ -136,6 +136,9 @@ func _apply_resume_progress(resume_unix: float = -1.0) -> void:
 	# emit completion for the same already-advanced mission a second time.
 	_last_pause_unix = -1.0
 	_apply_mission_progress(now, elapsed)
+	# Catch-up deliberately cannot dispatch new work. Once foregrounded, rebuild
+	# offers and resume enabled idle ships through the normal online scheduler.
+	MissionManager.call_deferred("resume_online_operations")
 
 
 func _apply_mission_progress(unix_time: float, elapsed_sec: float) -> void:

@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://db2deem7ot7ah" path="res://Scripts/port/port.gd" id="1_port_script"]
 
 [sub_resource type="CircleShape2D" id="1_port_shape"]
-radius = 32.0
+radius = 42.0
 
 [sub_resource type="Shader" id="Shader_selection_outline"]
 code = "shader_type canvas_item;\n\nuniform vec4 outline_color : source_color = vec4(0.31, 0.83, 1.0, 0.95);\n\nvoid fragment() {\n\tfloat texture_alpha = texture(TEXTURE, UV).a;\n\tCOLOR = vec4(outline_color.rgb, outline_color.a * texture_alpha);\n}\n"

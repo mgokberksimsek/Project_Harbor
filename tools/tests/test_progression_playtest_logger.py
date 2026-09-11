@@ -33,6 +33,92 @@ class ProgressionPlaytestWatcherTest(unittest.TestCase):
             MODULE.parse_playtest_line("PH_PLAYTEST|EVENT|BROKEN|{not json}")
         )
 
+    def test_reassembles_chunked_milestone_with_pipes_and_unicode(self) -> None:
+        payload = {
+            "event_id": "run-1:99",
+            "run_id": "run-1",
+            "ship_upgrade_state": "Yakamoz: S2/C1 | Rüzgâr: S1/C0",
+            "port_details": [{"port_name": "İzmir"}] * 20,
+        }
+        serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        pieces = [serialized[:100], serialized[100:300], serialized[300:]]
+        assembler = MODULE.PlaytestChunkAssembler()
+        record = None
+        for index in [1, 0, 2]:
+            line = (
+                "09-11 I/godot: PH_PLAYTEST_CHUNK|run-1:99|"
+                f"{index}|{len(pieces)}|MILESTONE|COMPANY_LEVEL_8|{pieces[index]}"
+            )
+            chunk = MODULE.parse_playtest_chunk(line)
+            self.assertIsNotNone(chunk)
+            record = assembler.append(chunk)
+        self.assertIsNotNone(record)
+        self.assertEqual(record.category, "MILESTONE")
+        self.assertEqual(record.name, "COMPANY_LEVEL_8")
+        self.assertEqual(record.payload, payload)
+
+    def test_offer_table_and_level_event_summary_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            session = MODULE.PlaytestSession(
+                Path(temporary_directory),
+                "run-1",
+                "2026-09-11 18:30:00",
+            )
+            presented = self._record(
+                "EVENT",
+                "MISSION_OFFER_PRESENTED",
+                "run-1:1",
+                active_sec=30,
+                offer_batch_id="run-1:offers:1",
+                offer_id="offer-1",
+                ship_id="starter_1",
+                ship_name="Yakamoz",
+                model="starter_freighter",
+                origin_port="samsun",
+                pickup_type="local",
+                pickup_is_local=True,
+                pickup_port="samsun",
+                destination_port="istanbul",
+                final_destination_port="trabzon",
+                contract_ports=["samsun", "istanbul", "trabzon"],
+                cargo_type="containers",
+                cargo_amount=2,
+                gross_reward=500,
+                operating_cost=50,
+                net_reward=450,
+                mission_duration=60.0,
+                net_per_min=450.0,
+                is_large_contract=True,
+                is_selected=False,
+            )
+            selected_values = presented.payload.copy()
+            selected_values.pop("event_id", None)
+            selected_values["is_selected"] = True
+            selected = self._record(
+                "EVENT",
+                "MISSION_OFFER_SELECTED",
+                "run-1:2",
+                **selected_values,
+            )
+            level_event = self._record(
+                "EVENT",
+                "COMPANY_LEVEL_CHANGED",
+                "run-1:3",
+                active_sec=120,
+                company_level=8,
+            )
+            self.assertTrue(session.append(presented))
+            self.assertTrue(session.append(selected))
+            self.assertTrue(session.append(level_event))
+            offer_rows = self._rows(session.mission_offers_path)
+            self.assertEqual(len(offer_rows), 2)
+            self.assertEqual(offer_rows[0]["pickup_type"], "local")
+            self.assertEqual(offer_rows[0]["net_per_min"], "450.0")
+            self.assertEqual(offer_rows[1]["offer_event"], "selected")
+            summary = session.summary_path.read_text(encoding="utf-8")
+            self.assertIn("Level 8 aktif süresi: 00:02:00", summary)
+            self.assertIn("COMPANY_LEVEL_CHANGED event fallback", summary)
+
     def test_csv_routing_summary_and_restart_deduplication(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_root = Path(temporary_directory)

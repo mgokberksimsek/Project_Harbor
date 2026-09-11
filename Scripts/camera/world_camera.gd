@@ -6,12 +6,12 @@ signal map_tapped(screen_position: Vector2)
 const WORLD_SIZE := Vector2(6000.0, 3500.0)
 # Normal interactive zoom limit. The whole-map cinematic view is a separate
 # camera state instead of weakening normal map navigation.
-const MIN_ZOOM := 0.40
+const MIN_ZOOM := 0.35
 const MAX_ZOOM := 1.30
 const ZOOM_STEP := 0.10
-const DOUBLE_TAP_OVERVIEW_ZOOM := 0.65
-const DOUBLE_TAP_NEAR_ZOOM := 1.00
-const DOUBLE_TAP_ZOOM_THRESHOLD := 0.90
+const DOUBLE_TAP_OVERVIEW_ZOOM := 0.50
+const DOUBLE_TAP_NEAR_ZOOM := 0.85
+const DOUBLE_TAP_ZOOM_THRESHOLD := 0.70
 const DOUBLE_TAP_ZOOM_DURATION_SEC := 0.28
 const WORLD_FOCUS_DURATION_SEC := 0.35
 const CINEMATIC_TRIGGER_PULL := 0.055
@@ -22,6 +22,8 @@ const PAN_DRAG_SENSITIVITY := 0.70
 const PAN_INERTIA_DAMPING := 3.5
 const PAN_INERTIA_MAX_SPEED_PX := 2400.0
 const PAN_INERTIA_STOP_SPEED_PX := 20.0
+const PAN_RELEASE_IDLE_GRACE_SEC := 0.035
+const PAN_RELEASE_IDLE_STOP_SEC := 0.14
 
 var _mouse_dragging := false
 var _mouse_pointer_active := false
@@ -33,6 +35,8 @@ var _touch_starts: Dictionary = {}
 var _touch_dragged: Dictionary = {}
 var _touch_consumed: Dictionary = {}
 var _pan_velocity_screen := Vector2.ZERO
+var _mouse_last_motion_msec := 0
+var _touch_last_motion_msec: Dictionary = {}
 var _zoom_tween: Tween = null
 var _cinematic_overview_active := false
 var _cinematic_exit_in_progress := false
@@ -171,6 +175,7 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
 			if not _is_cinematic_camera_locked():
 				_stop_zoom_animation()
 			_mouse_pointer_active = true
+			_mouse_last_motion_msec = Time.get_ticks_msec()
 			_mouse_press_position = event.position
 			_mouse_dragged = false
 			_mouse_tap_consumed = try_select_ship_at_screen_position(event.position)
@@ -185,6 +190,8 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
 			return
 		if not _mouse_pointer_active:
 			return
+		if _mouse_dragged:
+			_apply_release_velocity_age(_mouse_last_motion_msec)
 		var is_map_tap := not _mouse_tap_consumed \
 				and not _mouse_dragged \
 				and _mouse_press_position.distance_to(event.position) <= TAP_DRAG_THRESHOLD_PX
@@ -226,6 +233,7 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 		return
 	pan_by_screen_delta(event.relative * PAN_DRAG_SENSITIVITY)
 	_capture_pan_velocity(event.velocity, event.relative)
+	_mouse_last_motion_msec = Time.get_ticks_msec()
 	get_viewport().set_input_as_handled()
 
 
@@ -235,6 +243,7 @@ func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 		if not _is_cinematic_camera_locked():
 			_stop_zoom_animation()
 		_touches[event.index] = event.position
+		_touch_last_motion_msec[event.index] = Time.get_ticks_msec()
 		_touch_starts[event.index] = event.position
 		_touch_dragged[event.index] = false
 		_touch_consumed[event.index] = try_select_ship_at_screen_position(event.position)
@@ -255,7 +264,10 @@ func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 		var is_map_tap := not bool(_touch_consumed.get(event.index, false)) \
 				and not bool(_touch_dragged.get(event.index, false)) \
 				and start_position.distance_to(event.position) <= TAP_DRAG_THRESHOLD_PX
+		if bool(_touch_dragged.get(event.index, false)):
+			_apply_release_velocity_age(int(_touch_last_motion_msec.get(event.index, 0)))
 		_touches.erase(event.index)
+		_touch_last_motion_msec.erase(event.index)
 		_touch_starts.erase(event.index)
 		_touch_dragged.erase(event.index)
 		_touch_consumed.erase(event.index)
@@ -310,6 +322,7 @@ func _handle_screen_drag(event: InputEventScreenDrag) -> void:
 		if bool(_touch_dragged[event.index]) and not _is_cinematic_camera_locked():
 			pan_by_screen_delta(event.relative * PAN_DRAG_SENSITIVITY)
 			_capture_pan_velocity(event.velocity, event.relative)
+			_touch_last_motion_msec[event.index] = Time.get_ticks_msec()
 	else:
 		_stop_pan_inertia()
 		var indices := _touches.keys()
@@ -349,6 +362,35 @@ func _capture_pan_velocity(event_velocity: Vector2, relative: Vector2) -> void:
 		candidate = relative * 60.0
 	candidate *= PAN_DRAG_SENSITIVITY
 	_pan_velocity_screen = candidate.limit_length(PAN_INERTIA_MAX_SPEED_PX)
+
+
+func _apply_release_velocity_age(last_motion_msec: int) -> void:
+	if last_motion_msec <= 0:
+		_pan_velocity_screen = Vector2.ZERO
+		return
+	var idle_sec := maxf(
+		float(Time.get_ticks_msec() - last_motion_msec) / 1000.0,
+		0.0
+	)
+	_pan_velocity_screen = calculate_release_pan_velocity(
+		_pan_velocity_screen,
+		idle_sec
+	)
+
+
+func calculate_release_pan_velocity(velocity: Vector2, idle_sec: float) -> Vector2:
+	if idle_sec <= PAN_RELEASE_IDLE_GRACE_SEC:
+		return velocity
+	if idle_sec >= PAN_RELEASE_IDLE_STOP_SEC:
+		return Vector2.ZERO
+	var blend := clampf(
+		(idle_sec - PAN_RELEASE_IDLE_GRACE_SEC) \
+			/ (PAN_RELEASE_IDLE_STOP_SEC - PAN_RELEASE_IDLE_GRACE_SEC),
+		0.0,
+		1.0
+	)
+	var eased_blend := blend * blend * (3.0 - 2.0 * blend)
+	return velocity * (1.0 - eased_blend)
 
 
 func _stop_pan_inertia() -> void:

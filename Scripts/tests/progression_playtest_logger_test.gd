@@ -16,6 +16,7 @@ func _run() -> void:
 	var event_bus := root.get_node("/root/EventBus")
 	var game_manager := root.get_node("/root/GameManager")
 	var fleet_manager := root.get_node("/root/FleetManager")
+	var mission_manager := root.get_node("/root/MissionManager")
 	var port_manager := root.get_node("/root/PortManager")
 	var company_manager := root.get_node("/root/CompanyManager")
 
@@ -44,6 +45,18 @@ func _run() -> void:
 	assert(_record_count("EVENT", "SHIP_PURCHASED") == 1)
 	assert(_record_count("MILESTONE", "FIRST_SHIP_PURCHASED") == 1)
 	assert(_last_payload("EVENT", "SHIP_PURCHASED")["cost"] == 500)
+	mission_manager.refresh_offers()
+	assert(_record_count("EVENT", "MISSION_OFFER_PRESENTED") == 3)
+	assert(_record_count("EVENT", "MISSION_OFFER_BATCH") == 1)
+	var presented_offer: Mission = mission_manager.get_offers()[0]
+	var presented_payload := _last_payload("EVENT", "MISSION_OFFER_PRESENTED")
+	assert(presented_payload.has("pickup_is_local"))
+	assert(presented_payload.has("net_per_min"))
+	event_bus.mission_generated.emit(presented_offer)
+	assert(_record_count("EVENT", "MISSION_OFFER_SELECTED") == 1)
+	var selected_payload := _last_payload("EVENT", "MISSION_OFFER_SELECTED")
+	assert(selected_payload["offer_id"] == presented_offer.id)
+	assert(selected_payload["is_selected"])
 
 	var speed_cost: int = fleet_manager.get_ship_speed_upgrade_cost(starter_ship_id)
 	game_manager.add_money(speed_cost)

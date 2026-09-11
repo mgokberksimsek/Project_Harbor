@@ -53,6 +53,16 @@ func get_remaining_length() -> float:
 	return _get_polyline_length(_get_remaining_points())
 
 
+func get_debug_state() -> Dictionary:
+	return {
+		"route_point_count": _route_points.size(),
+		"route_progress": _progress,
+		"route_visible": visible,
+		"visible_dash_count": get_visible_dash_segments().size(),
+		"remaining_route_length": get_remaining_length(),
+	}
+
+
 func _draw() -> void:
 	var line_color := SELECTED_COLOR if _highlighted else UNSELECTED_COLOR
 	var line_width := SELECTED_WIDTH if _highlighted else UNSELECTED_WIDTH

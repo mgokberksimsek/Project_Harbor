@@ -8,6 +8,12 @@ extends Node
 signal record_emitted(category: String, record_name: String, payload: Dictionary)
 
 const LOG_PREFIX := "PH_PLAYTEST"
+const LOG_CHUNK_PREFIX := "PH_PLAYTEST_CHUNK"
+# Conservative character bound keeps localized UTF-8 records below logcat's
+# per-entry byte limit after protocol metadata is included.
+const LOG_CHUNK_CHARACTER_LIMIT := 700
+const ROUTE_DEBUG_SAMPLE_INTERVAL_SEC := 0.5
+const ROUTE_DEBUG_PROGRESS_STEPS := 10
 const STATE_VERSION := 1
 const DEFAULT_STATE_PATH := "user://progression_playtest_state.json"
 const DEFAULT_GAME_SAVE_PATH := "user://savegame.json"
@@ -40,6 +46,9 @@ var _run_started_unix := 0.0
 var _active_sec := 0.0
 var _event_sequence := 0
 var _milestones: Dictionary = {}
+var _offer_batch_by_id: Dictionary = {}
+var _route_debug_signatures: Dictionary = {}
+var _route_debug_elapsed := 0.0
 
 var _normal_missions_completed := 0
 var _large_contracts_completed := 0
@@ -68,6 +77,8 @@ func _ready() -> void:
 	EventBus.fresh_game_started.connect(_on_fresh_game_started)
 	EventBus.game_loaded.connect(_on_game_loaded)
 	EventBus.money_changed.connect(_on_money_changed)
+	EventBus.mission_offers_updated.connect(_on_mission_offers_updated)
+	EventBus.mission_generated.connect(_on_mission_generated)
 	EventBus.mission_completed.connect(_on_mission_completed)
 	EventBus.ship_purchased.connect(_on_ship_purchased)
 	EventBus.port_unlocked.connect(_on_port_unlocked)
@@ -79,8 +90,15 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if _run_active and _foreground:
-		_active_sec += maxf(delta, 0.0)
+	if not _run_active or not _foreground:
+		return
+	var safe_delta := maxf(delta, 0.0)
+	_active_sec += safe_delta
+	_route_debug_elapsed += safe_delta
+	if _route_debug_elapsed < ROUTE_DEBUG_SAMPLE_INTERVAL_SEC:
+		return
+	_route_debug_elapsed = 0.0
+	_sample_large_contract_routes()
 
 
 func _notification(what: int) -> void:
@@ -395,6 +413,126 @@ func _record_company_level_changed(new_level: int, previous_level: int) -> void:
 	_save_continuity_state()
 
 
+func _on_mission_offers_updated(offers: Array) -> void:
+	if not _can_record_runtime_event():
+		return
+	var batch_id := "%s:offers:%d" % [_run_id, _event_sequence + 1]
+	var offers_by_ship := {}
+	for idle_ship_id in FleetManager.get_idle_ship_ids():
+		offers_by_ship[String(idle_ship_id)] = 0
+	var valid_offer_count := 0
+	for candidate in offers:
+		if not (candidate is Mission):
+			continue
+		var offer := candidate as Mission
+		if FleetManager.get_ship_state(offer.offered_ship_id) \
+				!= ShipRuntimeState.State.IDLE:
+			continue
+		_offer_batch_by_id[offer.id] = batch_id
+		var ship_key := String(offer.offered_ship_id)
+		offers_by_ship[ship_key] = int(offers_by_ship.get(ship_key, 0)) + 1
+		valid_offer_count += 1
+		_emit_event(
+			"MISSION_OFFER_PRESENTED",
+			_build_mission_offer_payload(offer, batch_id, false)
+		)
+	_emit_event("MISSION_OFFER_BATCH", {
+		"offer_batch_id": batch_id,
+		"offer_count": valid_offer_count,
+		"idle_ship_count": FleetManager.get_idle_ship_ids().size(),
+		"offers_by_ship": offers_by_ship,
+	})
+
+
+func _on_mission_generated(mission: Mission) -> void:
+	if not _can_record_runtime_event() or mission == null:
+		return
+	_emit_event("MISSION_OFFER_SELECTED", _build_mission_offer_payload(
+		mission,
+		String(_offer_batch_by_id.get(mission.id, "")),
+		true
+	))
+
+
+func _build_mission_offer_payload(
+		mission: Mission,
+		offer_batch_id: String,
+		is_selected: bool
+) -> Dictionary:
+	var ship_id := mission.offered_ship_id
+	var ship_data: ShipData = FleetManager.get_ship_data(ship_id)
+	var cargo_data: CargoTypeData = MissionManager.get_cargo_type(
+		mission.cargo_type_id
+	)
+	var contract_ports: Array[String] = []
+	for contract_port_id in mission.contract_port_ids:
+		contract_ports.append(String(contract_port_id))
+	return {
+		"offer_batch_id": offer_batch_id,
+		"offer_id": mission.id,
+		"ship_id": String(ship_id),
+		"ship_name": FleetManager.get_ship_name(ship_id),
+		"model": String(ship_data.id) if ship_data != null else "",
+		"origin_port": String(mission.origin_port_id),
+		"pickup_port": String(mission.pickup_port_id),
+		"destination_port": String(mission.delivery_port_id),
+		"final_destination_port": String(mission.get_final_delivery_port_id()),
+		"contract_ports": contract_ports,
+		"pickup_is_local": mission.origin_port_id == mission.pickup_port_id,
+		"pickup_type": "local" \
+			if mission.origin_port_id == mission.pickup_port_id else "remote",
+		"cargo_type": String(mission.cargo_type_id),
+		"cargo_name": cargo_data.display_name if cargo_data != null else "",
+		"cargo_amount": mission.cargo_amount,
+		"gross_reward": mission.reward,
+		"operating_cost": mission.operating_cost,
+		"net_reward": mission.get_net_reward(),
+		"mission_duration": mission.estimated_duration_sec,
+		"net_per_min": float(mission.get_net_reward()) \
+			/ maxf(mission.estimated_duration_sec, 0.001) * 60.0,
+		"is_large_contract": mission.is_large_contract(),
+		"is_selected": is_selected,
+		"automation_enabled": FleetManager.is_ship_automation_enabled(ship_id),
+	}
+
+
+func _sample_large_contract_routes() -> void:
+	if not _can_record_runtime_event():
+		return
+	var active_ship_ids := {}
+	for ship_id in FleetManager.get_all_ship_ids():
+		var mission := FleetManager.get_ship_mission(ship_id)
+		if mission == null or not mission.is_large_contract():
+			continue
+		var ship_node := FleetManager.get_ship_node(ship_id) as Ship
+		if ship_node == null:
+			continue
+		var ship_key := String(ship_id)
+		active_ship_ids[ship_key] = true
+		var route_state := ship_node.get_route_visual_debug_state()
+		var progress_bucket := clampi(
+			floori(float(route_state.get("current_leg_progress", 0.0)) \
+				* ROUTE_DEBUG_PROGRESS_STEPS),
+			0,
+			ROUTE_DEBUG_PROGRESS_STEPS
+		)
+		route_state["progress_bucket"] = progress_bucket
+		var signature := "%s|%s|%s|%s|%s" % [
+			route_state.get("ship_state", -1),
+			route_state.get("contract_leg_index", -1),
+			progress_bucket,
+			route_state.get("route_point_count", 0),
+			route_state.get("route_visible", false),
+		]
+		if String(_route_debug_signatures.get(ship_key, "")) == signature:
+			continue
+		_route_debug_signatures[ship_key] = signature
+		_emit_event("LARGE_CONTRACT_ROUTE_STATE", route_state)
+	for recorded_ship_id in _route_debug_signatures.keys():
+		if not active_ship_ids.has(recorded_ship_id):
+			_route_debug_signatures.erase(recorded_ship_id)
+
+
 func _on_mission_completed(mission: Mission) -> void:
 	if not _run_active or mission == null:
 		return
@@ -464,12 +602,33 @@ func _emit_record(category: String, record_name: String, details: Dictionary) ->
 	payload.merge(details, true)
 	payload["event_id"] = "%s:%d" % [_run_id, _event_sequence]
 	record_emitted.emit(category, record_name, payload.duplicate(true))
-	print("%s|%s|%s|%s" % [
+	var json_payload := JSON.stringify(payload)
+	var regular_line := "%s|%s|%s|%s" % [
 		LOG_PREFIX,
 		category,
 		record_name,
-		JSON.stringify(payload),
-	])
+		json_payload,
+	]
+	if regular_line.length() <= LOG_CHUNK_CHARACTER_LIMIT:
+		print(regular_line)
+		return
+	var chunk_count := ceili(
+		float(json_payload.length()) / float(LOG_CHUNK_CHARACTER_LIMIT)
+	)
+	for chunk_index in range(chunk_count):
+		var chunk := json_payload.substr(
+			chunk_index * LOG_CHUNK_CHARACTER_LIMIT,
+			LOG_CHUNK_CHARACTER_LIMIT
+		)
+		print("%s|%s|%d|%d|%s|%s|%s" % [
+			LOG_CHUNK_PREFIX,
+			payload["event_id"],
+			chunk_index,
+			chunk_count,
+			category,
+			record_name,
+			chunk,
+		])
 
 
 func _build_common_payload() -> Dictionary:
@@ -629,6 +788,9 @@ func _reset_run_state() -> void:
 	_active_sec = 0.0
 	_event_sequence = 0
 	_milestones.clear()
+	_offer_batch_by_id.clear()
+	_route_debug_signatures.clear()
+	_route_debug_elapsed = 0.0
 	_normal_missions_completed = 0
 	_large_contracts_completed = 0
 	_total_net_mission_earnings = 0

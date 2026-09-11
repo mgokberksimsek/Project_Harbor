@@ -17,7 +17,8 @@ func _run() -> void:
 
 	var world_scene := load("res://Scenes/world.tscn") as PackedScene
 	assert(world_scene != null)
-	root.add_child(world_scene.instantiate())
+	var world := world_scene.instantiate()
+	root.add_child(world)
 	await process_frame
 	await process_frame
 
@@ -25,6 +26,12 @@ func _run() -> void:
 	assert(ship_data != null)
 	event_bus.mission_completed.connect(_on_mission_completed)
 
+	await _test_loaded_idle_ships_receive_offers(
+		fleet_manager,
+		mission_manager,
+		world,
+		ship_data
+	)
 	_test_surplus_time_reaches_next_leg(fleet_manager, mission_manager, ship_data)
 	_test_multiple_transitions_stop_mid_mission(fleet_manager, mission_manager, ship_data)
 	await _test_full_standard_completion_once(
@@ -73,6 +80,39 @@ func _test_surplus_time_reaches_next_leg(
 		7.0
 	))
 	_cleanup_test_ship(fleet_manager, mission_manager, ship_id, mission.id)
+
+
+func _test_loaded_idle_ships_receive_offers(
+		fleet_manager: Node,
+		mission_manager: Node,
+		world: Node,
+		ship_data: ShipData
+) -> void:
+	var first := ShipRuntimeState.new()
+	first.ship_id = &"loaded_idle_mersin"
+	first.model_id = ship_data.id
+	first.current_port_id = &"mersin"
+	var second := ShipRuntimeState.new()
+	second.ship_id = &"loaded_idle_izmir"
+	second.model_id = ship_data.id
+	second.current_port_id = &"izmir"
+	fleet_manager.apply_save_state({
+		String(first.ship_id): first.to_dict(),
+		String(second.ship_id): second.to_dict(),
+	})
+	mission_manager.apply_save_state({"offers": [], "active_missions": []})
+	mission_manager.call("_on_game_loaded")
+	await process_frame
+	await process_frame
+	var counts := {first.ship_id: 0, second.ship_id: 0}
+	for offer in mission_manager.get_offers():
+		counts[offer.offered_ship_id] = int(counts.get(offer.offered_ship_id, 0)) + 1
+	assert(counts[first.ship_id] == mission_manager.OFFER_COUNT_PER_SHIP)
+	assert(counts[second.ship_id] == mission_manager.OFFER_COUNT_PER_SHIP)
+	var cached_offers: Array = world.get("_mission_offers")
+	assert(cached_offers.size() == mission_manager.OFFER_COUNT_PER_SHIP * 2)
+	fleet_manager.reset_state()
+	mission_manager.reset_state()
 
 
 func _test_multiple_transitions_stop_mid_mission(
@@ -127,9 +167,10 @@ func _test_full_standard_completion_once(
 	save_manager.set("_last_pause_unix", start_unix + 5.0)
 	save_manager.call("_apply_resume_progress", start_unix + 1000.0)
 	await process_frame
-	assert(fleet_manager.get_ship_state(ship_id) == ShipRuntimeState.State.IDLE)
-	assert(fleet_manager.get_ship_mission(ship_id) == null)
-	assert(mission_manager.get_offers().is_empty())
+	var resumed_mission: Mission = fleet_manager.get_ship_mission(ship_id)
+	assert(resumed_mission != null)
+	assert(resumed_mission != mission)
+	assert(fleet_manager.get_ship_state(ship_id) != ShipRuntimeState.State.IDLE)
 	assert(mission.stage == Mission.Stage.COMPLETED)
 	assert(game_manager.money == money_before + mission.get_net_reward())
 	assert(runtime.completed_mission_count == completed_before + 1)
@@ -137,6 +178,7 @@ func _test_full_standard_completion_once(
 
 	# A duplicate resume notification has no pause timestamp and is a no-op.
 	save_manager.call("_apply_resume_progress", start_unix + 2000.0)
+	assert(fleet_manager.get_ship_mission(ship_id) == resumed_mission)
 	assert(game_manager.money == money_before + mission.get_net_reward())
 	assert(runtime.completed_mission_count == completed_before + 1)
 	assert(_completion_counts.get(mission.id, 0) == 1)
@@ -288,6 +330,9 @@ func _cleanup_test_ship(
 	var fleet_states: Dictionary = fleet_manager.get("_states")
 	var fleet_data: Dictionary = fleet_manager.get("_data")
 	var active_missions: Dictionary = mission_manager.get("_active_missions")
+	var current_mission: Mission = fleet_manager.get_ship_mission(ship_id)
+	if current_mission != null:
+		active_missions.erase(current_mission.id)
 	fleet_states.erase(ship_id)
 	fleet_data.erase(ship_id)
 	active_missions.erase(mission_id)

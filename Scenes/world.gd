@@ -54,7 +54,7 @@ var _mission_result_mission: Mission
 var _mission_result_tween: Tween
 
 const MAP_SHIP_TAP_RADIUS_PX := 48.0
-const MAP_PORT_TAP_RADIUS_PX := 48.0
+const MAP_PORT_TAP_RADIUS_PX := 56.0
 const TUTORIAL_PULSE_SPEED := 4.0
 const DEBUG_MONEY_AMOUNT := 10000
 const SHIP_RENAME_DIALOG_SIZE := Vector2i(300, 114)
@@ -70,7 +70,7 @@ func _handle_map_tap(screen_position: Vector2) -> void:
 		_collapse_management_panels()
 		get_viewport().set_input_as_handled()
 		return
-	if _is_port_at_screen_position(screen_position):
+	if try_select_port_at_screen_position(screen_position):
 		_collapse_management_panels()
 		return
 	if not GameManager.is_tutorial_completed():
@@ -99,17 +99,24 @@ func try_select_ship_at_screen_position(screen_position: Vector2) -> bool:
 	return true
 
 
-func _is_port_at_screen_position(screen_position: Vector2) -> bool:
+func try_select_port_at_screen_position(screen_position: Vector2) -> bool:
 	var canvas_transform := get_viewport().get_canvas_transform()
 	var maximum_distance_squared := MAP_PORT_TAP_RADIUS_PX * MAP_PORT_TAP_RADIUS_PX
+	var nearest_port_id: StringName = &""
+	var nearest_distance_squared := maximum_distance_squared
 	for port_id in PortManager.get_all_port_ids():
 		var port_node := PortManager.get_port_node(port_id)
 		if port_node == null or not port_node.is_visible_in_tree():
 			continue
 		var port_screen_position := canvas_transform * port_node.global_position
-		if screen_position.distance_squared_to(port_screen_position) <= maximum_distance_squared:
-			return true
-	return false
+		var distance_squared := screen_position.distance_squared_to(port_screen_position)
+		if distance_squared <= nearest_distance_squared:
+			nearest_distance_squared = distance_squared
+			nearest_port_id = port_id
+	if nearest_port_id == &"":
+		return false
+	EventBus.port_tapped.emit(nearest_port_id)
+	return true
 
 
 func clear_map_selection() -> void:
@@ -182,6 +189,7 @@ func _ready() -> void:
 		_on_company_value_info_confirmed
 	)
 	_management_dock.shop_opened.connect(_on_ship_shop_expanded)
+	_management_dock.panel_opened.connect(_on_management_panel_opened)
 	_company_progress_label.pressed.connect(_on_company_progress_pressed)
 	_debug_level_up_button.pressed.connect(_on_debug_level_up_pressed)
 	_debug_money_button.pressed.connect(_on_debug_money_pressed)
@@ -369,7 +377,18 @@ func _on_company_level_changed(new_level: int, previous_level: int) -> void:
 	if _company_progress_panel.is_open():
 		_show_company_progress_panel()
 	if new_level > previous_level:
-		_instruction_label.text = tr("INSTRUCTION_LEVEL_UP") % new_level
+		if previous_level < MissionManager.LARGE_CONTRACT_REQUIRED_COMPANY_LEVEL \
+				and new_level >= MissionManager.LARGE_CONTRACT_REQUIRED_COMPANY_LEVEL:
+			# Asset changes such as a ship purchase finish by showing their own
+			# feedback. Defer this milestone cue so the unlock is the final message
+			# the player sees for the Level 4 transition.
+			call_deferred("_show_large_contracts_unlocked_feedback")
+		else:
+			_instruction_label.text = tr("INSTRUCTION_LEVEL_UP") % new_level
+
+
+func _show_large_contracts_unlocked_feedback() -> void:
+	_instruction_label.text = tr("INSTRUCTION_LARGE_CONTRACTS_UNLOCKED")
 
 
 func _on_debug_level_up_pressed() -> void:
@@ -1229,6 +1248,14 @@ func _on_company_value_info_confirmed() -> void:
 func _on_ship_shop_expanded() -> void:
 	if GameManager.tutorial_step == GameManager.TutorialStep.OPEN_SHIP_SHOP:
 		GameManager.set_tutorial_step(GameManager.TutorialStep.PURCHASE_SHIP)
+
+
+func _on_management_panel_opened() -> void:
+	_open_mission_port_id = &""
+	_mission_offer_panel.close_panel()
+	_port_unlock_panel.close_panel()
+	_company_progress_panel.close_panel()
+	EventBus.port_selection_changed.emit(&"")
 
 
 func _on_skip_tutorial_pressed() -> void:

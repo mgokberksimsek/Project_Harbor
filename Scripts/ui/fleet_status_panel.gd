@@ -31,6 +31,7 @@ signal rename_requested(ship_id: StringName)
 
 const COLLAPSED_HEIGHT := 56.0
 const EXPANDED_HEIGHT := 290.0
+const IDLE_CARD_COLOR := Color("#FFF0B0")
 
 var _cards: Dictionary = {}
 var _entries: Dictionary = {}
@@ -120,7 +121,7 @@ func select_ship(ship_id: StringName) -> void:
 	_selected_ship_id = ship_id
 	for card_ship_id in _cards.keys():
 		var button: Button = _cards[card_ship_id]
-		button.modulate = Color("#BDE3FF") if card_ship_id == ship_id else Color.WHITE
+		button.modulate = _get_card_color(card_ship_id, card_ship_id == ship_id)
 	_update_selected_details()
 
 
@@ -138,12 +139,14 @@ func _create_card(ship_id: StringName) -> Button:
 
 
 func _update_card(button: Button, entry: Dictionary, selected: bool) -> void:
+	var is_idle := not bool(entry.get("has_mission", false))
 	var remaining_text: String = tr("REMAINING") % _format_duration(
 		float(entry.get("remaining_sec", 0.0))
 	) if bool(entry.get("has_mission", false)) else String(
 		entry.get("state_text", "")
 	)
-	button.text = "%s · %s\n%s" % [
+	button.text = "%s%s · %s\n%s" % [
+		"● " if is_idle else "",
 		entry.get("ship_name", entry.get("ship_id", tr("SHIP_DEFAULT"))),
 		entry.get("model_name", tr("SHIP_DEFAULT")),
 		remaining_text,
@@ -152,8 +155,15 @@ func _update_card(button: Button, entry: Dictionary, selected: bool) -> void:
 		entry.get("route_text", ""),
 		entry.get("cargo_text", tr("NO_CARGO")),
 	]
-	button.modulate = Color("#BDE3FF") if selected else Color.WHITE
+	button.modulate = _get_card_color(StringName(entry.get("ship_id", "")), selected)
 	button.disabled = not _interaction_enabled
+
+
+func _get_card_color(ship_id: StringName, selected: bool) -> Color:
+	if selected:
+		return Color("#BDE3FF")
+	var entry: Dictionary = _entries.get(ship_id, {})
+	return IDLE_CARD_COLOR if not bool(entry.get("has_mission", false)) else Color.WHITE
 
 
 func _update_summary(entries: Array) -> void:

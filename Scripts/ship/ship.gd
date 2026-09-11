@@ -632,6 +632,15 @@ func _append_future_contract_routes(
 			points.append(next_route[point_index])
 
 
+func _build_next_contract_route(mission: Mission) -> PackedVector2Array:
+	if mission == null or not mission.has_next_contract_delivery():
+		return PackedVector2Array()
+	var future_ports := mission.get_future_contract_port_ids()
+	if future_ports.size() < 2:
+		return PackedVector2Array()
+	return PortManager.get_smoothed_route_points(future_ports[0], future_ports[1])
+
+
 func _clear_mission_preview() -> void:
 	_mission_preview_route_points.clear()
 	_preview_pickup_route_length = 0.0
@@ -747,8 +756,49 @@ func _update_route_visual(state: ShipRuntimeState.State) -> void:
 			preview_progress,
 			_is_selected
 		)
+	elif state == ShipRuntimeState.State.UNLOADING \
+			and mission.has_next_contract_delivery():
+		# The completed segment may disappear, but a contract that still has a
+		# delivery must keep the next leg visible during cargo transfer.
+		_route_line.set_route(_build_next_contract_route(mission), 0.0, _is_selected)
 	else:
 		_route_line.clear_route()
+
+
+func get_route_visual_debug_state() -> Dictionary:
+	var state: ShipRuntimeState.State = FleetManager.get_ship_state(ship_id)
+	var state_names := ShipRuntimeState.State.keys()
+	var state_name := "UNKNOWN"
+	if state >= 0 and state < state_names.size():
+		state_name = String(state_names[state])
+	var result := {
+		"ship_id": String(ship_id),
+		"ship_name": FleetManager.get_ship_name(ship_id),
+		"ship_state": state,
+		"ship_state_name": state_name,
+		"sailing_route_point_count": _sailing_route_points.size(),
+		"preview_route_point_count": _mission_preview_route_points.size(),
+	}
+	var mission := FleetManager.get_ship_mission(ship_id)
+	if mission != null:
+		var stage_names := Mission.Stage.keys()
+		var stage_name := "UNKNOWN"
+		if mission.stage >= 0 and mission.stage < stage_names.size():
+			stage_name = String(stage_names[mission.stage])
+		var contract_ports: Array[String] = []
+		for port_id in mission.contract_port_ids:
+			contract_ports.append(String(port_id))
+		result.merge({
+			"mission_id": mission.id,
+			"mission_stage": mission.stage,
+			"mission_stage_name": stage_name,
+			"contract_leg_index": mission.contract_leg_index,
+			"contract_delivery_number": mission.contract_leg_index + 1,
+			"contract_ports": contract_ports,
+			"current_leg_progress": mission.get_leg_progress(),
+		}, true)
+	result.merge(_route_line.get_debug_state(), true)
+	return result
 
 
 func _scale_current_route_progress_to_preview(progress: float) -> float:

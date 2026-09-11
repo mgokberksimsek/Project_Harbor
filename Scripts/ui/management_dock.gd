@@ -2,6 +2,7 @@ class_name ManagementDock
 extends PanelContainer
 
 signal shop_opened()
+signal panel_opened()
 
 @onready var fleet_panel: FleetStatusPanel = \
 	$Margin/VBox/Content/FleetStatusPanel
@@ -76,9 +77,12 @@ func is_shop_open() -> bool:
 
 func open_fleet() -> void:
 	if _fleet_interaction_enabled:
+		var was_open := _fleet_open
 		_fleet_open = true
 		_shop_open = false
 		_refresh_open_panels()
+		if not was_open:
+			panel_opened.emit()
 
 
 func open_shop() -> void:
@@ -88,6 +92,7 @@ func open_shop() -> void:
 		_fleet_open = false
 		_refresh_open_panels()
 		if not was_open:
+			panel_opened.emit()
 			shop_opened.emit()
 
 
@@ -146,6 +151,8 @@ func _on_fleet_tab_pressed() -> void:
 	if _fleet_open:
 		_shop_open = false
 	_refresh_open_panels()
+	if _fleet_open:
+		panel_opened.emit()
 
 
 func _on_shop_tab_pressed() -> void:
@@ -157,6 +164,7 @@ func _on_shop_tab_pressed() -> void:
 		_fleet_open = false
 	_refresh_open_panels()
 	if opening:
+		panel_opened.emit()
 		shop_opened.emit()
 
 

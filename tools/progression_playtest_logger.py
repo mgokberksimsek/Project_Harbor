@@ -27,6 +27,7 @@ from typing import Any, Iterable
 
 
 LOG_PREFIX = "PH_PLAYTEST|"
+LOG_CHUNK_PREFIX = "PH_PLAYTEST_CHUNK|"
 DEFAULT_PACKAGE = "com.gokberksimsek.projectharbor"
 
 MILESTONE_COLUMNS = [
@@ -93,6 +94,37 @@ EVENT_COLUMNS = [
     "details",
 ]
 
+MISSION_OFFER_COLUMNS = [
+    "event_id",
+    "run_id",
+    "timestamp",
+    "active_time",
+    "elapsed_time",
+    "offer_event",
+    "offer_batch_id",
+    "offer_id",
+    "ship_id",
+    "ship_name",
+    "model",
+    "origin_port",
+    "pickup_type",
+    "pickup_is_local",
+    "pickup_port",
+    "destination_port",
+    "final_destination_port",
+    "contract_ports",
+    "cargo_type",
+    "cargo_amount",
+    "gross_reward",
+    "operating_cost",
+    "net_reward",
+    "estimated_duration_sec",
+    "net_per_min",
+    "is_large_contract",
+    "is_selected",
+    "automation_enabled",
+]
+
 SHIP_UPGRADE_COLUMNS = [
     "event_id",
     "run_id",
@@ -137,6 +169,16 @@ class PlaytestRecord:
     payload: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class PlaytestChunk:
+    event_id: str
+    index: int
+    count: int
+    category: str
+    name: str
+    data: str
+
+
 def parse_playtest_line(line: str) -> PlaytestRecord | None:
     """Extract one PH_PLAYTEST record from a raw or decorated logcat line."""
     marker_index = line.find(LOG_PREFIX)
@@ -153,6 +195,57 @@ def parse_playtest_line(line: str) -> PlaytestRecord | None:
     if not isinstance(payload, dict):
         return None
     return PlaytestRecord(parts[1], parts[2], payload)
+
+
+def parse_playtest_chunk(line: str) -> PlaytestChunk | None:
+    """Extract one bounded record fragment from a raw or decorated logcat line."""
+    marker_index = line.find(LOG_CHUNK_PREFIX)
+    if marker_index < 0:
+        return None
+    structured = line[marker_index:].rstrip("\r\n")
+    parts = structured.split("|", 6)
+    if len(parts) != 7 or parts[0] != "PH_PLAYTEST_CHUNK":
+        return None
+    try:
+        index = int(parts[2])
+        count = int(parts[3])
+    except ValueError:
+        return None
+    if not parts[1] or count <= 0 or count > 256 or index < 0 or index >= count:
+        return None
+    if parts[4] not in {"CONTROL", "EVENT", "MILESTONE"} or not parts[5]:
+        return None
+    return PlaytestChunk(parts[1], index, count, parts[4], parts[5], parts[6])
+
+
+class PlaytestChunkAssembler:
+    """Reassembles oversized Godot records split below logcat's entry limit."""
+
+    MAX_PENDING_RECORDS = 256
+
+    def __init__(self) -> None:
+        self._pending: dict[str, dict[str, Any]] = {}
+
+    def append(self, chunk: PlaytestChunk) -> PlaytestRecord | None:
+        identity = (chunk.count, chunk.category, chunk.name)
+        pending = self._pending.get(chunk.event_id)
+        if pending is None or pending["identity"] != identity:
+            pending = {"identity": identity, "parts": {}}
+            self._pending[chunk.event_id] = pending
+            while len(self._pending) > self.MAX_PENDING_RECORDS:
+                del self._pending[next(iter(self._pending))]
+        pending["parts"][chunk.index] = chunk.data
+        if len(pending["parts"]) != chunk.count:
+            return None
+        serialized = "".join(pending["parts"][index] for index in range(chunk.count))
+        del self._pending[chunk.event_id]
+        try:
+            payload = json.loads(serialized)
+        except json.JSONDecodeError:
+            return None
+        if not isinstance(payload, dict):
+            return None
+        return PlaytestRecord(chunk.category, chunk.name, payload)
 
 
 def format_duration(seconds: Any) -> str:
@@ -203,11 +296,13 @@ class PlaytestSession:
         self.metadata_path = self.path / ".playtest_session.json"
         self.milestones_path = self.path / "milestones.csv"
         self.events_path = self.path / "events.csv"
+        self.mission_offers_path = self.path / "mission_offers.csv"
         self.ship_upgrades_path = self.path / "ship_upgrades.csv"
         self.port_upgrades_path = self.path / "port_upgrades.csv"
         self.summary_path = self.path / "summary.md"
         self._ensure_csv(self.milestones_path, MILESTONE_COLUMNS)
         self._ensure_csv(self.events_path, EVENT_COLUMNS)
+        self._ensure_csv(self.mission_offers_path, MISSION_OFFER_COLUMNS)
         self._ensure_csv(self.ship_upgrades_path, SHIP_UPGRADE_COLUMNS)
         self._ensure_csv(self.port_upgrades_path, PORT_UPGRADE_COLUMNS)
         self.seen_event_ids = self._load_seen_event_ids()
@@ -295,6 +390,15 @@ class PlaytestSession:
                     PORT_UPGRADE_COLUMNS,
                     self._port_upgrade_row(record),
                 )
+            elif record.name in {
+                "MISSION_OFFER_PRESENTED",
+                "MISSION_OFFER_SELECTED",
+            }:
+                self._append_csv(
+                    self.mission_offers_path,
+                    MISSION_OFFER_COLUMNS,
+                    self._mission_offer_row(record),
+                )
         else:
             return False
 
@@ -345,6 +449,23 @@ class PlaytestSession:
         row.update(self._base_row(payload))
         row["event_type"] = record.name
         row["details"] = _compact_json(payload)
+        return row
+
+    def _mission_offer_row(self, record: PlaytestRecord) -> dict[str, Any]:
+        payload = record.payload
+        row = {column: payload.get(column, "") for column in MISSION_OFFER_COLUMNS}
+        row.update(self._base_row(payload))
+        row.update(
+            {
+                "offer_event": (
+                    "selected"
+                    if record.name == "MISSION_OFFER_SELECTED"
+                    else "presented"
+                ),
+                "contract_ports": _join_values(payload.get("contract_ports", [])),
+                "estimated_duration_sec": payload.get("mission_duration", ""),
+            }
+        )
         return row
 
     def _ship_upgrade_row(self, record: PlaytestRecord) -> dict[str, Any]:
@@ -464,6 +585,18 @@ class PlaytestSession:
             (row for row in milestones if row.get("milestone") == "COMPANY_LEVEL_8"),
             None,
         )
+        level_8_from_event = False
+        if level_8_row is None:
+            level_8_row = next(
+                (
+                    row
+                    for row in events
+                    if row.get("event_type") == "COMPANY_LEVEL_CHANGED"
+                    and _int(row.get("company_level")) >= 8
+                ),
+                None,
+            )
+            level_8_from_event = level_8_row is not None
         average_per_active_minute = (
             total_net / (latest_active_sec / 60.0) if latest_active_sec > 0.0 else 0.0
         )
@@ -505,6 +638,11 @@ class PlaytestSession:
                 "## Koşu özeti",
                 "",
                 f"- Level 8 aktif süresi: {level_8_row.get('active_time') if level_8_row else 'henüz ulaşılmadı'}",
+                *(
+                    ["- Level 8 kaynağı: COMPANY_LEVEL_CHANGED event fallback"]
+                    if level_8_from_event
+                    else []
+                ),
                 f"- Toplam mission: {len(mission_events)}",
                 f"- Toplam normal mission: {sum(row.get('event_type') == 'MISSION_COMPLETED' for row in mission_events)}",
                 f"- Toplam Large Contract: {sum(row.get('event_type') == 'LARGE_CONTRACT_COMPLETED' for row in mission_events)}",
@@ -748,6 +886,7 @@ def run_watcher(args: argparse.Namespace) -> int:
     output_root = Path(args.output_root).resolve()
     sessions: dict[str, PlaytestSession] = {}
     current_session: PlaytestSession | None = None
+    chunk_assembler = PlaytestChunkAssembler()
     try:
         while True:
             try:
@@ -776,6 +915,10 @@ def run_watcher(args: argparse.Namespace) -> int:
                 continue
 
             record = parse_playtest_line(value)
+            if record is None:
+                chunk = parse_playtest_chunk(value)
+                if chunk is not None:
+                    record = chunk_assembler.append(chunk)
             if record is None:
                 continue
             run_id = str(record.payload.get("run_id", ""))

@@ -105,6 +105,8 @@ Oyunu normal progression akışıyla oynayın. Watcher şunları otomatik kayded
 - ship speed/capacity ve port upgrade;
 - automation unlock/enable/disable;
 - Company Level değişimleri;
+- her refresh'te sunulan mission offer'lar ve kabul edilen seçenek;
+- Large Contract rota state/progress/point-count/visibility değişimleri;
 - istenen Level 1–8 milestone'ları.
 
 Uygulama background'a giderken active time durur. Elapsed time fresh run'ın Unix
@@ -140,6 +142,7 @@ Her fresh run repository altındaki ayrı timestamp klasörüne yazılır:
 playtests/2026-09-11_18-30-00/
 ├── milestones.csv
 ├── events.csv
+├── mission_offers.csv
 ├── ship_upgrades.csv
 ├── port_upgrades.csv
 ├── summary.md
@@ -152,6 +155,11 @@ eşleştirmesi içindir. `playtests/` git tarafından ignore edilir.
 Milestone CSV ayrıca `ship_upgrade_details` ve `port_details` JSON alanlarını
 tutar. Böylece compact özetin yanında her asset'in id, ad, level, effective
 değer ve koşu içi yatırım toplamları kaybolmaz.
+
+`mission_offers.csv`, her sunulan ve seçilen teklif için batch/offer id,
+local/remote pickup, rota, gross/cost/net, tahmini süre ve net/dakika alanlarını
+tutar. Büyük logger kayıtları Android logcat satır sınırına takılmamak için
+parçalara ayrılır; watcher bu parçaları CSV'ye yazmadan önce yeniden birleştirir.
 
 ## Sorun giderme
 

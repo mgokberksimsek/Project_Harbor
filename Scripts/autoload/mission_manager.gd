@@ -411,6 +411,13 @@ func _refresh_offers_and_dispatch_automated_ships() -> void:
 		_dispatch_automated_ship(ship_id)
 
 
+## Restores online-only work after loading or returning to the foreground.
+## Offline catch-up can finish existing missions, but it never starts a new
+## automated chain while the application is away.
+func resume_online_operations() -> void:
+	_refresh_offers_and_dispatch_automated_ships()
+
+
 func _get_compatible_cargo_types(ship_data: ShipData) -> Array[CargoTypeData]:
 	var compatible: Array[CargoTypeData] = []
 	if ship_data == null:
@@ -507,7 +514,7 @@ func _on_company_level_changed(new_level: int, previous_level: int) -> void:
 
 
 func _on_game_loaded() -> void:
-	call_deferred("_refresh_offers_and_dispatch_automated_ships")
+	call_deferred("resume_online_operations")
 
 
 func get_save_state() -> Dictionary:
