@@ -50,6 +50,7 @@ var _data: Dictionary = {}    # ship_id -> ShipData
 var _nodes: Dictionary = {}   # ship_id -> Node2D (transient, not persisted)
 var _catalog: Dictionary = {} # model_id -> ShipData
 var _ship_sequence: int = 0
+var _applying_offline_progress := false
 
 
 func _ready() -> void:
@@ -1034,9 +1035,13 @@ func apply_save_state(saved: Dictionary) -> void:
 
 
 func apply_offline_progress(unix_time: float) -> void:
+	_applying_offline_progress = true
 	for ship_id in _states.keys():
 		var state: ShipRuntimeState = _states[ship_id]
 		var safety := 0
+		# A standard mission needs at most four transitions and today's two-stop
+		# Large Contract needs seven. Eight prevents malformed zero-duration data
+		# from looping forever while still covering every current mission shape.
 		while state.current_mission != null \
 				and state.current_mission.is_leg_complete_at(unix_time) \
 				and safety < 8:
@@ -1044,6 +1049,11 @@ func apply_offline_progress(unix_time: float) -> void:
 				+ state.current_mission.leg_duration_sec
 			_advance_state(ship_id, state, completed_at)
 			safety += 1
+	_applying_offline_progress = false
+
+
+func is_applying_offline_progress() -> bool:
+	return _applying_offline_progress
 
 
 func reset_state() -> void:

@@ -7,6 +7,7 @@ const AUTOSAVE_INTERVAL_SEC := 10.0
 
 var _auto_enabled := true
 var _autosave_timer: Timer
+var _last_pause_unix: float = -1.0
 var loaded_existing_save := false
 
 
@@ -25,8 +26,12 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if not _auto_enabled:
 		return
-	if what == NOTIFICATION_APPLICATION_PAUSED:
-		save_game()
+	match what:
+		NOTIFICATION_APPLICATION_PAUSED:
+			_last_pause_unix = Time.get_unix_time_from_system()
+			save_game()
+		NOTIFICATION_APPLICATION_RESUMED:
+			_apply_resume_progress()
 
 
 func has_save(path: String = SAVE_PATH) -> bool:
@@ -108,20 +113,8 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	var now := Time.get_unix_time_from_system()
 	var saved_at := float(parsed.get("saved_at_unix", now))
 	var elapsed := maxf(now - saved_at, 0.0)
-	var active_missions_before := MissionManager.get_active_missions().size()
-	var money_before := GameManager.money
-	FleetManager.apply_offline_progress(now)
-	var completed_missions := maxi(
-		active_missions_before - MissionManager.get_active_missions().size(),
-		0
-	)
-	var earned_cash := maxi(GameManager.money - money_before, 0)
+	_apply_mission_progress(now, elapsed)
 	MissionManager.refresh_offers()
-	EventBus.offline_progress_applied.emit(
-		float(elapsed),
-		completed_missions,
-		earned_cash
-	)
 	EventBus.game_loaded.emit()
 	return true
 
@@ -130,3 +123,30 @@ func _load_or_start() -> void:
 	if not load_game():
 		loaded_existing_save = false
 		EventBus.game_loaded.emit()
+
+
+func _apply_resume_progress(resume_unix: float = -1.0) -> void:
+	if _last_pause_unix < 0.0:
+		return
+	var now := Time.get_unix_time_from_system() if resume_unix < 0.0 else resume_unix
+	var elapsed := maxf(now - _last_pause_unix, 0.0)
+	# Clear first so a duplicate platform resume notification cannot pay out or
+	# emit completion for the same already-advanced mission a second time.
+	_last_pause_unix = -1.0
+	_apply_mission_progress(now, elapsed)
+
+
+func _apply_mission_progress(unix_time: float, elapsed_sec: float) -> void:
+	var active_missions_before := MissionManager.get_active_missions().size()
+	var money_before := GameManager.money
+	FleetManager.apply_offline_progress(unix_time)
+	var completed_missions := maxi(
+		active_missions_before - MissionManager.get_active_missions().size(),
+		0
+	)
+	var earned_cash := maxi(GameManager.money - money_before, 0)
+	EventBus.offline_progress_applied.emit(
+		maxf(elapsed_sec, 0.0),
+		completed_missions,
+		earned_cash
+	)

@@ -452,6 +452,11 @@ func _load_cargo_types() -> void:
 
 func _on_mission_completed(mission: Mission) -> void:
 	_active_missions.erase(mission.id)
+	# Catch-up may complete a mission while loading or resuming. Only advance
+	# work that was already underway; automatic dispatch remains an online
+	# action and must not be chained from the offline completion itself.
+	if FleetManager.is_applying_offline_progress():
+		return
 	call_deferred("_refresh_offers_and_dispatch_automated_ships")
 
 

@@ -18,8 +18,9 @@ adding a new system.
    save/load, and the whole system, decoupled from scene layout.
 4. **Time-based, not frame-based.** Mission progress is computed from
    Unix timestamps (`leg_start_unix` + `leg_duration_sec`), not accumulated
-   per-frame. This is required for idle income / offline progress to work
-   without a separate "catch-up" system bolted on later.
+   per-frame. `SaveManager` runs the same `FleetManager` catch-up path after a
+   cold load and after an Android application resume. Catch-up advances only
+   missions that were already active; it does not chain automated missions.
 5. **Resources for assets, JSON for save games.** `ResourceSaver`/`ResourceLoader`
    are for editor-authored `.tres` assets only. Save games are plain JSON —
    Godot's own docs flag loading arbitrary `.tres` save files as a security
